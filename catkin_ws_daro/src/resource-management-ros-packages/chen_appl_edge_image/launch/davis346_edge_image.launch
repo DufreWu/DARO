@@ -1,0 +1,15 @@
+<launch>
+  <!-- Edges node -->
+  <node name="edges" pkg="edge_image" type="edges_node_live" ns="edge_image" output="screen">
+    <!-- <param name="topic" type="string" value="/dvs/events"/> -->
+    <param name="accumulation_window" type="int" value="25"/>
+    <param name="height" type="int" value="260"/>
+    <param name="width" type="int" value="346"/>
+    <param name="queues_size" type="int" value="10000"/>
+    <param name="req_thr" type="double" value="25"/>
+    <param name="mapping" type="int" value="0"/>
+    <!--<param name="calibration_file" type="str" value="..."/>-->
+    <remap from="events" to="dvs/events"/>
+  </node>
+
+</launch>

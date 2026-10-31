@@ -1,0 +1,5 @@
+<launch>
+    <node pkg="chen_resource_controller" name="chen_resource_controller_node" launch-prefix="sudo -E" type="controller" output="screen">
+        <param name="inference_enable" type="bool" value="false"/>
+    </node>
+</launch>

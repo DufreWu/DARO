@@ -1,0 +1,30 @@
+... logging to /home/chen2/.ros/log/deb3e760-0456-11f1-acaa-00044bc6da48/roslaunch-chen2-tx2-13458.log
+Checking log directory for disk usage. This may take a while.
+Press Ctrl-C to interrupt
+Done checking log file disk usage. Usage is <1GB.
+]2;/home/chen2/catkin_ws_chen/src/resource-management-ros-packages/chen_appl_distance_surface/launch/davis346_distance_surface.launch
+[1mstarted roslaunch server http://chen2-tx2:34759/[0m
+
+SUMMARY
+========
+
+PARAMETERS
+ * /distance_surface/distance_surface/distance_surface_formulation: exponential
+ * /distance_surface/distance_surface/mapping: 2
+ * /distance_surface/distance_surface/queues_size: 10000
+ * /distance_surface/distance_surface/req_thr: 25.0
+ * /distance_surface/distance_surface/use_gpu_version: True
+ * /rosdistro: melodic
+ * /rosversion: 1.14.13
+
+NODES
+  /distance_surface/
+    distance_surface (distance_surface/distance_surface_node)
+
+[1mROS_MASTER_URI=http://localhost:11311[0m
+]2;/home/chen2/catkin_ws_chen/src/resource-management-ros-packages/chen_appl_distance_surface/launch/davis346_distance_surface.launch http://localhost:11311
+[1mprocess[distance_surface/distance_surface-1]: started with pid [14038][0m
+[distance_surface/distance_surface-1] killing on exit
+shutting down processing monitor...
+... shutting down processing monitor complete
+[1mdone[0m

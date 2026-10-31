@@ -1,0 +1,3528 @@
+          -p,--policy : [1m22[0m
+ --fb,--init-freq-big : [1m499200,[0m
+--fl,--init-freq-little : [1m499200,[0m
+ --fg,--init-freq-gpu : [1m216750[0m
+      -s,--init-speed : [1m0.5[0m
+            --log-dir : [1m/home/chen2/catkin_ws_chen/src/resource-management-ros-packages/temp/exp-9999-cpu-gpu-s3[0m
+          --model-dir : [1m/home/chen2/catkin_ws_chen/src/resource-management-ros-packages/chen_resource_controller/models[0m
+         -v,--verbose : false
+               --help : false
+22
+CGroup controller [cpuset] available at [/sys/fs/cgroup/cpuset]
+CGroup controller [cpu] available at [/sys/fs/cgroup/cpu,cpuacct]
+CGroup controller [freezer] available at [/sys/fs/cgroup/freezer]
+Battery State:
+  SOC: 100%
+  SOH_C: 85% (Capacity: 5Ah)
+  SOH_R: 85% (Resistance multiplier: 1.176470555x)
+  Parameters: R0=35mΩ, R1=10mΩ, R2=5mΩ
+  Cycles: 0, Temperature: 25°C
+Setting freq big: 499200
+Setting freq little: 499200
+Setting freq gpu: 216750
+Setting speed: 0.5
+[PDQNAgent] Initialized with state_size=21, action_size=243, action_parameter_size=2
+Actor model loaded from: /home/chen2/catkin_ws_chen/src/resource-management-ros-packages/chen_resource_controller/models/pdqn_actor_model.pt
+Q model loaded from: /home/chen2/catkin_ws_chen/src/resource-management-ros-packages/chen_resource_controller/models/pdqn_q_model.pt
+[PDQN] Load model, using 23.225078ms
+[TegraSpeedPDQNPolicy()] Inference enable: 1
+press Ctrl+C in order to stop monitoring
+monitoring start...
+
+iteration 0
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 20.179742 ms
+[PDQN] Appl info time: 20.342879 ms
+1. Next state vector: 0.08526496589 0.5377500057 0 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+2. State vector: 0 0.5 1.700000048 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=1.746141195, comp_power=4.302000046, speed=0.5, epd=12.09628296, sys_crit=1, reward=1.413350105
+3. Reward: 1.413350105
+[Inference Exploitation] action=160, params=[0.01405482367, -0.03491092101]
+[PDQN] Inference completed in 12.381121 ms | action=160 | params=[0.01405482367, -0.03491092101]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.671450377
+[PDQN] Decision making time: 33.319461 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.671450377
+[PDQN] Cycle time: 99.81403 ms
+
+iteration 1
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 20.617761 ms
+[PDQN] Appl info time: 20.768834 ms
+1. Next state vector: 0.3068928719 0.4996249974 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+2. State vector: 0.08526496589 0.5377500057 0 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.28485918, comp_power=3.996999979, speed=2.671450377, epd=3.84879303, sys_crit=1, reward=2.299108505
+3. Reward: 2.299108505
+[PDQN] Inference completed in 0.000832 ms | action=160 | params=[0.01405482367, -0.03491092101]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.671450377
+[PDQN] Decision making time: 21.27815 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.671450377
+[PDQN] Cycle time: 98.82743 ms
+
+iteration 2
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 19.037046 ms
+[PDQN] Appl info time: 19.202679 ms
+1. Next state vector: 0.3068928719 0.5139999986 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+2. State vector: 0.3068928719 0.4996249974 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.28485918, comp_power=4.111999989, speed=2.671450377, epd=3.891840696, sys_crit=1, reward=2.284739017
+3. Reward: 2.284739017
+[PDQN] Inference completed in 0.001056 ms | action=160 | params=[0.01405482367, -0.03491092101]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.671450377
+[PDQN] Decision making time: 19.639418 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.671450377
+[PDQN] Cycle time: 90.437285 ms
+
+iteration 3
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 18.754931 ms
+[PDQN] Appl info time: 18.925909 ms
+1. Next state vector: 0.3068928719 0.528249979 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+2. State vector: 0.3068928719 0.5139999986 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.28485918, comp_power=4.225999832, speed=2.671450377, epd=3.934513807, sys_crit=1, reward=2.270804882
+3. Reward: 2.270804882
+[PDQN] Inference completed in 0.000928 ms | action=160 | params=[0.01405482367, -0.03491092101]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.671450377
+[PDQN] Decision making time: 19.367416 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.671450377
+[PDQN] Cycle time: 99.583533 ms
+
+iteration 4
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 17.536842 ms
+[PDQN] Appl info time: 17.693387 ms
+1. Next state vector: 0.3068928719 0.5044999719 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+2. State vector: 0.3068928719 0.528249979 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.28485918, comp_power=4.035999775, speed=2.671450377, epd=3.863391638, sys_crit=1, reward=2.294199467
+3. Reward: 2.294199467
+[PDQN] Inference completed in 0.000736 ms | action=160 | params=[0.01405482367, -0.03491092101]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.671450377
+[PDQN] Decision making time: 18.127247 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.671450377
+[PDQN] Cycle time: 123.185158 ms
+
+iteration 5
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 19.457816 ms
+[PDQN] Appl info time: 19.718138 ms
+1. Next state vector: 0.3068928719 0.5187500119 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+2. State vector: 0.3068928719 0.5044999719 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.28485918, comp_power=4.150000095, speed=2.671450377, epd=3.906065226, sys_crit=1, reward=2.28006053
+3. Reward: 2.28006053
+[PDQN] Inference completed in 0.0008 ms | action=160 | params=[0.01405482367, -0.03491092101]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.671450377
+[PDQN] Decision making time: 20.168926 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.671450377
+[PDQN] Cycle time: 95.222667 ms
+
+iteration 6
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 19.11407 ms
+[PDQN] Appl info time: 19.280631 ms
+1. Next state vector: 0.3068928719 0.4901250005 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+2. State vector: 0.3068928719 0.5187500119 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.28485918, comp_power=3.921000004, speed=2.671450377, epd=3.820343971, sys_crit=1, reward=2.308782578
+3. Reward: 2.308782578
+[PDQN] Inference completed in 0.000864 ms | action=160 | params=[0.01405482367, -0.03491092101]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.671450377
+[PDQN] Decision making time: 20.16883 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.671450377
+[PDQN] Cycle time: 105.360731 ms
+
+iteration 7
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 19.747611 ms
+[PDQN] Appl info time: 19.897564 ms
+1. Next state vector: 0.3068928719 0.5044999719 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+2. State vector: 0.3068928719 0.4901250005 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.28485918, comp_power=4.035999775, speed=2.671450377, epd=3.863391638, sys_crit=1, reward=2.294199467
+3. Reward: 2.294199467
+[PDQN] Inference completed in 0.000672 ms | action=160 | params=[0.01405482367, -0.03491092101]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.671450377
+[PDQN] Decision making time: 20.329408 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.671450377
+[PDQN] Cycle time: 86.848746 ms
+
+iteration 8
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 18.077358 ms
+[PDQN] Appl info time: 18.241295 ms
+1. Next state vector: 0.3068928719 0.4853749871 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+2. State vector: 0.3068928719 0.5044999719 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.28485918, comp_power=3.882999897, speed=2.671450377, epd=3.806119442, sys_crit=1, reward=2.313673973
+3. Reward: 2.313673973
+[PDQN] Inference completed in 0.000768 ms | action=160 | params=[0.01405482367, -0.03491092101]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.671450377
+[PDQN] Decision making time: 18.698418 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.671450377
+[PDQN] Cycle time: 65.52493 ms
+
+iteration 9
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 18.366385 ms
+[PDQN] Appl info time: 18.520434 ms
+1. Next state vector: 0.3068928719 0.4948750138 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+2. State vector: 0.3068928719 0.4853749871 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.28485918, comp_power=3.959000111, speed=2.671450377, epd=3.834568501, sys_crit=1, reward=2.30392766
+3. Reward: 2.30392766
+[PDQN] Inference completed in 0.000704 ms | action=160 | params=[0.01405482367, -0.03491092101]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.671450377
+[PDQN] Decision making time: 18.969685 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.671450377
+[PDQN] Cycle time: 65.569059 ms
+
+iteration 10
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 17.679691 ms
+[PDQN] Appl info time: 17.83198 ms
+1. Next state vector: 0.3068928719 0.4901250005 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+2. State vector: 0.3068928719 0.4948750138 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.28485918, comp_power=3.921000004, speed=2.671450377, epd=3.820343971, sys_crit=1, reward=2.308782578
+3. Reward: 2.308782578
+[PDQN] Inference completed in 0.000704 ms | action=160 | params=[0.01405482367, -0.03491092101]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.671450377
+[PDQN] Decision making time: 18.25992 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.671450377
+[PDQN] Cycle time: 124.189616 ms
+
+iteration 11
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 17.607242 ms
+[PDQN] Appl info time: 17.756523 ms
+1. Next state vector: 0.3068928719 0.4711250067 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+2. State vector: 0.3068928719 0.4901250005 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.28485918, comp_power=3.769000053, speed=2.671450377, epd=3.763446093, sys_crit=1, reward=2.328569412
+3. Reward: 2.328569412
+[PDQN] Inference completed in 0.000832 ms | action=160 | params=[0.01405482367, -0.03491092101]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.671450377
+[PDQN] Decision making time: 18.306416 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.671450377
+[PDQN] Cycle time: 112.55202 ms
+
+iteration 12
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 22.085646 ms
+[PDQN] Appl info time: 22.255695 ms
+1. Next state vector: 0.3068928719 0.5092499852 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+2. State vector: 0.3068928719 0.4711250067 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.28485918, comp_power=4.073999882, speed=2.671450377, epd=3.877616167, sys_crit=1, reward=2.289452076
+3. Reward: 2.289452076
+[PDQN] Inference completed in 0.000736 ms | action=160 | params=[0.01405482367, -0.03491092101]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.671450377
+[PDQN] Decision making time: 22.694195 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.671450377
+[PDQN] Cycle time: 91.640689 ms
+
+iteration 13
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 17.26116 ms
+[PDQN] Appl info time: 17.413193 ms
+1. Next state vector: 0.3068928719 0.5044999719 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+2. State vector: 0.3068928719 0.5092499852 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.28485918, comp_power=4.035999775, speed=2.671450377, epd=3.863391638, sys_crit=1, reward=2.294199467
+3. Reward: 2.294199467
+[PDQN] Inference completed in 0.00112 ms | action=160 | params=[0.01405482367, -0.03491092101]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.671450377
+[PDQN] Decision making time: 17.920141 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.671450377
+[PDQN] Cycle time: 116.888983 ms
+
+iteration 14
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 17.754059 ms
+[PDQN] Appl info time: 17.915213 ms
+1. Next state vector: 0.3068928719 0.4901250005 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+2. State vector: 0.3068928719 0.5044999719 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.28485918, comp_power=3.921000004, speed=2.671450377, epd=3.820343971, sys_crit=1, reward=2.308782578
+3. Reward: 2.308782578
+[PDQN] Inference completed in 0.000768 ms | action=160 | params=[0.01405482367, -0.03491092101]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.671450377
+[PDQN] Decision making time: 18.3404 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.671450377
+[PDQN] Cycle time: 85.154077 ms
+
+iteration 15
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 18.021838 ms
+[PDQN] Appl info time: 18.180687 ms
+1. Next state vector: 0.3068928719 0.4996249974 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+2. State vector: 0.3068928719 0.4901250005 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.28485918, comp_power=3.996999979, speed=2.671450377, epd=3.84879303, sys_crit=1, reward=2.299108505
+3. Reward: 2.299108505
+[PDQN] Inference completed in 0.000672 ms | action=160 | params=[0.01405482367, -0.03491092101]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.671450377
+[PDQN] Decision making time: 18.624402 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.671450377
+[PDQN] Cycle time: 115.392076 ms
+
+iteration 16
+ | Inference Enabled: Yes
+updateAttachedApplications 1 error initializing Cgroups.
+[PDQN] Sys info time: 631.767628 ms
+[PDQN] Appl info time: 632.121006 ms
+1. Next state vector: 0.3068928719 0.5044999719 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+2. State vector: 0.3068928719 0.4996249974 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.28485918, comp_power=4.035999775, speed=2.671450377, epd=3.863391638, sys_crit=0, reward=1.294199586
+3. Reward: 1.294199586
+[Inference Exploitation] action=137, params=[0.04255853593, -0.03504683822]
+[PDQN] Inference completed in 9.18708 ms | action=137 | params=[0.04255853593, -0.03504683822]
+[PDQN] Action Decoded -> App→Cluster: [2, -1, -1, -1, -1, ], Freq List: [5, 0, 0], Speed: 2.671144724
+[PDQN] Decision making time: 641.847643 ms
+[PDQN] Applying mapping for PID 21208, Name: edge_image
+[PDQN] Read shared memory for PID 21208
+[PDQN] Updated shared memory for PID 21208 to mapping GPU
+[PDQN] Updated CPU affinity for PID 21208
+[PDQN] Applied mapping to PID 21208 (edge_image → GPU)
+Setting freq little: 1267200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.671144724
+[PDQN] Cycle time: 768.541088 ms
+
+iteration 17
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 14.199087 ms
+[PDQN] Appl info time: 14.377841 ms
+1. Next state vector: 0.3068410456 0.5423750281 0.4824765921 0.4545454681 0 0 1 -1 -1 -1 -1 0 0 0 0 0 1 0 0 0 0
+2. State vector: 0.3068928719 0.5044999719 0.4825445414 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.283797741, comp_power=4.339000225, speed=2.671144724, epd=3.976871014, sys_crit=0, reward=1.257269859
+3. Reward: 1.257269859
+[PDQN] Inference completed in 0.00016 ms | action=137 | params=[0.04255853593, -0.03504683822]
+[PDQN] Action Decoded -> App→Cluster: [2, -1, -1, -1, -1, ], Freq List: [5, 0, 0], Speed: 2.671144724
+[PDQN] Decision making time: 14.568178 ms
+Setting freq little: 1267200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.671144724
+[PDQN] Cycle time: 111.906864 ms
+
+iteration 18
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 591.672946 ms
+[PDQN] Appl info time: 591.952181 ms
+1. Next state vector: 0.3068410456 0.5756250024 0.4824765921 0.4545454681 0 0 1 -1 -1 -1 -1 0.3544355035 0 0 0 0 1 0 0 0 0
+2. State vector: 0.3068410456 0.5423750281 0.4824765921 0.4545454681 0 0 1 -1 -1 -1 -1 0 0 0 0 0 1 0 0 0 0
+Reward calculation: mech_power=6.283797741, comp_power=4.605000019, speed=2.671144724, epd=4.076453686, sys_crit=0, reward=1.226556301
+3. Reward: 1.226556301
+[Inference Exploitation] action=199, params=[-0.0750150308, -0.05283460394]
+[PDQN] Inference completed in 2.117552 ms | action=199 | params=[-0.0750150308, -0.05283460394]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.631122112
+[PDQN] Decision making time: 594.297127 ms
+[PDQN] Applying mapping for PID 21208, Name: edge_image
+[PDQN] Read shared memory for PID 21208
+[PDQN] Updated shared memory for PID 21208 to mapping BIG
+[PDQN] Updated CPU affinity for PID 21208
+[PDQN] Applied mapping to PID 21208 (edge_image → BIG)
+[PDQN] Applying mapping for PID 21291, Name: distance_surface
+[PDQN] Read shared memory for PID 21291
+[PDQN] Updated shared memory for PID 21291 to mapping BIG
+[PDQN] Updated CPU affinity for PID 21291
+[PDQN] Applied mapping to PID 21291 (distance_surface → BIG)
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.631122112
+[PDQN] Cycle time: 1519.874848 ms
+
+iteration 19
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 22.567666 ms
+[PDQN] Appl info time: 23.059382 ms
+1. Next state vector: 0.3001241684 0.5756250024 0.473582685 0 0 0 0.5 -1 0.5 -1 -1 1 0 0.2669286728 0 0 1 0 1 0 0
+2. State vector: 0.3068410456 0.5756250024 0.4824765921 0.4545454681 0 0 1 -1 -1 -1 -1 0.3544355035 0 0 0 0 1 0 0 0 0
+Reward calculation: mech_power=6.146242619, comp_power=4.605000019, speed=2.631122112, epd=4.086181641, sys_crit=0.516651392, reward=1.740287662
+3. Reward: 1.740287662
+[PDQN] Inference completed in 0.000512 ms | action=199 | params=[-0.0750150308, -0.05283460394]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.631122112
+[PDQN] Decision making time: 23.836732 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.631122112
+[PDQN] Cycle time: 72.961855 ms
+
+iteration 20
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 50.677839 ms
+[PDQN] Appl info time: 51.171123 ms
+1. Next state vector: 0.3001241684 0.5518749952 0.473582685 0 0 0 0.5 -1 0.5 -1 -1 0.7200000286 0 0.9200000167 0 0 1 0 1 0 0
+2. State vector: 0.3001241684 0.5756250024 0.473582685 0 0 0 0.5 -1 0.5 -1 -1 1 0 0.2669286728 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.146242619, comp_power=4.414999962, speed=2.631122112, epd=4.013968945, sys_crit=0.8138796687, reward=2.059529543
+3. Reward: 2.059529543
+[PDQN] Inference completed in 0.000576 ms | action=199 | params=[-0.0750150308, -0.05283460394]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.631122112
+[PDQN] Decision making time: 51.635735 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.631122112
+[PDQN] Cycle time: 104.009332 ms
+
+iteration 21
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 44.094235 ms
+[PDQN] Appl info time: 45.866249 ms
+1. Next state vector: 0.3001241684 0.5425000191 0.473582685 0 0 0 0.5 -1 0.5 -1 -1 0.7599999905 0 0.7599999905 0 0 1 0 1 0 0
+2. State vector: 0.3001241684 0.5518749952 0.473582685 0 0 0 0.5 -1 0.5 -1 -1 0.7200000286 0 0.9200000167 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.146242619, comp_power=4.340000153, speed=2.631122112, epd=3.985463858, sys_crit=0.7599999905, reward=2.014559269
+3. Reward: 2.014559269
+[PDQN] Inference completed in 0.00048 ms | action=199 | params=[-0.0750150308, -0.05283460394]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.631122112
+[PDQN] Decision making time: 46.327469 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.631122112
+[PDQN] Cycle time: 103.38091 ms
+
+iteration 22
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 23.221175 ms
+[PDQN] Appl info time: 23.718299 ms
+1. Next state vector: 0.3001241684 0.5329999924 0.473582685 0 0 0 0.5 -1 0.5 -1 -1 0.7599999905 0 0.7599999905 0 0 1 0 1 0 0
+2. State vector: 0.3001241684 0.5425000191 0.473582685 0 0 0 0.5 -1 0.5 -1 -1 0.7599999905 0 0.7599999905 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.146242619, comp_power=4.263999939, speed=2.631122112, epd=3.956578732, sys_crit=0.7599999905, reward=2.02371788
+3. Reward: 2.02371788
+[PDQN] Inference completed in 0.000416 ms | action=199 | params=[-0.0750150308, -0.05283460394]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.631122112
+[PDQN] Decision making time: 24.474369 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.631122112
+[PDQN] Cycle time: 135.366027 ms
+
+iteration 23
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 72.051352 ms
+[PDQN] Appl info time: 73.871655 ms
+1. Next state vector: 0.3001241684 0.528249979 0.473582685 0 0 0 0.5 -1 0.5 -1 -1 0.7200000286 0 0.7200000286 0 0 1 0 1 0 0
+2. State vector: 0.3001241684 0.5329999924 0.473582685 0 0 0 0.5 -1 0.5 -1 -1 0.7599999905 0 0.7599999905 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.146242619, comp_power=4.225999832, speed=2.631122112, epd=3.942136288, sys_crit=0.7200000286, reward=1.988347888
+3. Reward: 1.988347888
+[PDQN] Inference completed in 0.000288 ms | action=199 | params=[-0.0750150308, -0.05283460394]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.631122112
+[PDQN] Decision making time: 74.369739 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.631122112
+[PDQN] Cycle time: 118.792137 ms
+
+iteration 24
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 22.042382 ms
+[PDQN] Appl info time: 22.54901 ms
+1. Next state vector: 0.3001241684 0.5235000253 0.473582685 0 0 0 0.5 -1 0.5 -1 -1 0.7599999905 0 0.8000000119 0 0 1 0 1 0 0
+2. State vector: 0.3001241684 0.528249979 0.473582685 0 0 0 0.5 -1 0.5 -1 -1 0.7200000286 0 0.7200000286 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.146242619, comp_power=4.188000202, speed=2.631122112, epd=3.927694082, sys_crit=0.7797435522, reward=2.052755117
+3. Reward: 2.052755117
+[PDQN] Inference completed in 0.00032 ms | action=199 | params=[-0.0750150308, -0.05283460394]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.631122112
+[PDQN] Decision making time: 23.043446 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.631122112
+[PDQN] Cycle time: 102.857387 ms
+
+iteration 25
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 39.451512 ms
+[PDQN] Appl info time: 39.938235 ms
+1. Next state vector: 0.3001241684 0.5235000253 0.473582685 0 0 0 0.5 -1 0.5 -1 -1 0.7599999905 0 0.7599999905 0 0 1 0 1 0 0
+2. State vector: 0.3001241684 0.5235000253 0.473582685 0 0 0 0.5 -1 0.5 -1 -1 0.7599999905 0 0.8000000119 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.146242619, comp_power=4.188000202, speed=2.631122112, epd=3.927694082, sys_crit=0.7599999905, reward=2.033011436
+3. Reward: 2.033011436
+[PDQN] Inference completed in 0.000416 ms | action=199 | params=[-0.0750150308, -0.05283460394]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.631122112
+[PDQN] Decision making time: 40.385375 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.631122112
+[PDQN] Cycle time: 115.936467 ms
+
+iteration 26
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 18.570578 ms
+[PDQN] Appl info time: 19.04591 ms
+1. Next state vector: 0.3001241684 0.5377500057 0.473582685 0 0 0 0.5 -1 0.5 -1 -1 0.7200000286 0 0.7200000286 0 0 1 0 1 0 0
+2. State vector: 0.3001241684 0.5235000253 0.473582685 0 0 0 0.5 -1 0.5 -1 -1 0.7599999905 0 0.7599999905 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.146242619, comp_power=4.302000046, speed=2.631122112, epd=3.971021414, sys_crit=0.7200000286, reward=1.979121923
+3. Reward: 1.979121923
+[PDQN] Inference completed in 0.000384 ms | action=199 | params=[-0.0750150308, -0.05283460394]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.631122112
+[PDQN] Decision making time: 19.722908 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.631122112
+[PDQN] Cycle time: 135.945425 ms
+
+iteration 27
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 618.670357 ms
+[PDQN] Appl info time: 619.291706 ms
+1. Next state vector: 0.3001241684 0.5235000253 0.473582685 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8000000119 0 0 1 0 1 0 0
+2. State vector: 0.3001241684 0.5377500057 0.473582685 0 0 0 0.5 -1 0.5 -1 -1 0.7200000286 0 0.7200000286 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.146242619, comp_power=4.188000202, speed=2.631122112, epd=3.927694082, sys_crit=0, reward=1.273011565
+3. Reward: 1.273011565
+[Inference Exploitation] action=199, params=[-0.0881800428, -0.04740841314]
+[PDQN] Inference completed in 3.947776 ms | action=199 | params=[-0.0881800428, -0.04740841314]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, 2, ], Freq List: [5, 0, 1], Speed: 2.643331051
+[PDQN] Decision making time: 625.678188 ms
+[PDQN] Applying mapping for PID 21208, Name: edge_image
+[PDQN] Read shared memory for PID 21208
+[PDQN] Updated shared memory for PID 21208 to mapping BIG
+[PDQN] Updated CPU affinity for PID 21208
+[PDQN] Applied mapping to PID 21208 (edge_image → BIG)
+[PDQN] Applying mapping for PID 21291, Name: distance_surface
+[PDQN] Read shared memory for PID 21291
+[PDQN] Updated shared memory for PID 21291 to mapping BIG
+[PDQN] Updated CPU affinity for PID 21291
+[PDQN] Applied mapping to PID 21291 (distance_surface → BIG)
+[PDQN] Applying mapping for PID 22262, Name: tracker
+[PDQN] Read shared memory for PID 22262
+[PDQN] Updated shared memory for PID 22262 to mapping GPU
+[PDQN] Updated CPU affinity for PID 22262
+[PDQN] Applied mapping to PID 22262 (tracker → GPU)
+Setting freq little: 1267200
+Setting freq big: 499200
+Setting freq gpu: 318750
+Setting speed: 2.643331051
+[PDQN] Cycle time: 1891.362903 ms
+
+iteration 28
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 13.953774 ms
+[PDQN] Appl info time: 14.291409 ms
+1. Next state vector: 0.3021588027 0.5235000253 0.476295799 0.4545454681 0 0.07692307979 0.5 -1 0.5 -1 1 0.8799999952 0 0.8399999738 0 0.3244685233 1 0 1 0 1
+2. State vector: 0.3001241684 0.5235000253 0.473582685 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8000000119 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.18791008, comp_power=4.188000202, speed=2.643331051, epd=3.925316095, sys_crit=0.6213145256, reward=1.895097256
+3. Reward: 1.895097256
+[PDQN] Inference completed in 0.000256 ms | action=199 | params=[-0.0881800428, -0.04740841314]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, 2, ], Freq List: [5, 0, 1], Speed: 2.643331051
+[PDQN] Decision making time: 14.528883 ms
+Setting freq little: 1267200
+Setting freq big: 499200
+Setting freq gpu: 318750
+Setting speed: 2.643331051
+[PDQN] Cycle time: 43.023572 ms
+
+iteration 29
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 18.075855 ms
+[PDQN] Appl info time: 18.380785 ms
+1. Next state vector: 0.3021588027 0.5471249819 0.476295799 0.4545454681 0 0.07692307979 0.5 -1 0.5 -1 1 1.039999962 0 1.080000043 0 1 1 0 1 0 1
+2. State vector: 0.3021588027 0.5235000253 0.476295799 0.4545454681 0 0.07692307979 0.5 -1 0.5 -1 1 0.8799999952 0 0.8399999738 0 0.3244685233 1 0 1 0 1
+Reward calculation: mech_power=6.18791008, comp_power=4.376999855, speed=2.643331051, epd=3.996816874, sys_crit=1, reward=2.250995636
+3. Reward: 2.250995636
+[PDQN] Inference completed in 9.6e-05 ms | action=199 | params=[-0.0881800428, -0.04740841314]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, 2, ], Freq List: [5, 0, 1], Speed: 2.643331051
+[PDQN] Decision making time: 19.533018 ms
+Setting freq little: 1267200
+Setting freq big: 499200
+Setting freq gpu: 318750
+Setting speed: 2.643331051
+[PDQN] Cycle time: 36.732002 ms
+
+iteration 30
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 15.833981 ms
+[PDQN] Appl info time: 16.103263 ms
+1. Next state vector: 0.3021588027 0.5518749952 0.476295799 0.4545454681 0 0.07692307979 0.5 -1 0.5 -1 1 1.039999962 0 1.080000043 0 1.039999962 1 0 1 0 1
+2. State vector: 0.3021588027 0.5471249819 0.476295799 0.4545454681 0 0.07692307979 0.5 -1 0.5 -1 1 1.039999962 0 1.080000043 0 1 1 0 1 0 1
+Reward calculation: mech_power=6.18791008, comp_power=4.414999962, speed=2.643331051, epd=4.011192799, sys_crit=1, reward=2.246511936
+3. Reward: 2.246511936
+[PDQN] Inference completed in 0.000192 ms | action=199 | params=[-0.0881800428, -0.04740841314]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, 2, ], Freq List: [5, 0, 1], Speed: 2.643331051
+[PDQN] Decision making time: 16.401922 ms
+Setting freq little: 1267200
+Setting freq big: 499200
+Setting freq gpu: 318750
+Setting speed: 2.643331051
+[PDQN] Cycle time: 39.658841 ms
+
+iteration 31
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 21.876749 ms
+[PDQN] Appl info time: 22.164335 ms
+1. Next state vector: 0.3021588027 0.5471249819 0.476295799 0.4545454681 0 0.07692307979 0.5 -1 0.5 -1 1 1.039999962 0 1.039999962 0 1.039999962 1 0 1 0 1
+2. State vector: 0.3021588027 0.5518749952 0.476295799 0.4545454681 0 0.07692307979 0.5 -1 0.5 -1 1 1.039999962 0 1.080000043 0 1.039999962 1 0 1 0 1
+Reward calculation: mech_power=6.18791008, comp_power=4.376999855, speed=2.643331051, epd=3.996816874, sys_crit=1, reward=2.250995636
+3. Reward: 2.250995636
+[PDQN] Inference completed in 0.000128 ms | action=199 | params=[-0.0881800428, -0.04740841314]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, 2, ], Freq List: [5, 0, 1], Speed: 2.643331051
+[PDQN] Decision making time: 23.295192 ms
+Setting freq little: 1267200
+Setting freq big: 499200
+Setting freq gpu: 318750
+Setting speed: 2.643331051
+[PDQN] Cycle time: 37.9539 ms
+
+iteration 32
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 13.541963 ms
+[PDQN] Appl info time: 13.838638 ms
+1. Next state vector: 0.3021588027 0.5518749952 0.476295799 0.4545454681 0 0.07692307979 0.5 -1 0.5 -1 1 1.039999962 0 1.039999962 0 1.039999962 1 0 1 0 1
+2. State vector: 0.3021588027 0.5471249819 0.476295799 0.4545454681 0 0.07692307979 0.5 -1 0.5 -1 1 1.039999962 0 1.039999962 0 1.039999962 1 0 1 0 1
+Reward calculation: mech_power=6.18791008, comp_power=4.414999962, speed=2.643331051, epd=4.011192799, sys_crit=1, reward=2.246511936
+3. Reward: 2.246511936
+[PDQN] Inference completed in 0.000704 ms | action=199 | params=[-0.0881800428, -0.04740841314]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, 2, ], Freq List: [5, 0, 1], Speed: 2.643331051
+[PDQN] Decision making time: 15.116696 ms
+Setting freq little: 1267200
+Setting freq big: 499200
+Setting freq gpu: 318750
+Setting speed: 2.643331051
+[PDQN] Cycle time: 36.983172 ms
+
+iteration 33
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 23.015126 ms
+[PDQN] Appl info time: 23.312536 ms
+1. Next state vector: 0.3021588027 0.5472499728 0.476295799 0.4545454681 0 0.07692307979 0.5 -1 0.5 -1 1 1.080000043 0 1.039999962 0 1.080000043 1 0 1 0 1
+2. State vector: 0.3021588027 0.5518749952 0.476295799 0.4545454681 0 0.07692307979 0.5 -1 0.5 -1 1 1.039999962 0 1.039999962 0 1.039999962 1 0 1 0 1
+Reward calculation: mech_power=6.18791008, comp_power=4.377999783, speed=2.643331051, epd=3.997195244, sys_crit=1, reward=2.250877142
+3. Reward: 2.250877142
+[PDQN] Inference completed in 0.00016 ms | action=199 | params=[-0.0881800428, -0.04740841314]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, 2, ], Freq List: [5, 0, 1], Speed: 2.643331051
+[PDQN] Decision making time: 23.52521 ms
+Setting freq little: 1267200
+Setting freq big: 499200
+Setting freq gpu: 318750
+Setting speed: 2.643331051
+[PDQN] Cycle time: 40.097085 ms
+
+iteration 34
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 17.452011 ms
+[PDQN] Appl info time: 17.739565 ms
+1. Next state vector: 0.3021588027 0.5423750281 0.476295799 0.4545454681 0 0.07692307979 0.5 -1 0.5 -1 1 1.039999962 0 1.039999962 0 1.039999962 1 0 1 0 1
+2. State vector: 0.3021588027 0.5472499728 0.476295799 0.4545454681 0 0.07692307979 0.5 -1 0.5 -1 1 1.080000043 0 1.039999962 0 1.080000043 1 0 1 0 1
+Reward calculation: mech_power=6.18791008, comp_power=4.339000225, speed=2.643331051, epd=3.982441425, sys_crit=1, reward=2.255511284
+3. Reward: 2.255511284
+[PDQN] Inference completed in 0.000256 ms | action=199 | params=[-0.0881800428, -0.04740841314]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, 2, ], Freq List: [5, 0, 1], Speed: 2.643331051
+[PDQN] Decision making time: 18.078767 ms
+Setting freq little: 1267200
+Setting freq big: 499200
+Setting freq gpu: 318750
+Setting speed: 2.643331051
+[PDQN] Cycle time: 44.229694 ms
+
+iteration 35
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 27.470873 ms
+[PDQN] Appl info time: 27.760156 ms
+1. Next state vector: 0.3021588027 0.5423750281 0.476295799 0.4545454681 0 0.07692307979 0.5 -1 0.5 -1 1 1.080000043 0 1.039999962 0 1.080000043 1 0 1 0 1
+2. State vector: 0.3021588027 0.5423750281 0.476295799 0.4545454681 0 0.07692307979 0.5 -1 0.5 -1 1 1.039999962 0 1.039999962 0 1.039999962 1 0 1 0 1
+Reward calculation: mech_power=6.18791008, comp_power=4.339000225, speed=2.643331051, epd=3.982441425, sys_crit=1, reward=2.255511284
+3. Reward: 2.255511284
+[PDQN] Inference completed in 0.000224 ms | action=199 | params=[-0.0881800428, -0.04740841314]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, 2, ], Freq List: [5, 0, 1], Speed: 2.643331051
+[PDQN] Decision making time: 28.070942 ms
+Setting freq little: 1267200
+Setting freq big: 499200
+Setting freq gpu: 318750
+Setting speed: 2.643331051
+[PDQN] Cycle time: 41.290887 ms
+
+iteration 36
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 13.170376 ms
+[PDQN] Appl info time: 13.446954 ms
+1. Next state vector: 0.3021588027 0.5995000005 0.476295799 0.4545454681 0 0.07692307979 0.5 -1 0.5 -1 1 0.9599999785 0 0.9599999785 0 0.9599999785 1 0 1 0 1
+2. State vector: 0.3021588027 0.5423750281 0.476295799 0.4545454681 0 0.07692307979 0.5 -1 0.5 -1 1 1.080000043 0 1.039999962 0 1.080000043 1 0 1 0 1
+Reward calculation: mech_power=6.18791008, comp_power=4.796000004, speed=2.643331051, epd=4.155328751, sys_crit=0.9599999785, reward=2.163274288
+3. Reward: 2.163274288
+[PDQN] Inference completed in 0.000416 ms | action=199 | params=[-0.0881800428, -0.04740841314]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, 2, ], Freq List: [5, 0, 1], Speed: 2.643331051
+[PDQN] Decision making time: 13.808109 ms
+Setting freq little: 1267200
+Setting freq big: 499200
+Setting freq gpu: 318750
+Setting speed: 2.643331051
+[PDQN] Cycle time: 31.538073 ms
+
+iteration 37
+ | Inference Enabled: Yes
+removing 22262
+[PDQN] Sys info time: 259.714088 ms
+[PDQN] Appl info time: 259.992874 ms
+1. Next state vector: 0.3021588027 0.58525002 0.476295799 0.4545454681 0 0.07692307979 0.5 -1 0.5 -1 -1 1.039999962 0 1.039999962 0 0 1 0 1 0 0
+2. State vector: 0.3021588027 0.5995000005 0.476295799 0.4545454681 0 0.07692307979 0.5 -1 0.5 -1 1 0.9599999785 0 0.9599999785 0 0.9599999785 1 0 1 0 1
+Reward calculation: mech_power=6.18791008, comp_power=4.68200016, speed=2.643331051, epd=4.112201691, sys_crit=1, reward=2.215893745
+3. Reward: 2.215893745
+[Inference Exploitation] action=199, params=[-0.08982633054, -0.06024419144]
+[PDQN] Inference completed in 2.828823 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 263.170691 ms
+[PDQN] Applying mapping for PID 21208, Name: edge_image
+[PDQN] Read shared memory for PID 21208
+[PDQN] Updated shared memory for PID 21208 to mapping BIG
+[PDQN] Updated CPU affinity for PID 21208
+[PDQN] Applied mapping to PID 21208 (edge_image → BIG)
+[PDQN] Applying mapping for PID 21291, Name: distance_surface
+[PDQN] Read shared memory for PID 21291
+[PDQN] Updated shared memory for PID 21291 to mapping BIG
+[PDQN] Updated CPU affinity for PID 21291
+[PDQN] Applied mapping to PID 21291 (distance_surface → BIG)
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 716.388328 ms
+
+iteration 38
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 46.652849 ms
+[PDQN] Appl info time: 47.145845 ms
+1. Next state vector: 0.2973659933 0.5471249819 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.9599999785 0 0.9599999785 0 0 1 0 1 0 0
+2. State vector: 0.3021588027 0.58525002 0.476295799 0.4545454681 0 0.07692307979 0.5 -1 0.5 -1 -1 1.039999962 0 1.039999962 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.376999855, speed=2.614450455, epd=4.003426075, sys_crit=0.9599999785, reward=2.208930254
+3. Reward: 2.208930254
+[PDQN] Inference completed in 0.000448 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 47.613177 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 112.312793 ms
+
+iteration 39
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 35.290519 ms
+[PDQN] Appl info time: 35.742875 ms
+1. Next state vector: 0.2973659933 0.5235000253 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.7599999905 0 0.7599999905 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.5471249819 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.9599999785 0 0.9599999785 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.188000202, speed=2.614450455, epd=3.931135416, sys_crit=0.7599999905, reward=2.031897068
+3. Reward: 2.031897068
+[PDQN] Inference completed in 0.000512 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 36.459745 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 123.390449 ms
+
+iteration 40
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 30.858516 ms
+[PDQN] Appl info time: 31.359032 ms
+1. Next state vector: 0.2973659933 0.5187500119 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8000000119 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.5235000253 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.7599999905 0 0.7599999905 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.150000095, speed=2.614450455, epd=3.916600704, sys_crit=0.8000000119, reward=2.076617241
+3. Reward: 2.076617241
+[PDQN] Inference completed in 0.000672 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 32.109758 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 87.869528 ms
+
+iteration 41
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 29.864588 ms
+[PDQN] Appl info time: 30.360304 ms
+1. Next state vector: 0.2973659933 0.5139999986 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.7599999905 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.5187500119 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8000000119 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.111999989, speed=2.614450455, epd=3.902065992, sys_crit=0.7797435522, reward=2.06111598
+3. Reward: 2.06111598
+[PDQN] Inference completed in 0.000544 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 30.86802 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 75.999738 ms
+
+iteration 42
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 23.658267 ms
+[PDQN] Appl info time: 24.112159 ms
+1. Next state vector: 0.2973659933 0.5139999986 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8399999738 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.5139999986 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.7599999905 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.111999989, speed=2.614450455, epd=3.902065992, sys_crit=0.819756031, reward=2.101128578
+3. Reward: 2.101128578
+[PDQN] Inference completed in 0.000352 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 25.978765 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 85.341732 ms
+
+iteration 43
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 82.974866 ms
+[PDQN] Appl info time: 83.471926 ms
+1. Next state vector: 0.2973659933 0.5139999986 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8000000119 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.5139999986 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8399999738 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.111999989, speed=2.614450455, epd=3.902065992, sys_crit=0.819756031, reward=2.101128578
+3. Reward: 2.101128578
+[PDQN] Inference completed in 0.000352 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 87.002002 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 140.000247 ms
+
+iteration 44
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 26.220336 ms
+[PDQN] Appl info time: 26.703924 ms
+1. Next state vector: 0.2973659933 0.5139999986 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8399999738 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.5139999986 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8000000119 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.111999989, speed=2.614450455, epd=3.902065992, sys_crit=0.8399999738, reward=2.121372461
+3. Reward: 2.121372461
+[PDQN] Inference completed in 0.000544 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 27.368249 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 86.570191 ms
+
+iteration 45
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 37.488265 ms
+[PDQN] Appl info time: 37.964077 ms
+1. Next state vector: 0.2973659933 0.5092499852 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8000000119 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.5139999986 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8399999738 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.073999882, speed=2.614450455, epd=3.887531519, sys_crit=0.819756031, reward=2.105919361
+3. Reward: 2.105919361
+[PDQN] Inference completed in 0.000448 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 38.542385 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 95.659319 ms
+
+iteration 46
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 17.731885 ms
+[PDQN] Appl info time: 18.204368 ms
+1. Next state vector: 0.2973659933 0.5139999986 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8000000119 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.5092499852 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8000000119 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.111999989, speed=2.614450455, epd=3.902065992, sys_crit=0.819756031, reward=2.101128578
+3. Reward: 2.101128578
+[PDQN] Inference completed in 0.000576 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 18.926646 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 117.901768 ms
+
+iteration 47
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 35.102039 ms
+[PDQN] Appl info time: 35.568923 ms
+1. Next state vector: 0.2973659933 0.5235000253 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8399999738 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.5139999986 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8000000119 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.188000202, speed=2.614450455, epd=3.931135416, sys_crit=0.819756031, reward=2.091653347
+3. Reward: 2.091653347
+[PDQN] Inference completed in 0.000416 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 36.27616 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 93.628296 ms
+
+iteration 48
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 72.739937 ms
+[PDQN] Appl info time: 73.454983 ms
+1. Next state vector: 0.2973659933 0.5139999986 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8000000119 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.5235000253 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8399999738 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.111999989, speed=2.614450455, epd=3.902065992, sys_crit=0.8000000119, reward=2.081372499
+3. Reward: 2.081372499
+[PDQN] Inference completed in 0.000256 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 76.437471 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 136.624157 ms
+
+iteration 49
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 83.637336 ms
+[PDQN] Appl info time: 84.125692 ms
+1. Next state vector: 0.2973659933 0.5139999986 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8399999738 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.5139999986 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8000000119 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.111999989, speed=2.614450455, epd=3.902065992, sys_crit=0.8399999738, reward=2.121372461
+3. Reward: 2.121372461
+[PDQN] Inference completed in 0.000416 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 84.596352 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 142.654253 ms
+
+iteration 50
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 44.084158 ms
+[PDQN] Appl info time: 44.594594 ms
+1. Next state vector: 0.2973659933 0.5092499852 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8000000119 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.5139999986 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8399999738 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.073999882, speed=2.614450455, epd=3.887531519, sys_crit=0.819756031, reward=2.105919361
+3. Reward: 2.105919361
+[PDQN] Inference completed in 0.000288 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+ParamActor model saved to: /home/chen2/catkin_ws_chen/src/resource-management-ros-packages/chen_resource_controller/models/pdqn_actor_model.pt
+Q_CriticNetwork model saved to: /home/chen2/catkin_ws_chen/src/resource-management-ros-packages/chen_resource_controller/models/pdqn_q_model.pt
+[PDQN] Decision making time: 60.519105 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 121.125602 ms
+
+iteration 51
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 22.814421 ms
+[PDQN] Appl info time: 23.323482 ms
+1. Next state vector: 0.2973659933 0.5187500119 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8399999738 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.5092499852 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8000000119 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.150000095, speed=2.614450455, epd=3.916600704, sys_crit=0.8399999738, reward=2.116617203
+3. Reward: 2.116617203
+[PDQN] Inference completed in 0.000384 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 23.786813 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 78.821587 ms
+
+iteration 52
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 51.697755 ms
+[PDQN] Appl info time: 54.081006 ms
+1. Next state vector: 0.2973659933 0.5187500119 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8399999738 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.5187500119 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8399999738 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.150000095, speed=2.614450455, epd=3.916600704, sys_crit=0.8399999738, reward=2.116617203
+3. Reward: 2.116617203
+[PDQN] Inference completed in 0.00032 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 55.852956 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 131.805463 ms
+
+iteration 53
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 46.071694 ms
+[PDQN] Appl info time: 46.537042 ms
+1. Next state vector: 0.2973659933 0.5139999986 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8000000119 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.5187500119 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8399999738 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.111999989, speed=2.614450455, epd=3.902065992, sys_crit=0.8000000119, reward=2.081372499
+3. Reward: 2.081372499
+[PDQN] Inference completed in 0.000544 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 47.206519 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 99.21874 ms
+
+iteration 54
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 82.751602 ms
+[PDQN] Appl info time: 83.373175 ms
+1. Next state vector: 0.2973659933 0.5139999986 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8399999738 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.5139999986 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8000000119 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.111999989, speed=2.614450455, epd=3.902065992, sys_crit=0.819756031, reward=2.101128578
+3. Reward: 2.101128578
+[PDQN] Inference completed in 0.000416 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 85.384423 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 160.959424 ms
+
+iteration 55
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 121.593383 ms
+[PDQN] Appl info time: 122.179276 ms
+1. Next state vector: 0.2973659933 0.5235000253 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.7599999905 0 0.7599999905 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.5139999986 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8399999738 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.188000202, speed=2.614450455, epd=3.931135416, sys_crit=0.7599999905, reward=2.031897068
+3. Reward: 2.031897068
+[PDQN] Inference completed in 0.000352 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 123.097587 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 190.029096 ms
+
+iteration 56
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 35.731996 ms
+[PDQN] Appl info time: 36.495234 ms
+1. Next state vector: 0.2973659933 0.528249979 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.7200000286 0 0.7200000286 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.5235000253 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.7599999905 0 0.7599999905 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.225999832, speed=2.614450455, epd=3.945669651, sys_crit=0.7200000286, reward=1.987212062
+3. Reward: 1.987212062
+[PDQN] Inference completed in 0.000544 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 36.986982 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 99.710265 ms
+
+iteration 57
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 32.129536 ms
+[PDQN] Appl info time: 32.600451 ms
+1. Next state vector: 0.2973659933 0.5139999986 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8399999738 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.528249979 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.7200000286 0 0.7200000286 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.111999989, speed=2.614450455, epd=3.902065992, sys_crit=0.8399999738, reward=2.121372461
+3. Reward: 2.121372461
+[PDQN] Inference completed in 0.000448 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 33.061767 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 81.109637 ms
+
+iteration 58
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 69.153286 ms
+[PDQN] Appl info time: 69.721355 ms
+1. Next state vector: 0.2973659933 0.5235000253 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.7599999905 0 0.7599999905 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.5139999986 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8399999738 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.188000202, speed=2.614450455, epd=3.931135416, sys_crit=0.7599999905, reward=2.031897068
+3. Reward: 2.031897068
+[PDQN] Inference completed in 0.00048 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 70.211183 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 136.566111 ms
+
+iteration 59
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 123.927675 ms
+[PDQN] Appl info time: 124.645665 ms
+1. Next state vector: 0.2973659933 0.5139999986 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.7599999905 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.5235000253 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.7599999905 0 0.7599999905 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.111999989, speed=2.614450455, epd=3.902065992, sys_crit=0.7797435522, reward=2.06111598
+3. Reward: 2.06111598
+[PDQN] Inference completed in 0.000544 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 125.162437 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 186.286508 ms
+
+iteration 60
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 84.977829 ms
+[PDQN] Appl info time: 85.519561 ms
+1. Next state vector: 0.2973659933 0.5377500057 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.7200000286 0 0.6800000072 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.5139999986 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.7599999905 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.302000046, speed=2.614450455, epd=3.974738836, sys_crit=0.6997142434, reward=1.957658529
+3. Reward: 1.957658529
+[PDQN] Inference completed in 0.00048 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 85.973901 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 163.268053 ms
+
+iteration 61
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 22.854903 ms
+[PDQN] Appl info time: 23.348218 ms
+1. Next state vector: 0.2973659933 0.528249979 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.7200000286 0 0.7599999905 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.5377500057 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.7200000286 0 0.6800000072 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.225999832, speed=2.614450455, epd=3.945669651, sys_crit=0.7397297025, reward=2.006941795
+3. Reward: 2.006941795
+[PDQN] Inference completed in 0.000768 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 23.898463 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 89.566154 ms
+
+iteration 62
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 104.612802 ms
+[PDQN] Appl info time: 105.615177 ms
+1. Next state vector: 0.2973659933 0.5329999924 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.7599999905 0 0.7599999905 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.528249979 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.7200000286 0 0.7599999905 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.263999939, speed=2.614450455, epd=3.960204363, sys_crit=0.7599999905, reward=2.022561073
+3. Reward: 2.022561073
+[PDQN] Inference completed in 0.00112 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 107.23679 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 199.087282 ms
+
+iteration 63
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 17.157705 ms
+[PDQN] Appl info time: 17.631405 ms
+1. Next state vector: 0.2973659933 0.528249979 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.7200000286 0 0.7599999905 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.5329999924 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.7599999905 0 0.7599999905 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.225999832, speed=2.614450455, epd=3.945669651, sys_crit=0.7397297025, reward=2.006941795
+3. Reward: 2.006941795
+[PDQN] Inference completed in 0.000384 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 18.09848 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 78.059438 ms
+
+iteration 64
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 20.088128 ms
+[PDQN] Appl info time: 20.561828 ms
+1. Next state vector: 0.2973659933 0.5235000253 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8000000119 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.528249979 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.7200000286 0 0.7599999905 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.188000202, speed=2.614450455, epd=3.931135416, sys_crit=0.819756031, reward=2.091653347
+3. Reward: 2.091653347
+[PDQN] Inference completed in 0.000544 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 21.34385 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 79.386937 ms
+
+iteration 65
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 22.844887 ms
+[PDQN] Appl info time: 23.358779 ms
+1. Next state vector: 0.2973659933 0.5187500119 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8399999738 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.5235000253 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8000000119 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.150000095, speed=2.614450455, epd=3.916600704, sys_crit=0.819756031, reward=2.09637332
+3. Reward: 2.09637332
+[PDQN] Inference completed in 0.000256 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 23.844095 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 100.05603 ms
+
+iteration 66
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 27.657116 ms
+[PDQN] Appl info time: 28.141888 ms
+1. Next state vector: 0.2973659933 0.528249979 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8000000119 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.5187500119 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8399999738 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.225999832, speed=2.614450455, epd=3.945669651, sys_crit=0.819756031, reward=2.086967945
+3. Reward: 2.086967945
+[PDQN] Inference completed in 0.00048 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 28.875558 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 85.32756 ms
+
+iteration 67
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 22.946231 ms
+[PDQN] Appl info time: 23.409275 ms
+1. Next state vector: 0.2973659933 0.528249979 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.7599999905 0 0.7599999905 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.528249979 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8000000119 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.225999832, speed=2.614450455, epd=3.945669651, sys_crit=0.7599999905, reward=2.027212143
+3. Reward: 2.027212143
+[PDQN] Inference completed in 0.00048 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 23.860767 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 89.612395 ms
+
+iteration 68
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 40.124224 ms
+[PDQN] Appl info time: 41.964143 ms
+1. Next state vector: 0.2973659933 0.528249979 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.7200000286 0 0.7599999905 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.528249979 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.7599999905 0 0.7599999905 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.225999832, speed=2.614450455, epd=3.945669651, sys_crit=0.7397297025, reward=2.006941795
+3. Reward: 2.006941795
+[PDQN] Inference completed in 0.00048 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 42.475315 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 103.173239 ms
+
+iteration 69
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 29.977711 ms
+[PDQN] Appl info time: 30.459795 ms
+1. Next state vector: 0.2973659933 0.528249979 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.7200000286 0 0.7200000286 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.528249979 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.7200000286 0 0.7599999905 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.225999832, speed=2.614450455, epd=3.945669651, sys_crit=0.7200000286, reward=1.987212062
+3. Reward: 1.987212062
+[PDQN] Inference completed in 0.0008 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 31.287546 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 103.075287 ms
+
+iteration 70
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 57.044423 ms
+[PDQN] Appl info time: 57.976815 ms
+1. Next state vector: 0.2973659933 0.5235000253 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.7599999905 0 0.7200000286 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.528249979 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.7200000286 0 0.7200000286 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.188000202, speed=2.614450455, epd=3.931135416, sys_crit=0.7397297025, reward=2.011626959
+3. Reward: 2.011626959
+[PDQN] Inference completed in 0.000928 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 63.471355 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 110.884245 ms
+
+iteration 71
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 101.049543 ms
+[PDQN] Appl info time: 101.702764 ms
+1. Next state vector: 0.2973659933 0.5187500119 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8000000119 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.5235000253 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.7599999905 0 0.7200000286 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.150000095, speed=2.614450455, epd=3.916600704, sys_crit=0.8000000119, reward=2.076617241
+3. Reward: 2.076617241
+[PDQN] Inference completed in 0.000448 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 103.953534 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 191.02687 ms
+
+iteration 72
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 41.781326 ms
+[PDQN] Appl info time: 42.301778 ms
+1. Next state vector: 0.2973659933 0.528249979 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.6800000072 0 0.6800000072 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.5187500119 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8000000119 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.225999832, speed=2.614450455, epd=3.945669651, sys_crit=0.6800000072, reward=1.947211981
+3. Reward: 1.947211981
+[PDQN] Inference completed in 0.00048 ms | action=199 | params=[-0.08982633054, -0.06024419144]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.614450455
+[PDQN] Decision making time: 42.816566 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.614450455
+[PDQN] Cycle time: 167.617691 ms
+
+iteration 73
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 597.350758 ms
+[PDQN] Appl info time: 599.467735 ms
+1. Next state vector: 0.2973659933 0.5187500119 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.7599999905 0 0.8000000119 0 0 1 0 1 0 0
+2. State vector: 0.2973659933 0.528249979 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.6800000072 0 0.6800000072 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.089758396, comp_power=4.150000095, speed=2.614450455, epd=3.916600704, sys_crit=0, reward=1.276617289
+3. Reward: 1.276617289
+[Inference Exploitation] action=199, params=[-0.08749747276, -0.04616712034]
+[PDQN] Inference completed in 3.539836 ms | action=199 | params=[-0.08749747276, -0.04616712034]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, 2, ], Freq List: [5, 0, 2], Speed: 2.646123886
+[PDQN] Decision making time: 603.575288 ms
+[PDQN] Applying mapping for PID 21208, Name: edge_image
+[PDQN] Read shared memory for PID 21208
+[PDQN] Updated shared memory for PID 21208 to mapping BIG
+[PDQN] Updated CPU affinity for PID 21208
+[PDQN] Applied mapping to PID 21208 (edge_image → BIG)
+[PDQN] Applying mapping for PID 21291, Name: distance_surface
+[PDQN] Read shared memory for PID 21291
+[PDQN] Updated shared memory for PID 21291 to mapping BIG
+[PDQN] Updated CPU affinity for PID 21291
+[PDQN] Applied mapping to PID 21291 (distance_surface → BIG)
+[PDQN] Applying mapping for PID 27345, Name: tracker
+[PDQN] Read shared memory for PID 27345
+[PDQN] Updated shared memory for PID 27345 to mapping GPU
+[PDQN] Updated CPU affinity for PID 27345
+[PDQN] Applied mapping to PID 27345 (tracker → GPU)
+Setting freq little: 1267200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 420750
+Setting freq gpu: 420750
+Setting speed: 2.646123886
+[PDQN] Cycle time: 1699.716594 ms
+
+iteration 74
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 17.445963 ms
+[PDQN] Appl info time: 17.962127 ms
+1. Next state vector: 0.302625984 0.528249979 0.4769164324 0.4545454681 0 0.1538461596 0.5 -1 0.5 -1 1 0.8799999952 0 0.8799999952 0 0.2482017279 1 0 1 0 1
+2. State vector: 0.2973659933 0.5187500119 0.4698778689 0 0 0 0.5 -1 0.5 -1 -1 0.7599999905 0 0.8000000119 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.197477818, comp_power=4.225999832, speed=2.646123886, epd=3.93914938, sys_crit=0.5771074891, reward=1.84641695
+3. Reward: 1.84641695
+[PDQN] Inference completed in 0.000288 ms | action=199 | params=[-0.08749747276, -0.04616712034]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, 2, ], Freq List: [5, 0, 2], Speed: 2.646123886
+[PDQN] Decision making time: 18.458995 ms
+Setting freq little: 1267200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 420750
+Setting freq gpu: 420750
+Setting speed: 2.646123886
+[PDQN] Cycle time: 33.202793 ms
+
+iteration 75
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 15.552829 ms
+[PDQN] Appl info time: 15.811743 ms
+1. Next state vector: 0.302625984 0.5423750281 0.4769164324 0.4545454681 0 0.1538461596 0.5 -1 0.5 -1 1 1.039999962 0 1.080000043 0 1.039999962 1 0 1 0 1
+2. State vector: 0.302625984 0.528249979 0.4769164324 0.4545454681 0 0.1538461596 0.5 -1 0.5 -1 1 0.8799999952 0 0.8799999952 0 0.2482017279 1 0 1 0 1
+Reward calculation: mech_power=6.197477818, comp_power=4.339000225, speed=2.646123886, epd=3.981853724, sys_crit=1, reward=2.255696535
+3. Reward: 2.255696535
+[PDQN] Inference completed in 0.00016 ms | action=199 | params=[-0.08749747276, -0.04616712034]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, 2, ], Freq List: [5, 0, 2], Speed: 2.646123886
+[PDQN] Decision making time: 16.16909 ms
+Setting freq little: 1267200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 420750
+Setting freq gpu: 420750
+Setting speed: 2.646123886
+[PDQN] Cycle time: 34.964856 ms
+
+iteration 76
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 20.196674 ms
+[PDQN] Appl info time: 20.468356 ms
+1. Next state vector: 0.302625984 0.5566250086 0.4769164324 0.4545454681 0 0.1538461596 0.5 -1 0.5 -1 1 1.039999962 0 1.039999962 0 1.039999962 1 0 1 0 1
+2. State vector: 0.302625984 0.5423750281 0.4769164324 0.4545454681 0 0.1538461596 0.5 -1 0.5 -1 1 1.039999962 0 1.080000043 0 1.039999962 1 0 1 0 1
+Reward calculation: mech_power=6.197477818, comp_power=4.453000069, speed=2.646123886, epd=4.024935722, sys_crit=1, reward=2.242255688
+3. Reward: 2.242255688
+[PDQN] Inference completed in 0.000224 ms | action=199 | params=[-0.08749747276, -0.04616712034]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, 2, ], Freq List: [5, 0, 2], Speed: 2.646123886
+[PDQN] Decision making time: 20.670598 ms
+Setting freq little: 1267200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 420750
+Setting freq gpu: 420750
+Setting speed: 2.646123886
+[PDQN] Cycle time: 38.037873 ms
+
+iteration 77
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 18.703221 ms
+[PDQN] Appl info time: 18.969591 ms
+1. Next state vector: 0.302625984 0.5661249757 0.4769164324 0.4545454681 0 0.1538461596 0.5 -1 0.5 -1 1 1.080000043 0 1.080000043 0 1.080000043 1 0 1 0 1
+2. State vector: 0.302625984 0.5566250086 0.4769164324 0.4545454681 0 0.1538461596 0.5 -1 0.5 -1 1 1.039999962 0 1.039999962 0 1.039999962 1 0 1 0 1
+Reward calculation: mech_power=6.197477818, comp_power=4.528999805, speed=2.646123886, epd=4.053656578, sys_crit=1, reward=2.233454227
+3. Reward: 2.233454227
+[PDQN] Inference completed in 0.000192 ms | action=199 | params=[-0.08749747276, -0.04616712034]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, 2, ], Freq List: [5, 0, 2], Speed: 2.646123886
+[PDQN] Decision making time: 19.242362 ms
+Setting freq little: 1267200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 420750
+Setting freq gpu: 420750
+Setting speed: 2.646123886
+[PDQN] Cycle time: 33.841198 ms
+
+iteration 78
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 19.207514 ms
+[PDQN] Appl info time: 19.485852 ms
+1. Next state vector: 0.302625984 0.5566250086 0.4769164324 0.4545454681 0 0.1538461596 0.5 -1 0.5 -1 1 1.039999962 0 1.039999962 0 1.039999962 1 0 1 0 1
+2. State vector: 0.302625984 0.5661249757 0.4769164324 0.4545454681 0 0.1538461596 0.5 -1 0.5 -1 1 1.080000043 0 1.080000043 0 1.080000043 1 0 1 0 1
+Reward calculation: mech_power=6.197477818, comp_power=4.453000069, speed=2.646123886, epd=4.024935722, sys_crit=1, reward=2.242255688
+3. Reward: 2.242255688
+[PDQN] Inference completed in 0.000192 ms | action=199 | params=[-0.08749747276, -0.04616712034]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, 2, ], Freq List: [5, 0, 2], Speed: 2.646123886
+[PDQN] Decision making time: 19.775358 ms
+Setting freq little: 1267200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 420750
+Setting freq gpu: 420750
+Setting speed: 2.646123886
+[PDQN] Cycle time: 31.556541 ms
+
+iteration 79
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 14.710934 ms
+[PDQN] Appl info time: 14.98092 ms
+1. Next state vector: 0.302625984 0.5423750281 0.4769164324 0.4545454681 0 0.1538461596 0.5 -1 0.5 -1 1 1.039999962 0 1.080000043 0 1.039999962 1 0 1 0 1
+2. State vector: 0.302625984 0.5566250086 0.4769164324 0.4545454681 0 0.1538461596 0.5 -1 0.5 -1 1 1.039999962 0 1.039999962 0 1.039999962 1 0 1 0 1
+Reward calculation: mech_power=6.197477818, comp_power=4.339000225, speed=2.646123886, epd=3.981853724, sys_crit=1, reward=2.255696535
+3. Reward: 2.255696535
+[PDQN] Inference completed in 0.000224 ms | action=199 | params=[-0.08749747276, -0.04616712034]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, 2, ], Freq List: [5, 0, 2], Speed: 2.646123886
+[PDQN] Decision making time: 15.208666 ms
+Setting freq little: 1267200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 420750
+Setting freq gpu: 420750
+Setting speed: 2.646123886
+[PDQN] Cycle time: 34.859735 ms
+
+iteration 80
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 22.342707 ms
+[PDQN] Appl info time: 22.598741 ms
+1. Next state vector: 0.302625984 0.5423750281 0.4769164324 0.4545454681 0 0.1538461596 0.5 -1 0.5 -1 1 1.039999962 0 1.039999962 0 1.039999962 1 0 1 0 1
+2. State vector: 0.302625984 0.5423750281 0.4769164324 0.4545454681 0 0.1538461596 0.5 -1 0.5 -1 1 1.039999962 0 1.080000043 0 1.039999962 1 0 1 0 1
+Reward calculation: mech_power=6.197477818, comp_power=4.339000225, speed=2.646123886, epd=3.981853724, sys_crit=1, reward=2.255696535
+3. Reward: 2.255696535
+[PDQN] Inference completed in 0.00016 ms | action=199 | params=[-0.08749747276, -0.04616712034]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, 2, ], Freq List: [5, 0, 2], Speed: 2.646123886
+[PDQN] Decision making time: 22.906679 ms
+Setting freq little: 1267200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 420750
+Setting freq gpu: 420750
+Setting speed: 2.646123886
+[PDQN] Cycle time: 37.575853 ms
+
+iteration 81
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 12.139137 ms
+[PDQN] Appl info time: 12.394787 ms
+1. Next state vector: 0.302625984 0.5947499871 0.4769164324 0.4545454681 0 0.1538461596 0.5 -1 0.5 -1 1 1.039999962 0 1.080000043 0 1.039999962 1 0 1 0 1
+2. State vector: 0.302625984 0.5423750281 0.4769164324 0.4545454681 0 0.1538461596 0.5 -1 0.5 -1 1 1.039999962 0 1.039999962 0 1.039999962 1 0 1 0 1
+Reward calculation: mech_power=6.197477818, comp_power=4.757999897, speed=2.646123886, epd=4.140198231, sys_crit=1, reward=2.207671642
+3. Reward: 2.207671642
+[PDQN] Inference completed in 0.000224 ms | action=199 | params=[-0.08749747276, -0.04616712034]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, 2, ], Freq List: [5, 0, 2], Speed: 2.646123886
+[PDQN] Decision making time: 12.631013 ms
+Setting freq little: 1267200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 420750
+Setting freq gpu: 420750
+Setting speed: 2.646123886
+[PDQN] Cycle time: 122.043665 ms
+
+iteration 82
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 14.147762 ms
+[PDQN] Appl info time: 14.438356 ms
+1. Next state vector: 0.302625984 0.5805000067 0.4769164324 0.4545454681 0 0.1538461596 0.5 -1 0.5 -1 1 0.9599999785 0 0.9200000167 0 0.8399999738 1 0 1 0 1
+2. State vector: 0.302625984 0.5947499871 0.4769164324 0.4545454681 0 0.1538461596 0.5 -1 0.5 -1 1 1.039999962 0 1.080000043 0 1.039999962 1 0 1 0 1
+Reward calculation: mech_power=6.197477818, comp_power=4.644000053, speed=2.646123886, epd=4.09711647, sys_crit=0.9052727222, reward=2.125643253
+3. Reward: 2.125643253
+[PDQN] Inference completed in 9.6e-05 ms | action=199 | params=[-0.08749747276, -0.04616712034]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, 2, ], Freq List: [5, 0, 2], Speed: 2.646123886
+[PDQN] Decision making time: 14.648566 ms
+Setting freq little: 1267200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 420750
+Setting freq gpu: 420750
+Setting speed: 2.646123886
+[PDQN] Cycle time: 57.010473 ms
+
+iteration 83
+ | Inference Enabled: Yes
+removing 27345
+[PDQN] Sys info time: 216.6778 ms
+[PDQN] Appl info time: 216.950667 ms
+1. Next state vector: 0.302625984 0.570874989 0.4769164324 0.4545454681 0 0.1538461596 0.5 -1 0.5 -1 -1 1.039999962 0 1.039999962 0 0 1 0 1 0 0
+2. State vector: 0.302625984 0.5805000067 0.4769164324 0.4545454681 0 0.1538461596 0.5 -1 0.5 -1 1 0.9599999785 0 0.9200000167 0 0.8399999738 1 0 1 0 1
+Reward calculation: mech_power=6.197477818, comp_power=4.566999912, speed=2.646123886, epd=4.068017483, sys_crit=1, reward=2.229099751
+3. Reward: 2.229099751
+[Inference Exploitation] action=199, params=[-0.08782711625, -0.0592694059]
+[PDQN] Inference completed in 1.655949 ms | action=199 | params=[-0.08782711625, -0.0592694059]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.616643906
+[PDQN] Decision making time: 218.858778 ms
+[PDQN] Applying mapping for PID 21208, Name: edge_image
+[PDQN] Read shared memory for PID 21208
+[PDQN] Updated shared memory for PID 21208 to mapping BIG
+[PDQN] Updated CPU affinity for PID 21208
+[PDQN] Applied mapping to PID 21208 (edge_image → BIG)
+[PDQN] Applying mapping for PID 21291, Name: distance_surface
+[PDQN] Read shared memory for PID 21291
+[PDQN] Updated shared memory for PID 21291 to mapping BIG
+[PDQN] Updated CPU affinity for PID 21291
+[PDQN] Applied mapping to PID 21291 (distance_surface → BIG)
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.616643906
+[PDQN] Cycle time: 661.053905 ms
+
+iteration 84
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 19.19993 ms
+[PDQN] Appl info time: 20.188322 ms
+1. Next state vector: 0.297727555 0.5423750281 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.9200000167 0 0.9599999785 0 0 1 0 1 0 0
+2. State vector: 0.302625984 0.570874989 0.4769164324 0.4545454681 0 0.1538461596 0.5 -1 0.5 -1 -1 1.039999962 0 1.039999962 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.097162724, comp_power=4.339000225, speed=2.616643906, epd=3.988377333, sys_crit=0.939787209, reward=2.193429947
+3. Reward: 2.193429947
+[PDQN] Inference completed in 0.000608 ms | action=199 | params=[-0.08782711625, -0.0592694059]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.616643906
+[PDQN] Decision making time: 20.723782 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.616643906
+[PDQN] Cycle time: 89.803664 ms
+
+iteration 85
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 29.500524 ms
+[PDQN] Appl info time: 30.052273 ms
+1. Next state vector: 0.297727555 0.5139999986 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8399999738 0 0 1 0 1 0 0
+2. State vector: 0.297727555 0.5423750281 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.9200000167 0 0.9599999785 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.097162724, comp_power=4.111999989, speed=2.616643906, epd=3.90162468, sys_crit=0.8399999738, reward=2.12151742
+3. Reward: 2.12151742
+[PDQN] Inference completed in 0.000576 ms | action=199 | params=[-0.08782711625, -0.0592694059]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.616643906
+[PDQN] Decision making time: 32.225378 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.616643906
+[PDQN] Cycle time: 90.153491 ms
+
+iteration 86
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 49.285323 ms
+[PDQN] Appl info time: 49.783119 ms
+1. Next state vector: 0.297727555 0.5092499852 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8399999738 0 0 1 0 1 0 0
+2. State vector: 0.297727555 0.5139999986 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8399999738 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.097162724, comp_power=4.073999882, speed=2.616643906, epd=3.887102365, sys_crit=0.8399999738, reward=2.126305103
+3. Reward: 2.126305103
+[PDQN] Inference completed in 0.000416 ms | action=199 | params=[-0.08782711625, -0.0592694059]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.616643906
+[PDQN] Decision making time: 50.486069 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.616643906
+[PDQN] Cycle time: 114.493686 ms
+
+iteration 87
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 57.931921 ms
+[PDQN] Appl info time: 60.281092 ms
+1. Next state vector: 0.297727555 0.5139999986 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0 0 0 1 0 1 0 0
+2. State vector: 0.297727555 0.5092499852 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8399999738 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.097162724, comp_power=4.111999989, speed=2.616643906, epd=3.90162468, sys_crit=0, reward=1.281517386
+3. Reward: 1.281517386
+[PDQN] Inference completed in 0.000416 ms | action=199 | params=[-0.08782711625, -0.0592694059]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.616643906
+[PDQN] Decision making time: 60.748295 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.616643906
+[PDQN] Cycle time: 104.103715 ms
+
+iteration 88
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 59.00857 ms
+[PDQN] Appl info time: 59.553694 ms
+1. Next state vector: 0.297727555 0.5092499852 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8399999738 0 0 1 0 1 0 0
+2. State vector: 0.297727555 0.5139999986 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.097162724, comp_power=4.073999882, speed=2.616643906, epd=3.887102365, sys_crit=0.819756031, reward=2.10606122
+3. Reward: 2.10606122
+[PDQN] Inference completed in 0.000512 ms | action=199 | params=[-0.08782711625, -0.0592694059]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.616643906
+[PDQN] Decision making time: 60.021666 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.616643906
+[PDQN] Cycle time: 118.878362 ms
+
+iteration 89
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 51.581853 ms
+[PDQN] Appl info time: 52.042305 ms
+1. Next state vector: 0.297727555 0.5139999986 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8399999738 0 0 1 0 1 0 0
+2. State vector: 0.297727555 0.5092499852 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8399999738 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.097162724, comp_power=4.111999989, speed=2.616643906, epd=3.90162468, sys_crit=0.8399999738, reward=2.12151742
+3. Reward: 2.12151742
+[PDQN] Inference completed in 0.000544 ms | action=199 | params=[-0.08782711625, -0.0592694059]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.616643906
+[PDQN] Decision making time: 52.734503 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.616643906
+[PDQN] Cycle time: 105.440622 ms
+
+iteration 90
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 55.503453 ms
+[PDQN] Appl info time: 55.991105 ms
+1. Next state vector: 0.297727555 0.5139999986 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8000000119 0 0 1 0 1 0 0
+2. State vector: 0.297727555 0.5139999986 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8399999738 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.097162724, comp_power=4.111999989, speed=2.616643906, epd=3.90162468, sys_crit=0.819756031, reward=2.101273537
+3. Reward: 2.101273537
+[PDQN] Inference completed in 0.000608 ms | action=199 | params=[-0.08782711625, -0.0592694059]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.616643906
+[PDQN] Decision making time: 56.748423 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.616643906
+[PDQN] Cycle time: 108.562055 ms
+
+iteration 91
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 68.379141 ms
+[PDQN] Appl info time: 68.859689 ms
+1. Next state vector: 0.297727555 0.5139999986 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8399999738 0 0 1 0 1 0 0
+2. State vector: 0.297727555 0.5139999986 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8000000119 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.097162724, comp_power=4.111999989, speed=2.616643906, epd=3.90162468, sys_crit=0.819756031, reward=2.101273537
+3. Reward: 2.101273537
+[PDQN] Inference completed in 0.000576 ms | action=199 | params=[-0.08782711625, -0.0592694059]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.616643906
+[PDQN] Decision making time: 70.900537 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.616643906
+[PDQN] Cycle time: 136.298438 ms
+
+iteration 92
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 83.859873 ms
+[PDQN] Appl info time: 84.572487 ms
+1. Next state vector: 0.297727555 0.5139999986 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8399999738 0 0 1 0 1 0 0
+2. State vector: 0.297727555 0.5139999986 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8399999738 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.097162724, comp_power=4.111999989, speed=2.616643906, epd=3.90162468, sys_crit=0.819756031, reward=2.101273537
+3. Reward: 2.101273537
+[PDQN] Inference completed in 0.00112 ms | action=199 | params=[-0.08782711625, -0.0592694059]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.616643906
+[PDQN] Decision making time: 88.549575 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.616643906
+[PDQN] Cycle time: 134.785402 ms
+
+iteration 93
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 20.565669 ms
+[PDQN] Appl info time: 23.551133 ms
+1. Next state vector: 0.297727555 0.5092499852 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8399999738 0 0 1 0 1 0 0
+2. State vector: 0.297727555 0.5139999986 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8399999738 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.097162724, comp_power=4.073999882, speed=2.616643906, epd=3.887102365, sys_crit=0.819756031, reward=2.10606122
+3. Reward: 2.10606122
+[PDQN] Inference completed in 0.000384 ms | action=199 | params=[-0.08782711625, -0.0592694059]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.616643906
+[PDQN] Decision making time: 24.604229 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.616643906
+[PDQN] Cycle time: 92.375942 ms
+
+iteration 94
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 58.455702 ms
+[PDQN] Appl info time: 58.945498 ms
+1. Next state vector: 0.297727555 0.5187500119 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8000000119 0 0 1 0 1 0 0
+2. State vector: 0.297727555 0.5092499852 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8399999738 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.097162724, comp_power=4.150000095, speed=2.616643906, epd=3.916147232, sys_crit=0.8000000119, reward=2.07676506
+3. Reward: 2.07676506
+[PDQN] Inference completed in 0.000512 ms | action=199 | params=[-0.08782711625, -0.0592694059]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.616643906
+[PDQN] Decision making time: 59.420606 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.616643906
+[PDQN] Cycle time: 114.137141 ms
+
+iteration 95
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 26.282003 ms
+[PDQN] Appl info time: 26.761271 ms
+1. Next state vector: 0.297727555 0.5139999986 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8399999738 0 0 1 0 1 0 0
+2. State vector: 0.297727555 0.5187500119 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8000000119 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.097162724, comp_power=4.111999989, speed=2.616643906, epd=3.90162468, sys_crit=0.8399999738, reward=2.12151742
+3. Reward: 2.12151742
+[PDQN] Inference completed in 0.000576 ms | action=199 | params=[-0.08782711625, -0.0592694059]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.616643906
+[PDQN] Decision making time: 27.405788 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.616643906
+[PDQN] Cycle time: 84.046883 ms
+
+iteration 96
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 78.498551 ms
+[PDQN] Appl info time: 79.35331 ms
+1. Next state vector: 0.297727555 0.5187500119 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8000000119 0 0 1 0 1 0 0
+2. State vector: 0.297727555 0.5139999986 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8399999738 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.097162724, comp_power=4.150000095, speed=2.616643906, epd=3.916147232, sys_crit=0.8000000119, reward=2.07676506
+3. Reward: 2.07676506
+[PDQN] Inference completed in 0.000512 ms | action=199 | params=[-0.08782711625, -0.0592694059]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.616643906
+[PDQN] Decision making time: 79.849986 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.616643906
+[PDQN] Cycle time: 144.670347 ms
+
+iteration 97
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 49.62107 ms
+[PDQN] Appl info time: 50.174931 ms
+1. Next state vector: 0.297727555 0.5187500119 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8000000119 0 0 1 0 1 0 0
+2. State vector: 0.297727555 0.5187500119 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8000000119 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.097162724, comp_power=4.150000095, speed=2.616643906, epd=3.916147232, sys_crit=0.8000000119, reward=2.07676506
+3. Reward: 2.07676506
+[PDQN] Inference completed in 0.000416 ms | action=199 | params=[-0.08782711625, -0.0592694059]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.616643906
+[PDQN] Decision making time: 50.642039 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.616643906
+[PDQN] Cycle time: 106.277718 ms
+
+iteration 98
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 31.230043 ms
+[PDQN] Appl info time: 31.696318 ms
+1. Next state vector: 0.297727555 0.5187500119 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8399999738 0 0 1 0 1 0 0
+2. State vector: 0.297727555 0.5187500119 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8000000119 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.097162724, comp_power=4.150000095, speed=2.616643906, epd=3.916147232, sys_crit=0.8399999738, reward=2.116765022
+3. Reward: 2.116765022
+[PDQN] Inference completed in 0.000576 ms | action=199 | params=[-0.08782711625, -0.0592694059]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.616643906
+[PDQN] Decision making time: 32.444484 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.616643906
+[PDQN] Cycle time: 94.78313 ms
+
+iteration 99
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 118.051445 ms
+[PDQN] Appl info time: 118.518297 ms
+1. Next state vector: 0.297727555 0.5139999986 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8000000119 0 0 1 0 1 0 0
+[Train] Critic Loss: 1.134824243e+11, Actor Loss: -298645.0938
+2. State vector: 0.297727555 0.5187500119 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8399999738 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.097162724, comp_power=4.111999989, speed=2.616643906, epd=3.90162468, sys_crit=0.8000000119, reward=2.081517458
+3. Reward: 2.081517458
+[PDQN] Inference completed in 0.000288 ms | action=199 | params=[-0.08782711625, -0.0592694059]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.616643906
+[PDQN] Decision making time: 1898.986317 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.616643906
+[PDQN] Cycle time: 1938.687821 ms
+
+iteration 100
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 34.723415 ms
+[PDQN] Appl info time: 35.184507 ms
+1. Next state vector: 0.297727555 0.5044999719 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8399999738 0 0 1 0 1 0 0
+[Train] Critic Loss: 735362560, Actor Loss: -313939.9375
+2. State vector: 0.297727555 0.5139999986 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8000000119 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.097162724, comp_power=4.035999775, speed=2.616643906, epd=3.872579813, sys_crit=0.819756031, reward=2.110885143
+3. Reward: 2.110885143
+[PDQN] Inference completed in 0.000576 ms | action=199 | params=[-0.08782711625, -0.0592694059]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.616643906
+ParamActor model saved to: /home/chen2/catkin_ws_chen/src/resource-management-ros-packages/chen_resource_controller/models/pdqn_actor_model.pt
+Q_CriticNetwork model saved to: /home/chen2/catkin_ws_chen/src/resource-management-ros-packages/chen_resource_controller/models/pdqn_q_model.pt
+[PDQN] Decision making time: 1907.028021 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.616643906
+[PDQN] Cycle time: 1973.779694 ms
+
+iteration 101
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 47.099291 ms
+[PDQN] Appl info time: 47.601023 ms
+1. Next state vector: 0.297727555 0.5187500119 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8399999738 0 0 1 0 1 0 0
+[Train] Critic Loss: 1112222976, Actor Loss: -312768.3438
+2. State vector: 0.297727555 0.5044999719 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8399999738 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.097162724, comp_power=4.150000095, speed=2.616643906, epd=3.916147232, sys_crit=0.8399999738, reward=2.116765022
+3. Reward: 2.116765022
+[PDQN] Inference completed in 0.000288 ms | action=199 | params=[-0.08782711625, -0.0592694059]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.616643906
+[PDQN] Decision making time: 1665.443586 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.616643906
+[PDQN] Cycle time: 1714.946513 ms
+
+iteration 102
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 29.348364 ms
+[PDQN] Appl info time: 29.829136 ms
+1. Next state vector: 0.297727555 0.5329999924 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8799999952 0 0 1 0 1 0 0
+[Train] Critic Loss: 554394496, Actor Loss: -305736.9688
+2. State vector: 0.297727555 0.5187500119 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8399999738 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.097162724, comp_power=4.263999939, speed=2.616643906, epd=3.959714174, sys_crit=0.8390470743, reward=2.101764441
+3. Reward: 2.101764441
+[PDQN] Inference completed in 0.000288 ms | action=199 | params=[-0.08782711625, -0.0592694059]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.616643906
+[PDQN] Decision making time: 1751.902944 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.616643906
+[PDQN] Cycle time: 1813.585841 ms
+
+iteration 103
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 29.22686 ms
+[PDQN] Appl info time: 29.725776 ms
+1. Next state vector: 0.297727555 0.5187500119 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8399999738 0 0 1 0 1 0 0
+[Train] Critic Loss: 445542080, Actor Loss: -322019.3125
+2. State vector: 0.297727555 0.5329999924 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8000000119 0 0.8799999952 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.097162724, comp_power=4.150000095, speed=2.616643906, epd=3.916147232, sys_crit=0.8399999738, reward=2.116765022
+3. Reward: 2.116765022
+[PDQN] Inference completed in 0.000288 ms | action=199 | params=[-0.08782711625, -0.0592694059]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.616643906
+[PDQN] Decision making time: 1612.803333 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.616643906
+[PDQN] Cycle time: 1662.881433 ms
+
+iteration 104
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 29.98421 ms
+[PDQN] Appl info time: 30.443189 ms
+1. Next state vector: 0.297727555 0.5235000253 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8799999952 0 0.8799999952 0 0 1 0 1 0 0
+[Train] Critic Loss: 1269222656, Actor Loss: -319374.9688
+2. State vector: 0.297727555 0.5187500119 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8399999738 0 0.8399999738 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.097162724, comp_power=4.188000202, speed=2.616643906, epd=3.930669785, sys_crit=0.8799999952, reward=2.152047873
+3. Reward: 2.152047873
+[PDQN] Inference completed in 0.00032 ms | action=199 | params=[-0.08782711625, -0.0592694059]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.616643906
+[PDQN] Decision making time: 1863.242253 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.616643906
+[PDQN] Cycle time: 1927.650517 ms
+
+iteration 105
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 20.504454 ms
+[PDQN] Appl info time: 20.973449 ms
+1. Next state vector: 0.297727555 0.5235000253 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8799999952 0 0.8399999738 0 0 1 0 1 0 0
+[Train] Critic Loss: 1163247104, Actor Loss: -309728
+2. State vector: 0.297727555 0.5235000253 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8799999952 0 0.8799999952 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.097162724, comp_power=4.188000202, speed=2.616643906, epd=3.930669785, sys_crit=0.859767437, reward=2.131815434
+3. Reward: 2.131815434
+[PDQN] Inference completed in 0.000288 ms | action=199 | params=[-0.08782711625, -0.0592694059]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.616643906
+[PDQN] Decision making time: 1744.571351 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.616643906
+[PDQN] Cycle time: 1882.676369 ms
+
+iteration 106
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 20.252484 ms
+[PDQN] Appl info time: 22.716632 ms
+1. Next state vector: 0.297727555 0.5471249819 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.6399999857 0 0.7200000286 0 0 1 0 1 0 0
+[Train] Critic Loss: 1023236864, Actor Loss: -304686.2188
+2. State vector: 0.297727555 0.5235000253 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.8799999952 0 0.8399999738 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.097162724, comp_power=4.376999855, speed=2.616643906, epd=4.002899647, sys_crit=0.6788225174, reward=1.927917004
+3. Reward: 1.927917004
+[PDQN] Inference completed in 0.000288 ms | action=199 | params=[-0.08782711625, -0.0592694059]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.616643906
+[PDQN] Decision making time: 1511.612389 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.616643906
+[PDQN] Cycle time: 1562.073052 ms
+
+iteration 107
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 23.251036 ms
+[PDQN] Appl info time: 23.70656 ms
+1. Next state vector: 0.297727555 0.5329999924 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.7599999905 0 0.7599999905 0 0 1 0 1 0 0
+[Train] Critic Loss: 1030331264, Actor Loss: -301106.375
+2. State vector: 0.297727555 0.5471249819 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.6399999857 0 0.7200000286 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.097162724, comp_power=4.263999939, speed=2.616643906, epd=3.959714174, sys_crit=0.7599999905, reward=2.022717476
+3. Reward: 2.022717476
+[PDQN] Inference completed in 0.000384 ms | action=199 | params=[-0.08782711625, -0.0592694059]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.616643906
+[PDQN] Decision making time: 1624.933276 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.616643906
+[PDQN] Cycle time: 1702.711024 ms
+
+iteration 108
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 24.618855 ms
+[PDQN] Appl info time: 25.094123 ms
+1. Next state vector: 0.297727555 0.5187500119 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.7599999905 0 0.7200000286 0 0 1 0 1 0 0
+[Train] Critic Loss: 122655392, Actor Loss: -294422.5
+2. State vector: 0.297727555 0.5329999924 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.7599999905 0 0.7599999905 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.097162724, comp_power=4.150000095, speed=2.616643906, epd=3.916147232, sys_crit=0.7397297025, reward=2.016494751
+3. Reward: 2.016494751
+[PDQN] Inference completed in 0.000448 ms | action=199 | params=[-0.08782711625, -0.0592694059]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.616643906
+[PDQN] Decision making time: 1616.790879 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.616643906
+[PDQN] Cycle time: 1723.439389 ms
+
+iteration 109
+ | Inference Enabled: Yes
+removing 21291
+[PDQN] Sys info time: 646.761448 ms
+[PDQN] Appl info time: 647.267276 ms
+1. Next state vector: 0.297727555 0.5235000253 0.4703653157 0 0 0 0.5 -1 -1 -1 -1 0.6000000238 0 0 0 0 1 0 0 0 0
+[Train] Critic Loss: 1566853504, Actor Loss: -305677.4688
+2. State vector: 0.297727555 0.5187500119 0.4703653157 0 0 0 0.5 -1 0.5 -1 -1 0.7599999905 0 0.7200000286 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.097162724, comp_power=4.188000202, speed=2.616643906, epd=3.930669785, sys_crit=0, reward=1.272047877
+3. Reward: 1.272047877
+[Inference Exploitation] action=208, params=[-0.06823398918, -0.06121030077]
+[PDQN] Inference completed in 3.276891 ms | action=208 | params=[-0.06823398918, -0.06121030077]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, -1, -1, 2, ], Freq List: [5, 1, 4], Speed: 2.612276793
+[PDQN] Decision making time: 2034.691925 ms
+[PDQN] Applying mapping for PID 21208, Name: edge_image
+[PDQN] Read shared memory for PID 21208
+[PDQN] Updated shared memory for PID 21208 to mapping BIG
+[PDQN] Updated CPU affinity for PID 21208
+[PDQN] Applied mapping to PID 21208 (edge_image → BIG)
+[PDQN] Applying mapping for PID 32315, Name: tracker
+[PDQN] Read shared memory for PID 32315
+[PDQN] Updated shared memory for PID 32315 to mapping GPU
+[PDQN] Updated CPU affinity for PID 32315
+[PDQN] Applied mapping to PID 32315 (tracker → GPU)
+Setting freq little: 1267200
+Setting freq big: 652800
+Setting freq gpu to closest neighbor: 624750
+Setting freq gpu: 624750
+Setting speed: 2.612276793
+[PDQN] Cycle time: 2581.931226 ms
+
+iteration 110
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 228.877177 ms
+[PDQN] Appl info time: 229.098459 ms
+1. Next state vector: 0.2970080972 0.58525002 0.4693948328 0.4545454681 0.09090909362 0.3076923192 0.5 -1 -1 -1 1 0.9200000167 0 0 0 0.2798517942 1 0 0 0 1
+[Train] Critic Loss: 555968896, Actor Loss: -288149.4062
+2. State vector: 0.297727555 0.5235000253 0.4703653157 0 0 0 0.5 -1 -1 -1 -1 0.6000000238 0 0 0 0 1 0 0 0 0
+Reward calculation: mech_power=6.082428932, comp_power=4.68200016, speed=2.612276793, epd=4.120707512, sys_crit=0.5074087977, reward=1.72079277
+3. Reward: 1.72079277
+[PDQN] Inference completed in 0.000128 ms | action=208 | params=[-0.06823398918, -0.06121030077]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, -1, -1, 2, ], Freq List: [5, 1, 4], Speed: 2.612276793
+[PDQN] Decision making time: 1718.624579 ms
+Setting freq little: 1267200
+Setting freq big: 652800
+Setting freq gpu to closest neighbor: 624750
+Setting freq gpu: 624750
+Setting speed: 2.612276793
+[PDQN] Cycle time: 1741.360538 ms
+
+iteration 111
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 12.224323 ms
+[PDQN] Appl info time: 12.410532 ms
+1. Next state vector: 0.2970080972 0.6564999819 0.4693948328 0.4545454681 0.09090909362 0.3076923192 0.5 -1 -1 -1 1 1.039999962 0 0 0 1.039999962 1 0 0 0 1
+[Train] Critic Loss: 1357538048, Actor Loss: -301260.9062
+2. State vector: 0.2970080972 0.58525002 0.4693948328 0.4545454681 0.09090909362 0.3076923192 0.5 -1 -1 -1 1 0.9200000167 0 0 0 0.2798517942 1 0 0 0 1
+Reward calculation: mech_power=6.082428932, comp_power=5.251999855, speed=2.612276793, epd=4.338908195, sys_crit=1, reward=2.152363777
+3. Reward: 2.152363777
+[PDQN] Inference completed in 0.000128 ms | action=208 | params=[-0.06823398918, -0.06121030077]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, -1, -1, 2, ], Freq List: [5, 1, 4], Speed: 2.612276793
+[PDQN] Decision making time: 1601.021297 ms
+Setting freq little: 1267200
+Setting freq big: 652800
+Setting freq gpu to closest neighbor: 624750
+Setting freq gpu: 624750
+Setting speed: 2.612276793
+[PDQN] Cycle time: 1623.971979 ms
+
+iteration 112
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 20.169027 ms
+[PDQN] Appl info time: 20.382853 ms
+1. Next state vector: 0.2970080972 0.6564999819 0.4693948328 0.4545454681 0.09090909362 0.3076923192 0.5 -1 -1 -1 1 1.080000043 0 0 0 1.080000043 1 0 0 0 1
+[Train] Critic Loss: 608826624, Actor Loss: -312202.3438
+2. State vector: 0.2970080972 0.6564999819 0.4693948328 0.4545454681 0.09090909362 0.3076923192 0.5 -1 -1 -1 1 1.039999962 0 0 0 1.039999962 1 0 0 0 1
+Reward calculation: mech_power=6.082428932, comp_power=5.251999855, speed=2.612276793, epd=4.338908195, sys_crit=1, reward=2.152363777
+3. Reward: 2.152363777
+[PDQN] Inference completed in 0.000128 ms | action=208 | params=[-0.06823398918, -0.06121030077]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, -1, -1, 2, ], Freq List: [5, 1, 4], Speed: 2.612276793
+[PDQN] Decision making time: 1444.979431 ms
+Setting freq little: 1267200
+Setting freq big: 652800
+Setting freq gpu to closest neighbor: 624750
+Setting freq gpu: 624750
+Setting speed: 2.612276793
+[PDQN] Cycle time: 1457.63083 ms
+
+iteration 113
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 27.102843 ms
+[PDQN] Appl info time: 27.344861 ms
+1. Next state vector: 0.2970080972 0.6657500267 0.4693948328 0.4545454681 0.09090909362 0.3076923192 0.5 -1 -1 -1 1 1.080000043 0 0 0 1.080000043 1 0 0 0 1
+[Train] Critic Loss: 1169428736, Actor Loss: -294538.25
+2. State vector: 0.2970080972 0.6564999819 0.4693948328 0.4545454681 0.09090909362 0.3076923192 0.5 -1 -1 -1 1 1.080000043 0 0 0 1.080000043 1 0 0 0 1
+Reward calculation: mech_power=6.082428932, comp_power=5.326000214, speed=2.612276793, epd=4.367236137, sys_crit=1, reward=2.144888878
+3. Reward: 2.144888878
+[PDQN] Inference completed in 0.000128 ms | action=208 | params=[-0.06823398918, -0.06121030077]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, -1, -1, 2, ], Freq List: [5, 1, 4], Speed: 2.612276793
+[PDQN] Decision making time: 1467.404897 ms
+Setting freq little: 1267200
+Setting freq big: 652800
+Setting freq gpu to closest neighbor: 624750
+Setting freq gpu: 624750
+Setting speed: 2.612276793
+[PDQN] Cycle time: 1490.181113 ms
+
+iteration 114
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 11.524926 ms
+[PDQN] Appl info time: 11.710847 ms
+1. Next state vector: 0.2970080972 0.6657500267 0.4693948328 0.4545454681 0.09090909362 0.3076923192 0.5 -1 -1 -1 1 1.039999962 0 0 0 1.039999962 1 0 0 0 1
+[Train] Critic Loss: 1629937920, Actor Loss: -306857.5
+2. State vector: 0.2970080972 0.6657500267 0.4693948328 0.4545454681 0.09090909362 0.3076923192 0.5 -1 -1 -1 1 1.080000043 0 0 0 1.080000043 1 0 0 0 1
+Reward calculation: mech_power=6.082428932, comp_power=5.326000214, speed=2.612276793, epd=4.367236137, sys_crit=1, reward=2.144888878
+3. Reward: 2.144888878
+[PDQN] Inference completed in 0.000224 ms | action=208 | params=[-0.06823398918, -0.06121030077]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, -1, -1, 2, ], Freq List: [5, 1, 4], Speed: 2.612276793
+[PDQN] Decision making time: 1529.167801 ms
+Setting freq little: 1267200
+Setting freq big: 652800
+Setting freq gpu to closest neighbor: 624750
+Setting freq gpu: 624750
+Setting speed: 2.612276793
+[PDQN] Cycle time: 1539.90376 ms
+
+iteration 115
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 11.90016 ms
+[PDQN] Appl info time: 12.104898 ms
+1. Next state vector: 0.2970080972 0.6752499938 0.4693948328 0.4545454681 0.09090909362 0.3076923192 0.5 -1 -1 -1 1 1.039999962 0 0 0 1.039999962 1 0 0 0 1
+[Train] Critic Loss: 1594265600, Actor Loss: -304016.25
+2. State vector: 0.2970080972 0.6657500267 0.4693948328 0.4545454681 0.09090909362 0.3076923192 0.5 -1 -1 -1 1 1.039999962 0 0 0 1.039999962 1 0 0 0 1
+Reward calculation: mech_power=6.082428932, comp_power=5.40199995, speed=2.612276793, epd=4.396328926, sys_crit=1, reward=2.137312412
+3. Reward: 2.137312412
+[PDQN] Inference completed in 0.000416 ms | action=208 | params=[-0.06823398918, -0.06121030077]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, -1, -1, 2, ], Freq List: [5, 1, 4], Speed: 2.612276793
+[PDQN] Decision making time: 1521.214013 ms
+Setting freq little: 1267200
+Setting freq big: 652800
+Setting freq gpu to closest neighbor: 624750
+Setting freq gpu: 624750
+Setting speed: 2.612276793
+[PDQN] Cycle time: 1553.142783 ms
+
+iteration 116
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 11.863936 ms
+[PDQN] Appl info time: 12.067746 ms
+1. Next state vector: 0.2970080972 0.6612499952 0.4693948328 0.4545454681 0.09090909362 0.3076923192 0.5 -1 -1 -1 1 1.080000043 0 0 0 1.080000043 1 0 0 0 1
+[Train] Critic Loss: 1029209920, Actor Loss: -307150.6875
+2. State vector: 0.2970080972 0.6752499938 0.4693948328 0.4545454681 0.09090909362 0.3076923192 0.5 -1 -1 -1 1 1.039999962 0 0 0 1.039999962 1 0 0 0 1
+Reward calculation: mech_power=6.082428932, comp_power=5.289999962, speed=2.612276793, epd=4.35345459, sys_crit=1, reward=2.148513317
+3. Reward: 2.148513317
+[PDQN] Inference completed in 9.6e-05 ms | action=208 | params=[-0.06823398918, -0.06121030077]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, -1, -1, 2, ], Freq List: [5, 1, 4], Speed: 2.612276793
+[PDQN] Decision making time: 1552.009114 ms
+Setting freq little: 1267200
+Setting freq big: 652800
+Setting freq gpu to closest neighbor: 624750
+Setting freq gpu: 624750
+Setting speed: 2.612276793
+[PDQN] Cycle time: 1573.17399 ms
+
+iteration 117
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 11.945153 ms
+[PDQN] Appl info time: 12.152355 ms
+1. Next state vector: 0.2970080972 0.6704999804 0.4693948328 0.4545454681 0.09090909362 0.3076923192 0.5 -1 -1 -1 1 1.080000043 0 0 0 1.080000043 1 0 0 0 1
+[Train] Critic Loss: 543699840, Actor Loss: -310694.5938
+2. State vector: 0.2970080972 0.6612499952 0.4693948328 0.4545454681 0.09090909362 0.3076923192 0.5 -1 -1 -1 1 1.080000043 0 0 0 1.080000043 1 0 0 0 1
+Reward calculation: mech_power=6.082428932, comp_power=5.363999844, speed=2.612276793, epd=4.381782532, sys_crit=1, reward=2.141088009
+3. Reward: 2.141088009
+[PDQN] Inference completed in 0.000192 ms | action=208 | params=[-0.06823398918, -0.06121030077]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, -1, -1, 2, ], Freq List: [5, 1, 4], Speed: 2.612276793
+[PDQN] Decision making time: 1630.816221 ms
+Setting freq little: 1267200
+Setting freq big: 652800
+Setting freq gpu to closest neighbor: 624750
+Setting freq gpu: 624750
+Setting speed: 2.612276793
+[PDQN] Cycle time: 1657.583734 ms
+
+iteration 118
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 39.774467 ms
+[PDQN] Appl info time: 39.983588 ms
+1. Next state vector: 0.2970080972 0.7133749723 0.4693948328 0.4545454681 0.09090909362 0.3076923192 0.5 -1 -1 -1 1 1 0 0 0 1 1 0 0 0 1
+[Train] Critic Loss: 1385966592, Actor Loss: -302624.0312
+2. State vector: 0.2970080972 0.6704999804 0.4693948328 0.4545454681 0.09090909362 0.3076923192 0.5 -1 -1 -1 1 1.080000043 0 0 0 1.080000043 1 0 0 0 1
+Reward calculation: mech_power=6.082428932, comp_power=5.706999779, speed=2.612276793, epd=4.513085365, sys_crit=1, reward=2.107889652
+3. Reward: 2.107889652
+[PDQN] Inference completed in 0.000128 ms | action=208 | params=[-0.06823398918, -0.06121030077]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, -1, -1, 2, ], Freq List: [5, 1, 4], Speed: 2.612276793
+[PDQN] Decision making time: 1870.630619 ms
+Setting freq little: 1267200
+Setting freq big: 652800
+Setting freq gpu to closest neighbor: 624750
+Setting freq gpu: 624750
+Setting speed: 2.612276793
+[PDQN] Cycle time: 1888.150985 ms
+
+iteration 119
+ | Inference Enabled: Yes
+removing 32315
+[PDQN] Sys info time: 211.14984 ms
+[PDQN] Appl info time: 211.344689 ms
+1. Next state vector: 0.2970080972 0.6847500205 0.4693948328 0.4545454681 0.09090909362 0.3076923192 0.5 -1 -1 -1 -1 1.080000043 0 0 0 0 1 0 0 0 0
+[Train] Critic Loss: 1015394048, Actor Loss: -318480.9688
+2. State vector: 0.2970080972 0.7133749723 0.4693948328 0.4545454681 0.09090909362 0.3076923192 0.5 -1 -1 -1 1 1 0 0 0 1 1 0 0 0 1
+Reward calculation: mech_power=6.082428932, comp_power=5.478000164, speed=2.612276793, epd=4.425422668, sys_crit=1, reward=2.129835606
+3. Reward: 2.129835606
+[Inference Exploitation] action=208, params=[-0.06002074108, -0.09773822874]
+[PDQN] Inference completed in 1.263338 ms | action=208 | params=[-0.06002074108, -0.09773822874]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, -1, -1, -1, ], Freq List: [0, 1, 0], Speed: 2.53008914
+[PDQN] Decision making time: 1651.077035 ms
+[PDQN] Applying mapping for PID 21208, Name: edge_image
+[PDQN] Read shared memory for PID 21208
+[PDQN] Updated shared memory for PID 21208 to mapping BIG
+[PDQN] Updated CPU affinity for PID 21208
+[PDQN] Applied mapping to PID 21208 (edge_image → BIG)
+Setting freq little: 499200
+Setting freq big: 652800
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.53008914
+[PDQN] Cycle time: 1881.310199 ms
+
+iteration 120
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 17.475821 ms
+[PDQN] Appl info time: 17.851376 ms
+1. Next state vector: 0.2837617695 0.6847500205 0.4511309266 0 0.09090909362 0 0.5 -1 -1 -1 -1 1.039999962 0 0 0 0 1 0 0 0 0
+[Train] Critic Loss: 1141680128, Actor Loss: -310299.7812
+2. State vector: 0.2970080972 0.6847500205 0.4693948328 0.4545454681 0.09090909362 0.3076923192 0.5 -1 -1 -1 -1 1.080000043 0 0 0 0 1 0 0 0 0
+Reward calculation: mech_power=5.811157227, comp_power=5.478000164, speed=2.53008914, epd=4.461960316, sys_crit=1, reward=2.120583534
+3. Reward: 2.120583534
+[PDQN] Inference completed in 0.00032 ms | action=208 | params=[-0.06002074108, -0.09773822874]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, -1, -1, -1, ], Freq List: [0, 1, 0], Speed: 2.53008914
+[PDQN] Decision making time: 1617.772066 ms
+Setting freq little: 499200
+Setting freq big: 652800
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.53008914
+[PDQN] Cycle time: 1694.94034 ms
+
+iteration 121
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 29.151532 ms
+[PDQN] Appl info time: 29.518255 ms
+1. Next state vector: 0.2837617695 0.4996249974 0.4511309266 0 0.09090909362 0 0.5 -1 -1 -1 -1 0.8799999952 0 0 0 0 1 0 0 0 0
+[Train] Critic Loss: 1225286016, Actor Loss: -308290.8125
+2. State vector: 0.2837617695 0.6847500205 0.4511309266 0 0.09090909362 0 0.5 -1 -1 -1 -1 1.039999962 0 0 0 0 1 0 0 0 0
+Reward calculation: mech_power=5.811157227, comp_power=3.996999979, speed=2.53008914, epd=3.876605272, sys_crit=0.8799999952, reward=2.169788361
+3. Reward: 2.169788361
+[PDQN] Inference completed in 0.00032 ms | action=208 | params=[-0.06002074108, -0.09773822874]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, -1, -1, -1, ], Freq List: [0, 1, 0], Speed: 2.53008914
+[PDQN] Decision making time: 1634.816562 ms
+Setting freq little: 499200
+Setting freq big: 652800
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.53008914
+[PDQN] Cycle time: 1741.447283 ms
+
+iteration 122
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 32.570377 ms
+[PDQN] Appl info time: 33.185134 ms
+1. Next state vector: 0.2837617695 0.4948750138 0.4511309266 0 0.09090909362 0 0.5 -1 -1 -1 -1 0.7200000286 0 0 0 0 1 0 0 0 0
+[Train] Critic Loss: 1032759488, Actor Loss: -333461.0625
+2. State vector: 0.2837617695 0.4996249974 0.4511309266 0 0.09090909362 0 0.5 -1 -1 -1 -1 0.8799999952 0 0 0 0 1 0 0 0 0
+Reward calculation: mech_power=5.811157227, comp_power=3.959000111, speed=2.53008914, epd=3.861586094, sys_crit=0.7200000286, reward=2.01480484
+3. Reward: 2.01480484
+[PDQN] Inference completed in 0.000416 ms | action=208 | params=[-0.06002074108, -0.09773822874]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, -1, -1, -1, ], Freq List: [0, 1, 0], Speed: 2.53008914
+[PDQN] Decision making time: 1715.758377 ms
+Setting freq little: 499200
+Setting freq big: 652800
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.53008914
+[PDQN] Cycle time: 1769.278715 ms
+
+iteration 123
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 31.260733 ms
+[PDQN] Appl info time: 33.587472 ms
+1. Next state vector: 0.2837617695 0.4948750138 0.4511309266 0 0.09090909362 0 0.5 -1 -1 -1 -1 0.8799999952 0 0 0 0 1 0 0 0 0
+[Train] Critic Loss: 1049110080, Actor Loss: -293462.8125
+2. State vector: 0.2837617695 0.4948750138 0.4511309266 0 0.09090909362 0 0.5 -1 -1 -1 -1 0.7200000286 0 0 0 0 1 0 0 0 0
+Reward calculation: mech_power=5.811157227, comp_power=3.959000111, speed=2.53008914, epd=3.861586094, sys_crit=0.8799999952, reward=2.174804688
+3. Reward: 2.174804688
+[PDQN] Inference completed in 0.000288 ms | action=208 | params=[-0.06002074108, -0.09773822874]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, -1, -1, -1, ], Freq List: [0, 1, 0], Speed: 2.53008914
+[PDQN] Decision making time: 1688.29979 ms
+Setting freq little: 499200
+Setting freq big: 652800
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.53008914
+[PDQN] Cycle time: 1728.497172 ms
+
+iteration 124
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 39.077565 ms
+[PDQN] Appl info time: 39.477441 ms
+1. Next state vector: 0.2837617695 0.4948750138 0.4511309266 0 0.09090909362 0 0.5 -1 -1 -1 -1 0.8799999952 0 0 0 0 1 0 0 0 0
+[Train] Critic Loss: 708239680, Actor Loss: -290435.75
+2. State vector: 0.2837617695 0.4948750138 0.4511309266 0 0.09090909362 0 0.5 -1 -1 -1 -1 0.8799999952 0 0 0 0 1 0 0 0 0
+Reward calculation: mech_power=5.811157227, comp_power=3.959000111, speed=2.53008914, epd=3.861586094, sys_crit=0.8799999952, reward=2.174804688
+3. Reward: 2.174804688
+[PDQN] Inference completed in 0.000256 ms | action=208 | params=[-0.06002074108, -0.09773822874]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, -1, -1, -1, ], Freq List: [0, 1, 0], Speed: 2.53008914
+[PDQN] Decision making time: 1817.245035 ms
+Setting freq little: 499200
+Setting freq big: 652800
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.53008914
+[PDQN] Cycle time: 1875.858503 ms
+
+iteration 125
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 20.026595 ms
+[PDQN] Appl info time: 20.395206 ms
+1. Next state vector: 0.2837617695 0.5044999719 0.4511309266 0 0.09090909362 0 0.5 -1 -1 -1 -1 0.8799999952 0 0 0 0 1 0 0 0 0
+[Train] Critic Loss: 405857216, Actor Loss: -328549.5625
+2. State vector: 0.2837617695 0.4948750138 0.4511309266 0 0.09090909362 0 0.5 -1 -1 -1 -1 0.8799999952 0 0 0 0 1 0 0 0 0
+Reward calculation: mech_power=5.811157227, comp_power=4.035999775, speed=2.53008914, epd=3.89201951, sys_crit=0.8799999952, reward=2.164680004
+3. Reward: 2.164680004
+[PDQN] Inference completed in 0.000288 ms | action=208 | params=[-0.06002074108, -0.09773822874]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, -1, -1, -1, ], Freq List: [0, 1, 0], Speed: 2.53008914
+[PDQN] Decision making time: 1600.062635 ms
+Setting freq little: 499200
+Setting freq big: 652800
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.53008914
+[PDQN] Cycle time: 1668.557528 ms
+
+iteration 126
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 18.440662 ms
+[PDQN] Appl info time: 18.807865 ms
+1. Next state vector: 0.2837617695 0.5139999986 0.4511309266 0 0.09090909362 0 0.5 -1 -1 -1 -1 0.8399999738 0 0 0 0 1 0 0 0 0
+[Train] Critic Loss: 720232064, Actor Loss: -319334.7188
+2. State vector: 0.2837617695 0.5044999719 0.4511309266 0 0.09090909362 0 0.5 -1 -1 -1 -1 0.8799999952 0 0 0 0 1 0 0 0 0
+Reward calculation: mech_power=5.811157227, comp_power=4.111999989, speed=2.53008914, epd=3.922058105, sys_crit=0.8399999738, reward=2.114840746
+3. Reward: 2.114840746
+[PDQN] Inference completed in 0.000576 ms | action=208 | params=[-0.06002074108, -0.09773822874]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, -1, -1, -1, ], Freq List: [0, 1, 0], Speed: 2.53008914
+[PDQN] Decision making time: 1768.841229 ms
+Setting freq little: 499200
+Setting freq big: 652800
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.53008914
+[PDQN] Cycle time: 1824.795636 ms
+
+iteration 127
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 30.804123 ms
+[PDQN] Appl info time: 31.408032 ms
+1. Next state vector: 0.2837617695 0.4948750138 0.4511309266 0 0.09090909362 0 0.5 -1 -1 -1 -1 0.8799999952 0 0 0 0 1 0 0 0 0
+[Train] Critic Loss: 755119552, Actor Loss: -295884.25
+2. State vector: 0.2837617695 0.5139999986 0.4511309266 0 0.09090909362 0 0.5 -1 -1 -1 -1 0.8399999738 0 0 0 0 1 0 0 0 0
+Reward calculation: mech_power=5.811157227, comp_power=3.959000111, speed=2.53008914, epd=3.861586094, sys_crit=0.8799999952, reward=2.174804688
+3. Reward: 2.174804688
+[PDQN] Inference completed in 0.00032 ms | action=208 | params=[-0.06002074108, -0.09773822874]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, -1, -1, -1, ], Freq List: [0, 1, 0], Speed: 2.53008914
+[PDQN] Decision making time: 1745.938648 ms
+Setting freq little: 499200
+Setting freq big: 652800
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.53008914
+[PDQN] Cycle time: 1826.799914 ms
+
+iteration 128
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 629.202654 ms
+[PDQN] Appl info time: 629.721955 ms
+1. Next state vector: 0.2837617695 0.5329999924 0.4511309266 0 0.09090909362 0 0.5 -1 -1 -1 -1 0.7200000286 0 0 0 0 1 0 0 0 0
+[Train] Critic Loss: 1007942080, Actor Loss: -304194.5625
+2. State vector: 0.2837617695 0.4948750138 0.4511309266 0 0.09090909362 0 0.5 -1 -1 -1 -1 0.8799999952 0 0 0 0 1 0 0 0 0
+Reward calculation: mech_power=5.811157227, comp_power=4.263999939, speed=2.53008914, epd=3.982135296, sys_crit=0, reward=1.255607724
+3. Reward: 1.255607724
+[Inference Exploitation] action=208, params=[-0.06415972859, -0.06774574518]
+[PDQN] Inference completed in 11.104538 ms | action=208 | params=[-0.06415972859, -0.06774574518]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, -1, ], Freq List: [5, 1, 7], Speed: 2.597572088
+[PDQN] Decision making time: 2689.739742 ms
+[PDQN] Applying mapping for PID 21208, Name: edge_image
+[PDQN] Read shared memory for PID 21208
+[PDQN] Updated shared memory for PID 21208 to mapping BIG
+[PDQN] Updated CPU affinity for PID 21208
+[PDQN] Applied mapping to PID 21208 (edge_image → BIG)
+[PDQN] Applying mapping for PID 3924, Name: distance_surface
+[PDQN] Read shared memory for PID 3924
+[PDQN] Updated shared memory for PID 3924 to mapping GPU
+[PDQN] Updated CPU affinity for PID 3924
+[PDQN] Applied mapping to PID 3924 (distance_surface → GPU)
+Setting freq little: 1267200
+Setting freq big: 652800
+Setting freq gpu: 854250
+Setting speed: 2.597572088
+[PDQN] Cycle time: 3231.684089 ms
+
+iteration 129
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 12.983497 ms
+[PDQN] Appl info time: 13.180587 ms
+1. Next state vector: 0.2945972681 0.5235000253 0.4661271274 0.4545454681 0.09090909362 0.538461566 0.5 -1 1 -1 -1 0.8799999952 0 0 0 0 1 0 1 0 0
+[Train] Critic Loss: 1571475456, Actor Loss: -304741.9062
+2. State vector: 0.2837617695 0.5329999924 0.4511309266 0 0.09090909362 0 0.5 -1 -1 -1 -1 0.7200000286 0 0 0 0 1 0 0 0 0
+Reward calculation: mech_power=6.033057213, comp_power=4.188000202, speed=2.597572088, epd=3.934850454, sys_crit=0, reward=1.270696282
+3. Reward: 1.270696282
+[PDQN] Inference completed in 0.000128 ms | action=208 | params=[-0.06415972859, -0.06774574518]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, -1, ], Freq List: [5, 1, 7], Speed: 2.597572088
+[PDQN] Decision making time: 1437.444919 ms
+Setting freq little: 1267200
+Setting freq big: 652800
+Setting freq gpu: 854250
+Setting speed: 2.597572088
+[PDQN] Cycle time: 1455.25828 ms
+
+iteration 130
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 20.135396 ms
+[PDQN] Appl info time: 20.335173 ms
+1. Next state vector: 0.2945972681 0.7513750196 0.4661271274 0.4545454681 0.09090909362 0.538461566 0.5 -1 1 -1 -1 1 0 0 0 0 1 0 1 0 0
+[Train] Critic Loss: 799366656, Actor Loss: -322040.9375
+2. State vector: 0.2945972681 0.5235000253 0.4661271274 0.4545454681 0.09090909362 0.538461566 0.5 -1 1 -1 -1 0.8799999952 0 0 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.033057213, comp_power=6.011000156, speed=2.597572088, epd=4.636659622, sys_crit=0, reward=1.078362584
+3. Reward: 1.078362584
+[PDQN] Inference completed in 9.6e-05 ms | action=208 | params=[-0.06415972859, -0.06774574518]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, -1, ], Freq List: [5, 1, 7], Speed: 2.597572088
+[PDQN] Decision making time: 1706.035782 ms
+Setting freq little: 1267200
+Setting freq big: 652800
+Setting freq gpu: 854250
+Setting speed: 2.597572088
+[PDQN] Cycle time: 1728.116186 ms
+
+iteration 131
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 11.963713 ms
+[PDQN] Appl info time: 12.189059 ms
+1. Next state vector: 0.2945972681 0.722874999 0.4661271274 0.4545454681 0.09090909362 0.538461566 0.5 -1 1 -1 -1 1.039999962 0 0.1745290756 0 0 1 0 1 0 0
+[Train] Critic Loss: 1401190144, Actor Loss: -309306.75
+2. State vector: 0.2945972681 0.7513750196 0.4661271274 0.4545454681 0.09090909362 0.538461566 0.5 -1 1 -1 -1 1 0 0 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.033057213, comp_power=5.782999992, speed=2.597572088, epd=4.548885345, sys_crit=0.4177667797, reward=1.516937137
+3. Reward: 1.516937137
+[PDQN] Inference completed in 0.000128 ms | action=208 | params=[-0.06415972859, -0.06774574518]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, -1, ], Freq List: [5, 1, 7], Speed: 2.597572088
+[PDQN] Decision making time: 1593.745816 ms
+Setting freq little: 1267200
+Setting freq big: 652800
+Setting freq gpu: 854250
+Setting speed: 2.597572088
+[PDQN] Cycle time: 1622.760101 ms
+
+iteration 132
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 20.971563 ms
+[PDQN] Appl info time: 21.161708 ms
+1. Next state vector: 0.2945972681 0.7133749723 0.4661271274 0.4545454681 0.09090909362 0.538461566 0.5 -1 1 -1 -1 1.039999962 0 1.039999962 0 0 1 0 1 0 0
+[Train] Critic Loss: 962494976, Actor Loss: -297975.125
+2. State vector: 0.2945972681 0.722874999 0.4661271274 0.4545454681 0.09090909362 0.538461566 0.5 -1 1 -1 -1 1.039999962 0 0.1745290756 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.033057213, comp_power=5.706999779, speed=2.597572088, epd=4.519627094, sys_crit=1, reward=2.106286049
+3. Reward: 2.106286049
+[PDQN] Inference completed in 0.000128 ms | action=208 | params=[-0.06415972859, -0.06774574518]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, -1, ], Freq List: [5, 1, 7], Speed: 2.597572088
+[PDQN] Decision making time: 1670.113643 ms
+Setting freq little: 1267200
+Setting freq big: 652800
+Setting freq gpu: 854250
+Setting speed: 2.597572088
+[PDQN] Cycle time: 1704.230977 ms
+
+iteration 133
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 247.461153 ms
+[PDQN] Appl info time: 247.762116 ms
+1. Next state vector: 0.2945972681 0.7086250186 0.4661271274 0.4545454681 0.09090909362 0.538461566 0.5 -1 1 -1 -1 1.039999962 0 0.9599999785 0 0 1 0 1 0 0
+[Train] Critic Loss: 1530434048, Actor Loss: -295695.375
+2. State vector: 0.2945972681 0.7133749723 0.4661271274 0.4545454681 0.09090909362 0.538461566 0.5 -1 1 -1 -1 1.039999962 0 1.039999962 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.033057213, comp_power=5.669000149, speed=2.597572088, epd=4.50499773, sys_crit=0.6405086517, reward=1.750387073
+3. Reward: 1.750387073
+[Inference Exploitation] action=208, params=[-0.09059521556, -0.06039603055]
+[PDQN] Inference completed in 1.252778 ms | action=208 | params=[-0.09059521556, -0.06039603055]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, 2, ], Freq List: [4, 10, 12], Speed: 2.614109039
+[PDQN] Decision making time: 1637.715688 ms
+[PDQN] Applying mapping for PID 21208, Name: edge_image
+[PDQN] Read shared memory for PID 21208
+[PDQN] Updated shared memory for PID 21208 to mapping BIG
+[PDQN] Updated CPU affinity for PID 21208
+[PDQN] Applied mapping to PID 21208 (edge_image → BIG)
+[PDQN] Applying mapping for PID 3924, Name: distance_surface
+[PDQN] Read shared memory for PID 3924
+[PDQN] Updated shared memory for PID 3924 to mapping GPU
+[PDQN] Updated CPU affinity for PID 3924
+[PDQN] Applied mapping to PID 3924 (distance_surface → GPU)
+[PDQN] Applying mapping for PID 5283, Name: tracker
+[PDQN] Read shared memory for PID 5283
+[PDQN] Updated shared memory for PID 5283 to mapping GPU
+[PDQN] Updated CPU affinity for PID 5283
+[PDQN] Applied mapping to PID 5283 (tracker → GPU)
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1300500
+Setting speed: 2.614109039
+[PDQN] Cycle time: 1877.633068 ms
+
+iteration 134
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 23.508128 ms
+[PDQN] Appl info time: 23.888451 ms
+1. Next state vector: 0.2973097563 0.6847500205 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 1 1.080000043 0 1.080000043 0 1.039999962 1 0 1 0 1
+[Train] Critic Loss: 1430874752, Actor Loss: -306318.7812
+2. State vector: 0.2945972681 0.7086250186 0.4661271274 0.4545454681 0.09090909362 0.538461566 0.5 -1 1 -1 -1 1.039999962 0 0.9599999785 0 0 1 0 1 0 0
+Reward calculation: mech_power=6.088606358, comp_power=5.478000164, speed=2.614109039, epd=4.424684048, sys_crit=1, reward=2.130024195
+3. Reward: 2.130024195
+[PDQN] Inference completed in 0.00016 ms | action=208 | params=[-0.09059521556, -0.06039603055]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, 2, ], Freq List: [4, 10, 12], Speed: 2.614109039
+[PDQN] Decision making time: 1574.704587 ms
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1300500
+Setting speed: 2.614109039
+[PDQN] Cycle time: 1591.873335 ms
+
+iteration 135
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 13.951314 ms
+[PDQN] Appl info time: 14.290997 ms
+1. Next state vector: 0.2973097563 0.722874999 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 1 1.039999962 0 1.039999962 0 1.039999962 1 0 1 0 1
+[Train] Critic Loss: 229982928, Actor Loss: -302878.8438
+2. State vector: 0.2973097563 0.6847500205 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 1 1.080000043 0 1.080000043 0 1.039999962 1 0 1 0 1
+Reward calculation: mech_power=6.088606358, comp_power=5.782999992, speed=2.614109039, epd=4.541358471, sys_crit=1, reward=2.100992203
+3. Reward: 2.100992203
+[PDQN] Inference completed in 0.000128 ms | action=208 | params=[-0.09059521556, -0.06039603055]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, 2, ], Freq List: [4, 10, 12], Speed: 2.614109039
+[PDQN] Decision making time: 1582.975731 ms
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1300500
+Setting speed: 2.614109039
+[PDQN] Cycle time: 1606.891094 ms
+
+iteration 136
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 30.981309 ms
+[PDQN] Appl info time: 31.254111 ms
+1. Next state vector: 0.2973097563 0.7181249857 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 1 1.039999962 0 1.039999962 0 1.039999962 1 0 1 0 1
+[Train] Critic Loss: 1474358784, Actor Loss: -314422.5625
+2. State vector: 0.2973097563 0.722874999 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 1 1.039999962 0 1.039999962 0 1.039999962 1 0 1 0 1
+Reward calculation: mech_power=6.088606358, comp_power=5.744999886, speed=2.614109039, epd=4.52682209, sys_crit=1, reward=2.104527473
+3. Reward: 2.104527473
+[PDQN] Inference completed in 0.000128 ms | action=208 | params=[-0.09059521556, -0.06039603055]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, 2, ], Freq List: [4, 10, 12], Speed: 2.614109039
+[PDQN] Decision making time: 1507.65832 ms
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1300500
+Setting speed: 2.614109039
+[PDQN] Cycle time: 1525.695619 ms
+
+iteration 137
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 28.868844 ms
+[PDQN] Appl info time: 29.144526 ms
+1. Next state vector: 0.2973097563 0.722874999 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 1 1.039999962 0 1.039999962 0 1.039999962 1 0 1 0 1
+[Train] Critic Loss: 2061431296, Actor Loss: -316658.4375
+2. State vector: 0.2973097563 0.7181249857 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 1 1.039999962 0 1.039999962 0 1.039999962 1 0 1 0 1
+Reward calculation: mech_power=6.088606358, comp_power=5.782999992, speed=2.614109039, epd=4.541358471, sys_crit=1, reward=2.100992203
+3. Reward: 2.100992203
+[PDQN] Inference completed in 0.000128 ms | action=208 | params=[-0.09059521556, -0.06039603055]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, 2, ], Freq List: [4, 10, 12], Speed: 2.614109039
+[PDQN] Decision making time: 1848.90271 ms
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1300500
+Setting speed: 2.614109039
+[PDQN] Cycle time: 1861.488957 ms
+
+iteration 138
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 13.253837 ms
+[PDQN] Appl info time: 13.507311 ms
+1. Next state vector: 0.2973097563 0.7323750257 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 1 1.080000043 0 1.039999962 0 1.080000043 1 0 1 0 1
+[Train] Critic Loss: 1482635136, Actor Loss: -329579.7812
+2. State vector: 0.2973097563 0.722874999 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 1 1.039999962 0 1.039999962 0 1.039999962 1 0 1 0 1
+Reward calculation: mech_power=6.088606358, comp_power=5.859000206, speed=2.614109039, epd=4.570431709, sys_crit=1, reward=2.093988419
+3. Reward: 2.093988419
+[PDQN] Inference completed in 0.000128 ms | action=208 | params=[-0.09059521556, -0.06039603055]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, 2, ], Freq List: [4, 10, 12], Speed: 2.614109039
+[PDQN] Decision making time: 1655.328911 ms
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1300500
+Setting speed: 2.614109039
+[PDQN] Cycle time: 1685.157635 ms
+
+iteration 139
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 23.54896 ms
+[PDQN] Appl info time: 23.822402 ms
+1. Next state vector: 0.2973097563 0.7418749928 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 1 1.039999962 0 1.039999962 0 1.039999962 1 0 1 0 1
+[Train] Critic Loss: 1056466624, Actor Loss: -302185.4688
+2. State vector: 0.2973097563 0.7323750257 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 1 1.080000043 0 1.039999962 0 1.080000043 1 0 1 0 1
+Reward calculation: mech_power=6.088606358, comp_power=5.934999943, speed=2.614109039, epd=4.599504471, sys_crit=1, reward=2.087073803
+3. Reward: 2.087073803
+[PDQN] Inference completed in 0.00016 ms | action=208 | params=[-0.09059521556, -0.06039603055]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, 2, ], Freq List: [4, 10, 12], Speed: 2.614109039
+[PDQN] Decision making time: 1518.151026 ms
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1300500
+Setting speed: 2.614109039
+[PDQN] Cycle time: 1550.245464 ms
+
+iteration 140
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 25.752403 ms
+[PDQN] Appl info time: 26.026677 ms
+1. Next state vector: 0.2973097563 0.7466250062 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 1 1.039999962 0 1.080000043 0 1.039999962 1 0 1 0 1
+[Train] Critic Loss: 2236329472, Actor Loss: -292318.4375
+2. State vector: 0.2973097563 0.7418749928 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 1 1.039999962 0 1.039999962 0 1.039999962 1 0 1 0 1
+Reward calculation: mech_power=6.088606358, comp_power=5.97300005, speed=2.614109039, epd=4.614040852, sys_crit=1, reward=2.083648682
+3. Reward: 2.083648682
+[PDQN] Inference completed in 0.000128 ms | action=208 | params=[-0.09059521556, -0.06039603055]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, 2, ], Freq List: [4, 10, 12], Speed: 2.614109039
+[PDQN] Decision making time: 1606.396968 ms
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1300500
+Setting speed: 2.614109039
+[PDQN] Cycle time: 1620.412762 ms
+
+iteration 141
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 21.174605 ms
+[PDQN] Appl info time: 21.436015 ms
+1. Next state vector: 0.2973097563 0.7466250062 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 1 1.080000043 0 1.080000043 0 1.080000043 1 0 1 0 1
+[Train] Critic Loss: 1341776128, Actor Loss: -346343.4688
+2. State vector: 0.2973097563 0.7466250062 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 1 1.039999962 0 1.080000043 0 1.039999962 1 0 1 0 1
+Reward calculation: mech_power=6.088606358, comp_power=5.97300005, speed=2.614109039, epd=4.614040852, sys_crit=1, reward=2.083648682
+3. Reward: 2.083648682
+[PDQN] Inference completed in 0.00016 ms | action=208 | params=[-0.09059521556, -0.06039603055]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, 2, ], Freq List: [4, 10, 12], Speed: 2.614109039
+[PDQN] Decision making time: 1719.243654 ms
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1300500
+Setting speed: 2.614109039
+[PDQN] Cycle time: 1742.141153 ms
+
+iteration 142
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 19.173725 ms
+[PDQN] Appl info time: 19.465279 ms
+1. Next state vector: 0.2973097563 0.7323750257 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 1 1.039999962 0 1.039999962 0 1.039999962 1 0 1 0 1
+[Train] Critic Loss: 1098962304, Actor Loss: -315422
+2. State vector: 0.2973097563 0.7466250062 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 1 1.080000043 0 1.080000043 0 1.080000043 1 0 1 0 1
+Reward calculation: mech_power=6.088606358, comp_power=5.859000206, speed=2.614109039, epd=4.570431709, sys_crit=1, reward=2.093988419
+3. Reward: 2.093988419
+[PDQN] Inference completed in 0.000128 ms | action=208 | params=[-0.09059521556, -0.06039603055]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, 2, ], Freq List: [4, 10, 12], Speed: 2.614109039
+[PDQN] Decision making time: 1529.285465 ms
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1300500
+Setting speed: 2.614109039
+[PDQN] Cycle time: 1564.382808 ms
+
+iteration 143
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 26.464024 ms
+[PDQN] Appl info time: 26.71897 ms
+1. Next state vector: 0.2973097563 0.7276250124 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 1 1.080000043 0 1.039999962 0 1.080000043 1 0 1 0 1
+[Train] Critic Loss: 1417821568, Actor Loss: -307368.5312
+2. State vector: 0.2973097563 0.7323750257 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 1 1.039999962 0 1.039999962 0 1.039999962 1 0 1 0 1
+Reward calculation: mech_power=6.088606358, comp_power=5.821000099, speed=2.614109039, epd=4.555895329, sys_crit=1, reward=2.097479105
+3. Reward: 2.097479105
+[PDQN] Inference completed in 0.000128 ms | action=208 | params=[-0.09059521556, -0.06039603055]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, 2, ], Freq List: [4, 10, 12], Speed: 2.614109039
+[PDQN] Decision making time: 1657.887577 ms
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1300500
+Setting speed: 2.614109039
+[PDQN] Cycle time: 1684.949751 ms
+
+iteration 144
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 29.579154 ms
+[PDQN] Appl info time: 29.84562 ms
+1. Next state vector: 0.2973097563 0.7323750257 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 1 1.039999962 0 1.039999962 0 1.039999962 1 0 1 0 1
+[Train] Critic Loss: 1440132608, Actor Loss: -361743.125
+2. State vector: 0.2973097563 0.7276250124 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 1 1.080000043 0 1.039999962 0 1.080000043 1 0 1 0 1
+Reward calculation: mech_power=6.088606358, comp_power=5.859000206, speed=2.614109039, epd=4.570431709, sys_crit=1, reward=2.093988419
+3. Reward: 2.093988419
+[PDQN] Inference completed in 0.000416 ms | action=208 | params=[-0.09059521556, -0.06039603055]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, 2, ], Freq List: [4, 10, 12], Speed: 2.614109039
+[PDQN] Decision making time: 1700.137144 ms
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1300500
+Setting speed: 2.614109039
+[PDQN] Cycle time: 1731.463928 ms
+
+iteration 145
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 12.566855 ms
+[PDQN] Appl info time: 12.836265 ms
+1. Next state vector: 0.2973097563 0.7181249857 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 1 1.039999962 0 1.039999962 0 1.039999962 1 0 1 0 1
+[Train] Critic Loss: 1480756864, Actor Loss: -341328.625
+2. State vector: 0.2973097563 0.7323750257 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 1 1.039999962 0 1.039999962 0 1.039999962 1 0 1 0 1
+Reward calculation: mech_power=6.088606358, comp_power=5.744999886, speed=2.614109039, epd=4.52682209, sys_crit=1, reward=2.104527473
+3. Reward: 2.104527473
+[PDQN] Inference completed in 0.000128 ms | action=208 | params=[-0.09059521556, -0.06039603055]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, 2, ], Freq List: [4, 10, 12], Speed: 2.614109039
+[PDQN] Decision making time: 1685.930088 ms
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1300500
+Setting speed: 2.614109039
+[PDQN] Cycle time: 1709.53713 ms
+
+iteration 146
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 20.900427 ms
+[PDQN] Appl info time: 21.154381 ms
+1. Next state vector: 0.2973097563 0.7323750257 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 1 1.039999962 0 1.039999962 0 1.039999962 1 0 1 0 1
+[Train] Critic Loss: 524232512, Actor Loss: -336590.5312
+2. State vector: 0.2973097563 0.7181249857 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 1 1.039999962 0 1.039999962 0 1.039999962 1 0 1 0 1
+Reward calculation: mech_power=6.088606358, comp_power=5.859000206, speed=2.614109039, epd=4.570431709, sys_crit=1, reward=2.093988419
+3. Reward: 2.093988419
+[PDQN] Inference completed in 0.000128 ms | action=208 | params=[-0.09059521556, -0.06039603055]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, 2, ], Freq List: [4, 10, 12], Speed: 2.614109039
+[PDQN] Decision making time: 1567.000095 ms
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1300500
+Setting speed: 2.614109039
+[PDQN] Cycle time: 1599.578697 ms
+
+iteration 147
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 23.040828 ms
+[PDQN] Appl info time: 23.310975 ms
+1. Next state vector: 0.2973097563 0.793874979 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 1 1 0 1 0 1 1 0 1 0 1
+[Train] Critic Loss: 1770709760, Actor Loss: -348646.3438
+2. State vector: 0.2973097563 0.7323750257 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 1 1.039999962 0 1.039999962 0 1.039999962 1 0 1 0 1
+Reward calculation: mech_power=6.088606358, comp_power=6.350999832, speed=2.614109039, epd=4.758640766, sys_crit=1, reward=2.050720215
+3. Reward: 2.050720215
+[PDQN] Inference completed in 0.00016 ms | action=208 | params=[-0.09059521556, -0.06039603055]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, 2, ], Freq List: [4, 10, 12], Speed: 2.614109039
+[PDQN] Decision making time: 2166.984502 ms
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1300500
+Setting speed: 2.614109039
+[PDQN] Cycle time: 2181.732143 ms
+
+iteration 148
+ | Inference Enabled: Yes
+removing 5283
+[PDQN] Sys info time: 268.436407 ms
+[PDQN] Appl info time: 269.771266 ms
+1. Next state vector: 0.2973097563 0.7466250062 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 -1 1.080000043 0 1.039999962 0 0 1 0 1 0 0
+[Train] Critic Loss: 2405486080, Actor Loss: -358762.9375
+2. State vector: 0.2973097563 0.793874979 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 1 1 0 1 0 1 1 0 1 0 1
+Reward calculation: mech_power=6.088606358, comp_power=5.97300005, speed=2.614109039, epd=4.614040852, sys_crit=1, reward=2.083648682
+3. Reward: 2.083648682
+[Inference Exploitation] action=208, params=[-0.09315137565, -0.08766759932]
+[PDQN] Inference completed in 1.318123 ms | action=208 | params=[-0.09315137565, -0.08766759932]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, -1, ], Freq List: [4, 10, 10], Speed: 2.552747965
+[PDQN] Decision making time: 1839.373696 ms
+[PDQN] Applying mapping for PID 21208, Name: edge_image
+[PDQN] Read shared memory for PID 21208
+[PDQN] Updated shared memory for PID 21208 to mapping BIG
+[PDQN] Updated CPU affinity for PID 21208
+[PDQN] Applied mapping to PID 21208 (edge_image → BIG)
+[PDQN] Applying mapping for PID 3924, Name: distance_surface
+[PDQN] Read shared memory for PID 3924
+[PDQN] Updated shared memory for PID 3924 to mapping GPU
+[PDQN] Updated CPU affinity for PID 3924
+[PDQN] Applied mapping to PID 3924 (distance_surface → GPU)
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1122000
+Setting speed: 2.552747965
+[PDQN] Cycle time: 2095.041936 ms
+
+iteration 149
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 26.927517 ms
+[PDQN] Appl info time: 27.168863 ms
+1. Next state vector: 0.2873585224 0.7276250124 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 1 -1 -1 1.039999962 0 1.080000043 0 0 1 0 1 0 0
+[Train] Critic Loss: 794888768, Actor Loss: -321048.4688
+2. State vector: 0.2973097563 0.7466250062 0.469802022 0.3636363745 0.9090909362 0.9230769277 0.5 -1 1 -1 -1 1.080000043 0 1.039999962 0 0 1 0 1 0 0
+Reward calculation: mech_power=5.884815216, comp_power=5.821000099, speed=2.552747965, epd=4.58557415, sys_crit=1, reward=2.0903759
+3. Reward: 2.0903759
+[PDQN] Inference completed in 0.00016 ms | action=208 | params=[-0.09315137565, -0.08766759932]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, -1, ], Freq List: [4, 10, 10], Speed: 2.552747965
+[PDQN] Decision making time: 1691.052679 ms
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1122000
+Setting speed: 2.552747965
+[PDQN] Cycle time: 1723.706643 ms
+
+iteration 150
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 20.337479 ms
+[PDQN] Appl info time: 20.55412 ms
+1. Next state vector: 0.2873585224 0.7133749723 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 1 -1 -1 1.039999962 0 1.080000043 0 0 1 0 1 0 0
+[Train] Critic Loss: 1281472768, Actor Loss: -329111.4375
+2. State vector: 0.2873585224 0.7276250124 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 1 -1 -1 1.039999962 0 1.080000043 0 0 1 0 1 0 0
+Reward calculation: mech_power=5.884815216, comp_power=5.706999779, speed=2.552747965, epd=4.540916443, sys_crit=1, reward=2.101099491
+3. Reward: 2.101099491
+[PDQN] Inference completed in 0.000128 ms | action=208 | params=[-0.09315137565, -0.08766759932]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, -1, ], Freq List: [4, 10, 10], Speed: 2.552747965
+ParamActor model saved to: /home/chen2/catkin_ws_chen/src/resource-management-ros-packages/chen_resource_controller/models/pdqn_actor_model.pt
+Q_CriticNetwork model saved to: /home/chen2/catkin_ws_chen/src/resource-management-ros-packages/chen_resource_controller/models/pdqn_q_model.pt
+[PDQN] Decision making time: 1623.559489 ms
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1122000
+Setting speed: 2.552747965
+[PDQN] Cycle time: 1652.967219 ms
+
+iteration 151
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 17.851602 ms
+[PDQN] Appl info time: 18.068404 ms
+1. Next state vector: 0.2873585224 0.7418749928 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 1 -1 -1 1.039999962 0 1.039999962 0 0 1 0 1 0 0
+[Train] Critic Loss: 2084972800, Actor Loss: -334642.6875
+2. State vector: 0.2873585224 0.7133749723 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 1 -1 -1 1.039999962 0 1.080000043 0 0 1 0 1 0 0
+Reward calculation: mech_power=5.884815216, comp_power=5.934999943, speed=2.552747965, epd=4.630231857, sys_crit=1, reward=2.079859495
+3. Reward: 2.079859495
+[PDQN] Inference completed in 0.000128 ms | action=208 | params=[-0.09315137565, -0.08766759932]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, -1, ], Freq List: [4, 10, 10], Speed: 2.552747965
+[PDQN] Decision making time: 1746.175124 ms
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1122000
+Setting speed: 2.552747965
+[PDQN] Cycle time: 1767.312929 ms
+
+iteration 152
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 12.239813 ms
+[PDQN] Appl info time: 12.462278 ms
+1. Next state vector: 0.2873585224 0.7276250124 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 1 -1 -1 1.039999962 0 1.039999962 0 0 1 0 1 0 0
+[Train] Critic Loss: 1465295232, Actor Loss: -356086.2188
+2. State vector: 0.2873585224 0.7418749928 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 1 -1 -1 1.039999962 0 1.039999962 0 0 1 0 1 0 0
+Reward calculation: mech_power=5.884815216, comp_power=5.821000099, speed=2.552747965, epd=4.58557415, sys_crit=1, reward=2.0903759
+3. Reward: 2.0903759
+[PDQN] Inference completed in 0.000224 ms | action=208 | params=[-0.09315137565, -0.08766759932]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, -1, ], Freq List: [4, 10, 10], Speed: 2.552747965
+[PDQN] Decision making time: 1748.836303 ms
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1122000
+Setting speed: 2.552747965
+[PDQN] Cycle time: 1783.849774 ms
+
+iteration 153
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 16.771082 ms
+[PDQN] Appl info time: 16.986252 ms
+1. Next state vector: 0.2873585224 0.722874999 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 1 -1 -1 1.039999962 0 1.039999962 0 0 1 0 1 0 0
+[Train] Critic Loss: 1435052800, Actor Loss: -354446.9062
+2. State vector: 0.2873585224 0.7276250124 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 1 -1 -1 1.039999962 0 1.039999962 0 0 1 0 1 0 0
+Reward calculation: mech_power=5.884815216, comp_power=5.782999992, speed=2.552747965, epd=4.570688248, sys_crit=1, reward=2.093927145
+3. Reward: 2.093927145
+[PDQN] Inference completed in 0.000256 ms | action=208 | params=[-0.09315137565, -0.08766759932]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, -1, ], Freq List: [4, 10, 10], Speed: 2.552747965
+[PDQN] Decision making time: 1649.17469 ms
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1122000
+Setting speed: 2.552747965
+[PDQN] Cycle time: 1665.830602 ms
+
+iteration 154
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 25.026381 ms
+[PDQN] Appl info time: 25.249903 ms
+1. Next state vector: 0.2873585224 0.722874999 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 1 -1 -1 1.080000043 0 1.039999962 0 0 1 0 1 0 0
+[Train] Critic Loss: 766414592, Actor Loss: -364285.5312
+2. State vector: 0.2873585224 0.722874999 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 1 -1 -1 1.039999962 0 1.039999962 0 0 1 0 1 0 0
+Reward calculation: mech_power=5.884815216, comp_power=5.782999992, speed=2.552747965, epd=4.570688248, sys_crit=1, reward=2.093927145
+3. Reward: 2.093927145
+[PDQN] Inference completed in 0.00032 ms | action=208 | params=[-0.09315137565, -0.08766759932]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, -1, ], Freq List: [4, 10, 10], Speed: 2.552747965
+[PDQN] Decision making time: 1568.414574 ms
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1122000
+Setting speed: 2.552747965
+[PDQN] Cycle time: 1596.624533 ms
+
+iteration 155
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 26.993437 ms
+[PDQN] Appl info time: 27.267104 ms
+1. Next state vector: 0.2873585224 0.7371249795 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 1 -1 -1 1.080000043 0 1.080000043 0 0 1 0 1 0 0
+[Train] Critic Loss: 1680929536, Actor Loss: -338207.3438
+2. State vector: 0.2873585224 0.722874999 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 1 -1 -1 1.080000043 0 1.039999962 0 0 1 0 1 0 0
+Reward calculation: mech_power=5.884815216, comp_power=5.896999836, speed=2.552747965, epd=4.615345955, sys_crit=1, reward=2.083342552
+3. Reward: 2.083342552
+[PDQN] Inference completed in 0.000128 ms | action=208 | params=[-0.09315137565, -0.08766759932]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, -1, ], Freq List: [4, 10, 10], Speed: 2.552747965
+[PDQN] Decision making time: 1676.468393 ms
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1122000
+Setting speed: 2.552747965
+[PDQN] Cycle time: 1705.367927 ms
+
+iteration 156
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 28.578955 ms
+[PDQN] Appl info time: 28.795405 ms
+1. Next state vector: 0.2873585224 0.722874999 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 1 -1 -1 1.080000043 0 1.080000043 0 0 1 0 1 0 0
+[Train] Critic Loss: 1326823424, Actor Loss: -333480.1562
+2. State vector: 0.2873585224 0.7371249795 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 1 -1 -1 1.080000043 0 1.080000043 0 0 1 0 1 0 0
+Reward calculation: mech_power=5.884815216, comp_power=5.782999992, speed=2.552747965, epd=4.570688248, sys_crit=1, reward=2.093927145
+3. Reward: 2.093927145
+[PDQN] Inference completed in 0.000128 ms | action=208 | params=[-0.09315137565, -0.08766759932]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, -1, ], Freq List: [4, 10, 10], Speed: 2.552747965
+[PDQN] Decision making time: 1658.403994 ms
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1122000
+Setting speed: 2.552747965
+[PDQN] Cycle time: 1683.109445 ms
+
+iteration 157
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 25.447921 ms
+[PDQN] Appl info time: 25.678451 ms
+1. Next state vector: 0.2873585224 0.7181249857 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 1 -1 -1 1.039999962 0 1.039999962 0 0 1 0 1 0 0
+[Train] Critic Loss: 1538266240, Actor Loss: -345391.625
+2. State vector: 0.2873585224 0.722874999 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 1 -1 -1 1.080000043 0 1.080000043 0 0 1 0 1 0 0
+Reward calculation: mech_power=5.884815216, comp_power=5.744999886, speed=2.552747965, epd=4.555802345, sys_crit=1, reward=2.097501516
+3. Reward: 2.097501516
+[PDQN] Inference completed in 0.00016 ms | action=208 | params=[-0.09315137565, -0.08766759932]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, -1, ], Freq List: [4, 10, 10], Speed: 2.552747965
+[PDQN] Decision making time: 1652.742224 ms
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1122000
+Setting speed: 2.552747965
+[PDQN] Cycle time: 1681.594205 ms
+
+iteration 158
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 12.051843 ms
+[PDQN] Appl info time: 12.268805 ms
+1. Next state vector: 0.2873585224 0.7276250124 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 1 -1 -1 1.039999962 0 1.039999962 0 0 1 0 1 0 0
+[Train] Critic Loss: 1682819840, Actor Loss: -336969.0938
+2. State vector: 0.2873585224 0.7181249857 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 1 -1 -1 1.039999962 0 1.039999962 0 0 1 0 1 0 0
+Reward calculation: mech_power=5.884815216, comp_power=5.821000099, speed=2.552747965, epd=4.58557415, sys_crit=1, reward=2.0903759
+3. Reward: 2.0903759
+[PDQN] Inference completed in 0.000256 ms | action=208 | params=[-0.09315137565, -0.08766759932]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, -1, ], Freq List: [4, 10, 10], Speed: 2.552747965
+[PDQN] Decision making time: 1653.982334 ms
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1122000
+Setting speed: 2.552747965
+[PDQN] Cycle time: 1671.858545 ms
+
+iteration 159
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 12.610824 ms
+[PDQN] Appl info time: 12.826922 ms
+1. Next state vector: 0.2873585224 0.7276250124 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 1 -1 -1 1.039999962 0 1.039999962 0 0 1 0 1 0 0
+[Train] Critic Loss: 803975936, Actor Loss: -361449.5
+2. State vector: 0.2873585224 0.7276250124 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 1 -1 -1 1.039999962 0 1.039999962 0 0 1 0 1 0 0
+Reward calculation: mech_power=5.884815216, comp_power=5.821000099, speed=2.552747965, epd=4.58557415, sys_crit=1, reward=2.0903759
+3. Reward: 2.0903759
+[PDQN] Inference completed in 0.000128 ms | action=208 | params=[-0.09315137565, -0.08766759932]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, -1, ], Freq List: [4, 10, 10], Speed: 2.552747965
+[PDQN] Decision making time: 1625.953564 ms
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1122000
+Setting speed: 2.552747965
+[PDQN] Cycle time: 1653.559519 ms
+
+iteration 160
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 29.669044 ms
+[PDQN] Appl info time: 29.894934 ms
+1. Next state vector: 0.2873585224 0.7323750257 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 1 -1 -1 1.039999962 0 1.039999962 0 0 1 0 1 0 0
+[Train] Critic Loss: 1036481856, Actor Loss: -346257.125
+2. State vector: 0.2873585224 0.7276250124 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 1 -1 -1 1.039999962 0 1.039999962 0 0 1 0 1 0 0
+Reward calculation: mech_power=5.884815216, comp_power=5.859000206, speed=2.552747965, epd=4.600460052, sys_crit=1, reward=2.086847782
+3. Reward: 2.086847782
+[PDQN] Inference completed in 0.000128 ms | action=208 | params=[-0.09315137565, -0.08766759932]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, -1, ], Freq List: [4, 10, 10], Speed: 2.552747965
+[PDQN] Decision making time: 1626.341123 ms
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1122000
+Setting speed: 2.552747965
+[PDQN] Cycle time: 1648.235223 ms
+
+iteration 161
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 23.646882 ms
+[PDQN] Appl info time: 23.894756 ms
+1. Next state vector: 0.2873585224 0.7703750134 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 1 -1 -1 1 0 0.9599999785 0 0 1 0 1 0 0
+[Train] Critic Loss: 1201639936, Actor Loss: -361325.7812
+2. State vector: 0.2873585224 0.7323750257 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 1 -1 -1 1.039999962 0 1.039999962 0 0 1 0 1 0 0
+Reward calculation: mech_power=5.884815216, comp_power=6.163000107, speed=2.552747965, epd=4.719547749, sys_crit=0.9797958732, reward=2.039219379
+3. Reward: 2.039219379
+[PDQN] Inference completed in 0.000128 ms | action=208 | params=[-0.09315137565, -0.08766759932]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, -1, ], Freq List: [4, 10, 10], Speed: 2.552747965
+[PDQN] Decision making time: 1763.948179 ms
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1122000
+Setting speed: 2.552747965
+[PDQN] Cycle time: 1785.562341 ms
+
+iteration 162
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 12.873354 ms
+[PDQN] Appl info time: 13.088428 ms
+1. Next state vector: 0.2873585224 0.7466250062 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 1 -1 -1 1.039999962 0 1.039999962 0 0 1 0 1 0 0
+[Train] Critic Loss: 1699573504, Actor Loss: -350745.4688
+2. State vector: 0.2873585224 0.7703750134 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 1 -1 -1 1 0 0.9599999785 0 0 1 0 1 0 0
+Reward calculation: mech_power=5.884815216, comp_power=5.97300005, speed=2.552747965, epd=4.64511776, sys_crit=1, reward=2.076398849
+3. Reward: 2.076398849
+[PDQN] Inference completed in 0.000128 ms | action=208 | params=[-0.09315137565, -0.08766759932]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, 2, -1, -1, ], Freq List: [4, 10, 10], Speed: 2.552747965
+[PDQN] Decision making time: 1822.628284 ms
+Setting freq little: 1113600
+Setting freq big: 2035200
+Setting freq gpu: 1122000
+Setting speed: 2.552747965
+[PDQN] Cycle time: 1843.669865 ms
+
+iteration 163
+ | Inference Enabled: Yes
+removing 3924
+[PDQN] Sys info time: 228.503994 ms
+[PDQN] Appl info time: 228.7311 ms
+1. Next state vector: 0.2873585224 0.7418749928 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 -1 -1 -1 1.039999962 0 0 0 0 1 0 0 0 0
+[Train] Critic Loss: 1868029184, Actor Loss: -341287.0625
+2. State vector: 0.2873585224 0.7466250062 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 1 -1 -1 1.039999962 0 1.039999962 0 0 1 0 1 0 0
+Reward calculation: mech_power=5.884815216, comp_power=5.934999943, speed=2.552747965, epd=4.630231857, sys_crit=1, reward=2.079859495
+3. Reward: 2.079859495
+[Inference Exploitation] action=208, params=[-0.05342586339, -0.1173942983]
+[PDQN] Inference completed in 1.30481 ms | action=208 | params=[-0.05342586339, -0.1173942983]
+[PDQN] Action Decoded -> App→Cluster: [1, -1, -1, -1, -1, ], Freq List: [0, 2, 0], Speed: 2.485862732
+[PDQN] Decision making time: 1632.103776 ms
+[PDQN] Applying mapping for PID 21208, Name: edge_image
+[PDQN] Read shared memory for PID 21208
+[PDQN] Updated shared memory for PID 21208 to mapping BIG
+[PDQN] Updated CPU affinity for PID 21208
+[PDQN] Applied mapping to PID 21208 (edge_image → BIG)
+Setting freq little: 499200
+Setting freq big: 806400
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.485862732
+[PDQN] Cycle time: 1888.860963 ms
+
+iteration 164
+ | Inference Enabled: Yes
+removing 21208
+[PDQN] Sys info time: 596.944661 ms
+[PDQN] Appl info time: 597.634011 ms
+1. Next state vector: 0.2768605649 0.5661249757 0.4413028359 0 0.1818181872 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+[Train] Critic Loss: 2559182336, Actor Loss: -348833.875
+2. State vector: 0.2873585224 0.7418749928 0.4561662078 0.3636363745 0.9090909362 0.769230783 0.5 -1 -1 -1 -1 1.039999962 0 0 0 0 1 0 0 0 0
+Reward calculation: mech_power=5.669827461, comp_power=4.528999805, speed=2.485862732, epd=4.102731705, sys_crit=1, reward=2.218700171
+3. Reward: 2.218700171
+[Inference Exploitation] action=137, params=[0.03288896754, -0.03589787707]
+[PDQN] Inference completed in 3.176027 ms | action=137 | params=[0.03288896754, -0.03589787707]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.669229746
+[PDQN] Decision making time: 2199.384518 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.669229746
+[PDQN] Cycle time: 2255.910392 ms
+
+iteration 165
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 39.699335 ms
+[PDQN] Appl info time: 39.865672 ms
+1. Next state vector: 0.3065165877 0.4427500069 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+[Train] Critic Loss: 2399598080, Actor Loss: -354275.75
+2. State vector: 0.2768605649 0.5661249757 0.4413028359 0 0.1818181872 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.277153015, comp_power=3.542000055, speed=2.669229746, epd=3.678646564, sys_crit=1, reward=2.359195709
+3. Reward: 2.359195709
+[PDQN] Inference completed in 0.000288 ms | action=137 | params=[0.03288896754, -0.03589787707]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.669229746
+[PDQN] Decision making time: 1728.186017 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.669229746
+[PDQN] Cycle time: 1804.811513 ms
+
+iteration 166
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 19.759395 ms
+[PDQN] Appl info time: 19.974629 ms
+1. Next state vector: 0.3065165877 0.5092499852 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+[Train] Critic Loss: 3472795136, Actor Loss: -352184.875
+2. State vector: 0.3065165877 0.4427500069 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.277153015, comp_power=4.073999882, speed=2.669229746, epd=3.87795496, sys_crit=1, reward=2.289339542
+3. Reward: 2.289339542
+[PDQN] Inference completed in 0.00096 ms | action=137 | params=[0.03288896754, -0.03589787707]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.669229746
+[PDQN] Decision making time: 1775.404012 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.669229746
+[PDQN] Cycle time: 1865.789749 ms
+
+iteration 167
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 48.82117 ms
+[PDQN] Appl info time: 49.048244 ms
+1. Next state vector: 0.3065165877 0.5187500119 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+[Train] Critic Loss: 1291509504, Actor Loss: -355469.4062
+2. State vector: 0.3065165877 0.5092499852 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.277153015, comp_power=4.150000095, speed=2.669229746, epd=3.906427622, sys_crit=1, reward=2.279941797
+3. Reward: 2.279941797
+[PDQN] Inference completed in 0.000352 ms | action=137 | params=[0.03288896754, -0.03589787707]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.669229746
+[PDQN] Decision making time: 1760.888281 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.669229746
+[PDQN] Cycle time: 1851.891943 ms
+
+iteration 168
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 17.725522 ms
+[PDQN] Appl info time: 17.887156 ms
+1. Next state vector: 0.3065165877 0.4663749933 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+[Train] Critic Loss: 2907611904, Actor Loss: -336838.7812
+2. State vector: 0.3065165877 0.5187500119 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.277153015, comp_power=3.730999947, speed=2.669229746, epd=3.749453545, sys_crit=1, reward=2.333527565
+3. Reward: 2.333527565
+[PDQN] Inference completed in 0.00032 ms | action=137 | params=[0.03288896754, -0.03589787707]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.669229746
+[PDQN] Decision making time: 1634.414986 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.669229746
+[PDQN] Cycle time: 1745.899106 ms
+
+iteration 169
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 23.999238 ms
+[PDQN] Appl info time: 24.174311 ms
+1. Next state vector: 0.3065165877 0.4901250005 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+[Train] Critic Loss: 481004992, Actor Loss: -330721.4375
+2. State vector: 0.3065165877 0.4663749933 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.277153015, comp_power=3.921000004, speed=2.669229746, epd=3.82063508, sys_crit=1, reward=2.308682919
+3. Reward: 2.308682919
+[PDQN] Inference completed in 0.00032 ms | action=137 | params=[0.03288896754, -0.03589787707]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.669229746
+[PDQN] Decision making time: 1664.860042 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.669229746
+[PDQN] Cycle time: 1750.569517 ms
+
+iteration 170
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 31.909543 ms
+[PDQN] Appl info time: 32.158089 ms
+1. Next state vector: 0.3065165877 0.4996249974 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+[Train] Critic Loss: 784620608, Actor Loss: -333405.625
+2. State vector: 0.3065165877 0.4901250005 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.277153015, comp_power=3.996999979, speed=2.669229746, epd=3.849107742, sys_crit=1, reward=2.299002171
+3. Reward: 2.299002171
+[PDQN] Inference completed in 0.000384 ms | action=137 | params=[0.03288896754, -0.03589787707]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.669229746
+[PDQN] Decision making time: 1650.871419 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.669229746
+[PDQN] Cycle time: 1730.95544 ms
+
+iteration 171
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 36.427949 ms
+[PDQN] Appl info time: 36.624462 ms
+1. Next state vector: 0.3065165877 0.5235000253 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+[Train] Critic Loss: 497938848, Actor Loss: -331073.375
+2. State vector: 0.3065165877 0.4996249974 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.277153015, comp_power=4.188000202, speed=2.669229746, epd=3.920663834, sys_crit=1, reward=2.275294304
+3. Reward: 2.275294304
+[PDQN] Inference completed in 0.000288 ms | action=137 | params=[0.03288896754, -0.03589787707]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.669229746
+[PDQN] Decision making time: 1637.849107 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.669229746
+[PDQN] Cycle time: 1782.498846 ms
+
+iteration 172
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 34.083993 ms
+[PDQN] Appl info time: 34.267867 ms
+1. Next state vector: 0.3065165877 0.4948750138 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+[Train] Critic Loss: 2895716864, Actor Loss: -371298.625
+2. State vector: 0.3065165877 0.5235000253 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.277153015, comp_power=3.959000111, speed=2.669229746, epd=3.834871292, sys_crit=1, reward=2.303824902
+3. Reward: 2.303824902
+[PDQN] Inference completed in 0.00048 ms | action=137 | params=[0.03288896754, -0.03589787707]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.669229746
+[PDQN] Decision making time: 1866.815035 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.669229746
+[PDQN] Cycle time: 1955.218645 ms
+
+iteration 173
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 19.149598 ms
+[PDQN] Appl info time: 19.321599 ms
+1. Next state vector: 0.3065165877 0.4948750138 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+[Train] Critic Loss: 780090176, Actor Loss: -346219.2812
+2. State vector: 0.3065165877 0.4948750138 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.277153015, comp_power=3.959000111, speed=2.669229746, epd=3.834871292, sys_crit=1, reward=2.303824902
+3. Reward: 2.303824902
+[PDQN] Inference completed in 0.00032 ms | action=137 | params=[0.03288896754, -0.03589787707]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.669229746
+[PDQN] Decision making time: 1805.726983 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.669229746
+[PDQN] Cycle time: 1891.478732 ms
+
+iteration 174
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 28.680877 ms
+[PDQN] Appl info time: 28.861711 ms
+1. Next state vector: 0.3065165877 0.4948750138 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+[Train] Critic Loss: 3345606656, Actor Loss: -346458.1875
+2. State vector: 0.3065165877 0.4948750138 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.277153015, comp_power=3.959000111, speed=2.669229746, epd=3.834871292, sys_crit=1, reward=2.303824902
+3. Reward: 2.303824902
+[PDQN] Inference completed in 0.000288 ms | action=137 | params=[0.03288896754, -0.03589787707]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.669229746
+[PDQN] Decision making time: 1800.221439 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.669229746
+[PDQN] Cycle time: 1911.268917 ms
+
+iteration 175
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 32.486157 ms
+[PDQN] Appl info time: 32.649038 ms
+1. Next state vector: 0.3065165877 0.4901250005 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+[Train] Critic Loss: 1514369792, Actor Loss: -334555.0625
+2. State vector: 0.3065165877 0.4948750138 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.277153015, comp_power=3.921000004, speed=2.669229746, epd=3.82063508, sys_crit=1, reward=2.308682919
+3. Reward: 2.308682919
+[PDQN] Inference completed in 0.00032 ms | action=137 | params=[0.03288896754, -0.03589787707]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.669229746
+[PDQN] Decision making time: 1749.742114 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.669229746
+[PDQN] Cycle time: 1878.186409 ms
+
+iteration 176
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 21.206544 ms
+[PDQN] Appl info time: 21.386417 ms
+1. Next state vector: 0.3065165877 0.5092499852 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+[Train] Critic Loss: 1262110976, Actor Loss: -323826.3125
+2. State vector: 0.3065165877 0.4901250005 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.277153015, comp_power=4.073999882, speed=2.669229746, epd=3.87795496, sys_crit=1, reward=2.289339542
+3. Reward: 2.289339542
+[PDQN] Inference completed in 0.00032 ms | action=137 | params=[0.03288896754, -0.03589787707]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.669229746
+[PDQN] Decision making time: 1910.074486 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.669229746
+[PDQN] Cycle time: 2012.829512 ms
+
+iteration 177
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 25.279633 ms
+[PDQN] Appl info time: 25.455922 ms
+1. Next state vector: 0.3065165877 0.5187500119 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+[Train] Critic Loss: 1147448448, Actor Loss: -336768.5
+2. State vector: 0.3065165877 0.5092499852 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.277153015, comp_power=4.150000095, speed=2.669229746, epd=3.906427622, sys_crit=1, reward=2.279941797
+3. Reward: 2.279941797
+[PDQN] Inference completed in 0.000288 ms | action=137 | params=[0.03288896754, -0.03589787707]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.669229746
+[PDQN] Decision making time: 1741.604296 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.669229746
+[PDQN] Cycle time: 1852.365885 ms
+
+iteration 178
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 37.43503 ms
+[PDQN] Appl info time: 37.591704 ms
+1. Next state vector: 0.3065165877 0.5187500119 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+[Train] Critic Loss: 3187803904, Actor Loss: -349164.5
+2. State vector: 0.3065165877 0.5187500119 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.277153015, comp_power=4.150000095, speed=2.669229746, epd=3.906427622, sys_crit=1, reward=2.279941797
+3. Reward: 2.279941797
+[PDQN] Inference completed in 0.000768 ms | action=137 | params=[0.03288896754, -0.03589787707]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.669229746
+[PDQN] Decision making time: 1756.780076 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.669229746
+[PDQN] Cycle time: 1860.010914 ms
+
+iteration 179
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 23.452258 ms
+[PDQN] Appl info time: 23.611619 ms
+1. Next state vector: 0.3065165877 0.4853749871 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+[Train] Critic Loss: 1445010432, Actor Loss: -317243.1875
+2. State vector: 0.3065165877 0.5187500119 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.277153015, comp_power=3.882999897, speed=2.669229746, epd=3.80639863, sys_crit=1, reward=2.313577652
+3. Reward: 2.313577652
+[PDQN] Inference completed in 0.000288 ms | action=137 | params=[0.03288896754, -0.03589787707]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.669229746
+[PDQN] Decision making time: 1772.514898 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.669229746
+[PDQN] Cycle time: 1879.374599 ms
+
+iteration 180
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 25.487507 ms
+[PDQN] Appl info time: 25.654868 ms
+1. Next state vector: 0.3065165877 0.4948750138 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+[Train] Critic Loss: 1453679488, Actor Loss: -309276.1562
+2. State vector: 0.3065165877 0.4853749871 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.277153015, comp_power=3.959000111, speed=2.669229746, epd=3.834871292, sys_crit=1, reward=2.303824902
+3. Reward: 2.303824902
+[PDQN] Inference completed in 0.000384 ms | action=137 | params=[0.03288896754, -0.03589787707]
+[PDQN] Action Decoded -> App→Cluster: [-1, -1, -1, -1, -1, ], Freq List: [0, 0, 0], Speed: 2.669229746
+[PDQN] Decision making time: 1655.28078 ms
+Setting freq little: 499200
+Setting freq big: 499200
+Setting freq gpu to closest neighbor: 216750
+Setting freq gpu: 216750
+Setting speed: 2.669229746
+[PDQN] Cycle time: 1794.202314 ms
+
+iteration 181
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 1190.795304 ms
+[PDQN] Appl info time: 1191.176331 ms
+1. Next state vector: 0.3065165877 0.4711250067 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+[Train] Critic Loss: 3366837760, Actor Loss: -274297.375
+2. State vector: 0.3065165877 0.4948750138 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.277153015, comp_power=3.769000053, speed=2.669229746, epd=3.763689995, sys_crit=0, reward=1.328483462
+3. Reward: 1.328483462
+[Inference Exploitation] action=137, params=[0.04354009777, -0.03499788791]
+[PDQN] Inference completed in 3.14217 ms | action=137 | params=[0.04354009777, -0.03499788791]
+[PDQN] Action Decoded -> App→Cluster: [2, -1, -1, -1, -1, ], Freq List: [5, 0, 1], Speed: 2.671254873
+[PDQN] Decision making time: 3249.870445 ms
+[PDQN] Applying mapping for PID 13933, Name: edge_image
+[PDQN] Read shared memory for PID 13933
+[PDQN] Updated shared memory for PID 13933 to mapping GPU
+[PDQN] Updated CPU affinity for PID 13933
+[PDQN] Applied mapping to PID 13933 (edge_image → GPU)
+[PDQN] Applying mapping for PID 14038, Name: distance_surface
+[PDQN] Read shared memory for PID 14038
+[PDQN] Updated shared memory for PID 14038 to mapping GPU
+[PDQN] Updated CPU affinity for PID 14038
+[PDQN] Applied mapping to PID 14038 (distance_surface → GPU)
+Setting freq little: 1267200
+Setting freq big: 499200
+Setting freq gpu: 318750
+Setting speed: 2.671254873
+[PDQN] Cycle time: 3420.516595 ms
+
+iteration 182
+ | Inference Enabled: Yes
+[PDQN] Sys info time: 482.329374 ms
+[PDQN] Appl info time: 482.56336 ms
+1. Next state vector: 0.3068597019 0.5471249819 0.4825010896 0.4545454681 0 0.07692307979 1 -1 -1 -1 -1 0 0 0 0 0 1 0 0 0 0
+[Train] Critic Loss: 907243200, Actor Loss: -343988.375
+2. State vector: 0.3065165877 0.4711250067 0.4820510447 0 0 0 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0
+Reward calculation: mech_power=6.284180164, comp_power=4.376999855, speed=2.671254873, epd=3.991075754, sys_crit=0, reward=1.2527951
+3. Reward: 1.2527951
+[PDQN] Inference completed in 0.000224 ms | action=137 | params=[0.04354009777, -0.03499788791]
+[PDQN] Action Decoded -> App→Cluster: [2, -1, 0, -1, -1, ], Freq List: [5, 0, 1], Speed: 2.671254873
+[PDQN] Decision making time: 2423.957853 ms
+Setting freq little: 1267200
+Setting freq big: 499200
+Setting freq gpu: 318750
+Setting speed: 2.671254873
+[PDQN] Cycle time: 2441.418926 ms
+
+iteration 183
+ | Inference Enabled: Yes
+removing 13933
+removing 14038
+[PDQN] Sys info time: 399.429904 ms
+[PDQN] Appl info time: 399.532273 ms
+1. Next state vector: 0.3068597019 0.5329999924 0.4825010896 0.4545454681 0 0.07692307979 -1 -1 -1 -1 -1 0 0 0 0 0 0 0 0 0 0

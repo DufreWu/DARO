@@ -1,0 +1,33 @@
+tracker, throughput 26, mapping 2
+[33m[ WARN] [1772024382.033934910]: Shutdown request received.[0m
+[33m[ WARN] [1772024382.034079038]: Reason given for shutdown: [user request][0m
+[0m[ INFO] [1772024355.525854345]: [tracker_gpu] Initializing GPU memory[0m
+... logging to /home/chen2/.ros/log/69342864-1249-11f1-904a-00044bc6da48/roslaunch-chen2-tx2-28006.log
+Checking log directory for disk usage. This may take a while.
+Press Ctrl-C to interrupt
+Done checking log file disk usage. Usage is <1GB.
+]2;/home/chen2/catkin_ws_chen/src/resource-management-ros-packages/chen_appl_tracker/launch/tracker.launch
+[1mstarted roslaunch server http://chen2-tx2:40399/[0m
+
+SUMMARY
+========
+
+PARAMETERS
+ * /rosdistro: melodic
+ * /rosversion: 1.14.13
+ * /tracker/mapping: 2
+ * /tracker/req_thr: 26.0
+
+NODES
+  /
+    tracker (tracker/tracker_node)
+
+[1mROS_MASTER_URI=http://localhost:11311[0m
+]2;/home/chen2/catkin_ws_chen/src/resource-management-ros-packages/chen_appl_tracker/launch/tracker.launch http://localhost:11311
+[1mprocess[tracker-1]: started with pid [28370][0m
+[1m[tracker-1] process has finished cleanly
+log file: /home/chen2/.ros/log/69342864-1249-11f1-904a-00044bc6da48/tracker-1*.log[0m
+all processes on machine have died, roslaunch will exit
+shutting down processing monitor...
+... shutting down processing monitor complete
+[1mdone[0m
