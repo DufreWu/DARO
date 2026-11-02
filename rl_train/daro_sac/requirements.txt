@@ -1,0 +1,4 @@
+numpy>=1.26
+# Use a PyTorch wheel appropriate for your CPU/CUDA platform.
+torch>=2.2
+gymnasium>=0.29
