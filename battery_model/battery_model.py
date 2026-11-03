@@ -5,7 +5,10 @@ functions of SOC, SOH, and cell/pack temperature. OCV can be supplied as
 SOH-indexed measured curves or an explicitly uncalibrated aging perturbation.
 No measured impedance, HPPC, OCV or aging calibration is claimed: default
 coefficient values are illustrative.
-Only discharge (nonnegative constant terminal power) is supported.
+The electrical ECM supports discharge only (nonnegative constant terminal
+power). Recharge is modelled by coulomb counting in charge() (CC charge at a
+given C-rate), which accrues the charge half-cycle and calendar aging but
+does not simulate charge-side ECM voltages.
 
 Energy bookkeeping separates resistor heat, frozen-parameter RC energy change,
 and signed numerical/parameter residual. These are diagnostic channels, not a
@@ -33,16 +36,33 @@ matching the formulation used in the DARO paper (Eqs. 6-8):
 
     SOH(t) = exp(-fd)
     fd     = fd_completed + fd_current_halfcycle
+    fd_completed = sum(committed cycle half-cycles) + fd_calendar
 
 where fd_current_halfcycle tracks the in-progress discharge (or charge)
 half-cycle using cumulative DOD and time-averaged SOC since cycle_start:
 
-    sigma  = SOC_cycle_start - SOC_now          (cumulative DOD; = delta_i)
-    delta  = (SOC_cycle_start + SOC_now) / 2    (avg SOC;        = sigma_i)
+    delta  = |SOC_cycle_start - SOC_now|        (cumulative DoD; = delta_i)
+    sigma  = (SOC_cycle_start + SOC_now) / 2    (avg SOC;        = sigma_i)
     S_sig  = exp(k_sigma * (sigma - sigma_ref))
     S_del  = 1 / (k_d1 * delta^k_d2 + k_d3)
     S_T    = exp(k_T * (T_K - T_ref) * T_ref / T_K)
-    fd_current_halfcycle = 0.5 * S_sig * S_del * S_T
+    fd_current_halfcycle = 0.5 * k_cyc * S_sig * S_del * S_T
+
+k_cyc is a dimensionless cycle-rate scale. It is the only aging coefficient the
+LiPo dataset can identify (all cells were cycled under one stress condition),
+so parameter_fitting.py fits k_cyc and keeps the stress-shape coefficients at
+the Xu et al. literature values.
+
+Calendar aging (Xu et al. 2016, Eq. for f_t) accrues continuously in time,
+during discharge, charge and rest alike:
+
+    d fd_calendar / dt = k_t * S_sig(SOC(t)) * S_T(T)
+
+so a slower mission (longer duration for the same distance) pays a calendar
+aging penalty. k_t defaults to the Xu literature value (4.14e-10 1/s); the
+LiPo cycling data cannot separate it from cycle aging, so treat it as an
+assumption and override via aging_params if you have calendar data.
+Charge half-cycles are counted the same way as discharge half-cycles.
 
 This is mathematically equivalent to applying Rainflow counting at the end of
 each half-cycle: the terminal value of fd_current_halfcycle equals the Rainflow
@@ -108,61 +128,71 @@ def _load_fitted_model_params() -> Dict[str, Any]:
     return payload
 
 
-def _dataset_reference_ecm_values() -> Dict[str, float]:
-    """Return ECM reference values anchored to the LiPo fit results.
+def _cpe_to_c_parallel(r: float, q: float, alpha: float) -> float:
+    """Hsu-Mansfeld equivalent capacitance (F) of a parallel R-CPE element."""
+    if not (r > 0.0 and q > 0.0 and 0.0 < alpha <= 1.0):
+        raise ValueError('Invalid R||CPE combination')
+    return math.exp((math.log(q) + (1.0 - alpha) * math.log(r)) / alpha)
 
-    The model prefers the repository-generated polynomial fit from
-    lipo_fit_parameters.json because it is the most recent and directly reflects
-    the data-driven fit. If that file is missing, it falls back to extracting a
-    representative SOC≈0.5 value from the raw LiPo CSV fits.
+
+_FALLBACK_CELL_NOMINAL_V = 3.7
+_FALLBACK_CELL_CAPACITY_AH = 1.0
+
+
+def _dataset_reference_ecm_values() -> Dict[str, float]:
+    """Return SINGLE-CELL ECM reference values (SOC=0.5) from the LiPo data.
+
+    Keys: R0, R1, R2 (ohm), C1, C2 (farad), cell_nominal_voltage, cell_capacity_ah.
+
+    Preferred source: lipo_fit_parameters.json written by parameter_fitting.py
+    (identified by its 'ecm_fit_method' field; C1/C2 there are Hsu-Mansfeld
+    equivalent capacitances in farad). Older JSON files stored the raw CPE
+    coefficients Q1/Q2 as "C1/C2", which are not farads, so they are ignored.
+    Fallback: median of the raw LiPO_*_fit CSV rows near SOC=0.5 with the same
+    CPE -> C conversion. Returns {} when neither source exists.
     """
     fit_payload = _load_fitted_model_params()
     ecm = fit_payload.get('ecm', {}) if isinstance(fit_payload, dict) else {}
-    if isinstance(ecm, dict):
+    if isinstance(ecm, dict) and 'ecm_fit_method' in fit_payload:
         refs = {}
         for key in ('R0', 'R1', 'R2', 'C1', 'C2'):
             info = ecm.get(key)
-            if isinstance(info, dict):
-                val = info.get('reference_soc_0_5')
-                if isinstance(val, (int, float)):
-                    refs[key] = float(val)
-        if refs:
-            # Map the fit-file names to the model's internal reference names.
-            return {
-                'RO': refs.get('R0', 0.035),
-                'R1': refs.get('R1', 0.010),
-                'R2': refs.get('R2', 0.005),
-                'Q1': refs.get('C1', 7.5),
-                'Q2': refs.get('C2', 30.0),
-            }
+            if isinstance(info, dict) and isinstance(info.get('reference_soc_0_5'), (int, float)):
+                refs[key] = float(info['reference_soc_0_5'])
+        if len(refs) == 5:
+            cell = fit_payload.get('cell', {}) if isinstance(fit_payload.get('cell'), dict) else {}
+            refs['cell_nominal_voltage'] = float(cell.get('nominal_voltage_v', _FALLBACK_CELL_NOMINAL_V))
+            refs['cell_capacity_ah'] = float(cell.get('capacity_ah', _FALLBACK_CELL_CAPACITY_AH))
+            return refs
 
     base_dir = Path(__file__).resolve().parent / 'LiPo_dataset'
     if not base_dir.exists():
         return {}
 
-    samples: Dict[str, list[float]] = {key: [] for key in ('RO', 'R1', 'R2', 'Q1', 'Q2')}
+    samples: Dict[str, list] = {key: [] for key in ('R0', 'R1', 'R2', 'C1', 'C2')}
     for fit_dir in sorted(base_dir.glob('*_fit')):
-        for csv_path in sorted(fit_dir.glob('*.csv')):
-            if not csv_path.name.startswith('model_fit_'):
-                continue
+        for csv_path in sorted(fit_dir.glob('model_fit_cycle_*.csv')):
             with csv_path.open(newline='') as fh:
-                reader = csv.DictReader(fh)
-                for row in reader:
+                for row in csv.DictReader(fh):
                     try:
                         soc = float(row['SOC'])
-                    except (TypeError, ValueError):
+                        if not 0.45 <= soc <= 0.55:
+                            continue
+                        r0, r1, r2 = float(row['RO']), float(row['R1']), float(row['R2'])
+                        c1 = _cpe_to_c_parallel(r1, float(row['Q1']), float(row['a1']))
+                        c2 = _cpe_to_c_parallel(r2, float(row['Q2']), float(row['a2']))
+                    except (TypeError, ValueError, KeyError):
                         continue
-                    if not 0.45 <= soc <= 0.55:
+                    if r0 <= 0:
                         continue
-                    for key in samples:
-                        try:
-                            samples[key].append(float(row[key]))
-                        except (TypeError, ValueError, KeyError):
-                            pass
-    if not any(samples.values()):
+                    for key, val in zip(('R0', 'R1', 'R2', 'C1', 'C2'), (r0, r1, r2, c1, c2)):
+                        samples[key].append(val)
+    if not all(samples.values()):
         return {}
-
-    return {key: statistics.median(vals) for key, vals in samples.items() if vals}
+    refs = {key: statistics.median(vals) for key, vals in samples.items()}
+    refs['cell_nominal_voltage'] = _FALLBACK_CELL_NOMINAL_V
+    refs['cell_capacity_ah'] = _FALLBACK_CELL_CAPACITY_AH
+    return refs
 
 
 _DATASET_ECM_REF = _dataset_reference_ecm_values()
@@ -186,6 +216,10 @@ _DEFAULT_AGING_PARAMS_SOURCE = {
     'k_d3': -1.23e5,
     'sigma_ref': 0.50,
     'T_ref_k': 298.15,
+    # Cycle-rate scale (fitted by parameter_fitting.py; 1.0 = pure Xu LMO).
+    'k_cyc': 1.0,
+    # Calendar aging rate, 1/s (Xu et al. 2016 literature value).
+    'k_t': 4.14e-10,
 }
 
 
@@ -196,23 +230,58 @@ def _fit_aging_params_from_dataset() -> Dict[str, float]:
     exists; otherwise keep the same LiPo-derived defaults so the model remains
     usable both in and outside the dataset workspace.
     """
+    params = dict(_DEFAULT_AGING_PARAMS_SOURCE)
     fit_payload = _load_fitted_model_params()
     aging = fit_payload.get('degradation', {}) if isinstance(fit_payload, dict) else {}
     if isinstance(aging, dict):
-        keys = ('k_sigma', 'k_T', 'k_d1', 'k_d2', 'k_d3', 'sigma_ref', 'T_ref_k')
-        values = {key: float(aging[key]) for key in keys if key in aging}
-        if len(values) == len(keys):
-            return values
-
-    dataset_root = Path(__file__).resolve().parent / 'LiPo_dataset'
-    dataset_present = dataset_root.exists() and any(
-        dataset_root.glob('LiPO_*'))
-    if dataset_present:
-        return dict(_DEFAULT_AGING_PARAMS_SOURCE)
-    return dict(_DEFAULT_AGING_PARAMS_SOURCE)
+        # Merge any known numeric keys from the fit; keep defaults for the rest.
+        for key in params:
+            if key in aging:
+                try:
+                    params[key] = float(aging[key])
+                except (TypeError, ValueError):
+                    pass
+    return params
 
 
 _DEFAULT_AGING_PARAMS: Dict[str, float] = _fit_aging_params_from_dataset()
+
+
+def _xu_s_sigma(soc: float, k_sigma: float, sigma_ref: float) -> float:
+    return math.exp(k_sigma * (soc - sigma_ref))
+
+
+def _xu_s_temp(temp_k: float, k_T: float, T_ref_k: float) -> float:
+    return math.exp(k_T * (temp_k - T_ref_k) * T_ref_k / temp_k)
+
+
+def _xu_calendar_fd(
+    soc0: float,
+    soc1: float,
+    dt_s: float,
+    temp_k: float,
+    *,
+    k_sigma: float,
+    k_T: float,
+    sigma_ref: float,
+    T_ref_k: float,
+    k_t: float,
+    **_unused: float,
+) -> float:
+    """Calendar fd over dt_s with SOC moving linearly from soc0 to soc1.
+
+    Integrates k_t * S_sigma(SOC(t)) * S_T exactly for a linear SOC segment, so
+    the result does not depend on how a constant-rate segment is subdivided.
+    """
+    if dt_s <= 0.0 or k_t == 0.0:
+        return 0.0
+    a = k_sigma * (soc0 - sigma_ref)
+    b = k_sigma * (soc1 - sigma_ref)
+    if abs(b - a) < 1e-12:
+        mean_s_sigma = math.exp(0.5 * (a + b))
+    else:
+        mean_s_sigma = (math.exp(b) - math.exp(a)) / (b - a)
+    return k_t * dt_s * mean_s_sigma * _xu_s_temp(temp_k, k_T, T_ref_k)
 
 
 def _xu_fd_halfcycle(
@@ -227,22 +296,24 @@ def _xu_fd_halfcycle(
     k_d3: float,
     sigma_ref: float,
     T_ref_k: float,
+    k_cyc: float = 1.0,
+    **_unused: float,
 ) -> float:
     """Degradation increment for one half-cycle under the Xu et al. model.
 
-    Returns fd contribution = 0.5 * S_sigma * S_delta * S_T >= 0.
-    S_delta is guarded against a zero or negative denominator; if the
-    parameter combination produces a non-positive denominator (which should
-    not occur for physically reasonable DOD/avgSOC values with the default
-    coefficients), the term is clamped to zero with no side-effects.
+    Returns fd contribution = 0.5 * k_cyc * S_sigma * S_delta * S_T >= 0.
+    S_delta is guarded against a non-positive denominator; such a case
+    represents an out-of-validity parameter/state combination and should
+    be diagnosed before results are used for lifetime prediction.
     """
     if dod <= 0.0:
         return 0.0
-    S_sigma = math.exp(k_sigma * (dod - sigma_ref))
-    denom = k_d1 * (avg_soc ** k_d2) + k_d3
+    # Xu et al. (2016): S_sigma depends on average SOC; S_delta on DoD.
+    S_sigma = _xu_s_sigma(avg_soc, k_sigma, sigma_ref)
+    denom = k_d1 * (dod ** k_d2) + k_d3
     S_delta = 1.0 / denom if denom > 0.0 else 0.0
-    S_T = math.exp(k_T * (temp_k - T_ref_k) * T_ref_k / temp_k)
-    return 0.5 * S_sigma * S_delta * S_T
+    S_T = _xu_s_temp(temp_k, k_T, T_ref_k)
+    return 0.5 * k_cyc * S_sigma * S_delta * S_T
 
 
 class Battery2RCECM:
@@ -275,7 +346,8 @@ class Battery2RCECM:
         """Construct an illustrative pack-level discharge-only 2RC ECM.
 
         aging_params overrides the default Xu-model coefficients for any key
-        supplied. Keys: k_sigma, k_T, k_d1, k_d2, k_d3, sigma_ref, T_ref_k.
+        supplied. Keys: k_sigma, k_T, k_d1, k_d2, k_d3, sigma_ref, T_ref_k,
+        k_cyc (cycle-rate scale), k_t (calendar rate, 1/s; 0 disables).
         cycles_to_80 is retained for API compatibility but is no longer used
         in the SOH update; the Xu model parameters govern degradation rate.
         """
@@ -333,24 +405,35 @@ class Battery2RCECM:
             self._ocv_tables_by_soh = tuple(sorted(tables))
 
         # Reference ECM components: SOC=0.5, SOH=1, T=25 C.
-        # These are anchored to the LiPo_dataset fit outputs instead of the
-        # original illustrative defaults, while still preserving the model's
-        # scaling with pack voltage/capacity.
-        scale = (self.nominal_voltage / 14.8) * (5.0 / self.capacity_ah)
-        r0_ref = _DATASET_ECM_REF.get('RO', 0.035 * scale)
-        r1_ref = _DATASET_ECM_REF.get('R1', 0.010 * scale)
-        r2_ref = _DATASET_ECM_REF.get('R2', 0.005 * scale)
-        c1_ref = _DATASET_ECM_REF.get('Q1', 7.5 / max(r1_ref, 1e-9))
-        c2_ref = _DATASET_ECM_REF.get('Q2', 30.0 / max(r2_ref, 1e-9))
-        self.r0_ref = float(r0_ref) * scale
-        self.r1_ref = float(r1_ref) * scale
-        self.r2_ref = float(r2_ref) * scale
-        self.c1_ref = float(c1_ref)
-        self.c2_ref = float(c2_ref)
+        # With LiPo data available, single-cell values are scaled to the pack:
+        #   Ns = pack V / cell V (series), Np = pack Ah / cell Ah (parallel),
+        #   R_pack = R_cell * Ns / Np,  C_pack = C_cell * Np / Ns  (tau unchanged).
+        # Without data, fall back to the illustrative pack-level defaults.
+        ref = _DATASET_ECM_REF
+        if ref:
+            self.cells_series = self.nominal_voltage / ref['cell_nominal_voltage']
+            self.cells_parallel = self.capacity_ah / ref['cell_capacity_ah']
+            r_scale = self.cells_series / self.cells_parallel
+            self.r0_ref = ref['R0'] * r_scale
+            self.r1_ref = ref['R1'] * r_scale
+            self.r2_ref = ref['R2'] * r_scale
+            self.c1_ref = ref['C1'] / r_scale
+            self.c2_ref = ref['C2'] / r_scale
+            self.ecm_source = 'lipo_dataset_cell_scaled'
+        else:
+            self.cells_series = self.cells_parallel = float('nan')
+            scale = (self.nominal_voltage / 14.8) * (5.0 / self.capacity_ah)
+            self.r0_ref = 0.035 * scale
+            self.r1_ref = 0.010 * scale
+            self.r2_ref = 0.005 * scale
+            self.c1_ref = 7.5 / self.r1_ref
+            self.c2_ref = 30.0 / self.r2_ref
+            self.ecm_source = 'illustrative_defaults'
 
         self.v1 = self.v2 = 0.0
         self.elapsed_s = 0.0
         self.discharge_ah = 0.0
+        self.charge_ah = 0.0
         self.load_energy_j = 0.0
         self.source_energy_j = 0.0
         self.heat_energy_j = 0.0
@@ -374,6 +457,8 @@ class Battery2RCECM:
         self._fd_completed: float = -math.log(float(soh_init))
         # SOC at the start of the current (in-progress) half-cycle.
         self._soc_cycle_start: float = float(soc_init)
+        # Diagnostic split of fd_completed (calendar part is included in it).
+        self._fd_calendar: float = 0.0
 
     # ------------------------------------------------------------------
     # Public: Xu-model cycle boundary
@@ -406,6 +491,11 @@ class Battery2RCECM:
         return soh
 
     @property
+    def fd_calendar(self) -> float:
+        """Cumulative calendar-aging fd (already included in fd_completed)."""
+        return self._fd_calendar
+
+    @property
     def fd_completed(self) -> float:
         """Cumulative degradation from all completed half-cycles."""
         return self._fd_completed
@@ -413,7 +503,7 @@ class Battery2RCECM:
     @property
     def fd_total(self) -> float:
         """fd_completed plus the real-time estimate for the current half-cycle."""
-        dod = max(self._soc_cycle_start - self.soc, 0.0)
+        dod = abs(self._soc_cycle_start - self.soc)
         avg_soc = (self._soc_cycle_start + self.soc) / 2.0
         temp_k = self.temp_c + 273.15
         return self._fd_completed + _xu_fd_halfcycle(dod, avg_soc, temp_k, **self._ap)
@@ -606,6 +696,7 @@ class Battery2RCECM:
 
         soc, soh, v1, v2 = self.soc, self.soh, self.v1, self.v2
         source_j = heat_j = rc_storage_j = discharge_ah = 0.0
+        fd_cal_step = 0.0
 
         # Snapshot of Xu-model cycle state for rollback on error.
         fd_completed_snap = self._fd_completed
@@ -615,6 +706,7 @@ class Battery2RCECM:
             for _ in range(n):
                 i, v, ocv, p = self._electrical(power_w, soc, soh, v1, v2, t)
                 da = i * ds / 3600.0
+                soc_prev = soc
                 soc -= da / (self.capacity_ah * soh)
                 if soc < 0.02:
                     raise BatteryLimitError('SOC reserve reached')
@@ -628,10 +720,11 @@ class Battery2RCECM:
                     # fd is a function of cumulative state, not a running sum,
                     # so there is no dependence on time-step size.
                     t_k = t + 273.15
-                    dod_cumul = max(self._soc_cycle_start - soc, 0.0)
+                    fd_cal_step += _xu_calendar_fd(soc_prev, soc, ds, t_k, **self._ap)
+                    dod_cumul = abs(self._soc_cycle_start - soc)
                     avg_soc = (self._soc_cycle_start + soc) / 2.0
                     fd_hc = _xu_fd_halfcycle(dod_cumul, avg_soc, t_k, **self._ap)
-                    fd_total = self._fd_completed + fd_hc
+                    fd_total = self._fd_completed + fd_cal_step + fd_hc
                     soh = math.exp(-fd_total)
                     if soh < 0.5:
                         raise BatteryLimitError('SOH below modeled range')
@@ -653,6 +746,8 @@ class Battery2RCECM:
 
         # Commit all state atomically.
         self.soc, self.soh, self.v1, self.v2, self.temp_c = soc, soh, v1, v2, t
+        self._fd_completed += fd_cal_step
+        self._fd_calendar += fd_cal_step
         self.elapsed_s += dt
         self.discharge_ah += discharge_ah
         self.load_energy_j += load_j
@@ -666,6 +761,8 @@ class Battery2RCECM:
             tau1_s=p.tau1, tau2_s=p.tau2,
             fd_completed=self._fd_completed,
             fd_total=self.fd_total,
+            fd_calendar=self._fd_calendar,
+            fd_calendar_step=fd_cal_step,
             load_energy_j=load_j, source_energy_j=source_j,
             energy_loss_j=source_j - load_j,
             heat_energy_j=heat_j,
@@ -685,6 +782,87 @@ class Battery2RCECM:
             cumulative_power_balance_error_j=self.power_balance_error_j,
         )
         return soc, soh
+
+    def rest(self, duration_s: float, temp_c: Optional[float] = None):
+        """Idle at constant SOC for duration_s; accrues calendar aging only.
+
+        RC branch voltages relax with the current tau values. No current flows,
+        so the in-progress half-cycle is unchanged. Returns (SOC, SOH).
+        """
+        t = self.temp_c if temp_c is None else float(temp_c)
+        if not (math.isfinite(duration_s) and duration_s >= 0
+                and math.isfinite(t) and -10 <= t <= 50):
+            raise ValueError('Invalid rest duration or temperature')
+        if duration_s == 0:
+            return self.soc, self.soh
+        p = self.parameters(self.soc, self.soh, t)
+        self.v1 *= math.exp(-duration_s / p.tau1)
+        self.v2 *= math.exp(-duration_s / p.tau2)
+        self.temp_c = t
+        self.elapsed_s += duration_s
+        if self.aging_enabled:
+            fd_cal = _xu_calendar_fd(self.soc, self.soc, duration_s, t + 273.15, **self._ap)
+            self._fd_completed += fd_cal
+            self._fd_calendar += fd_cal
+            soh = math.exp(-self.fd_total)
+            if soh < 0.5:
+                raise BatteryLimitError('SOH below modeled range during rest')
+            self.soh = soh
+        return self.soc, self.soh
+
+    def charge(self, target_soc: float = 1.0, c_rate: float = 0.5,
+               temp_c: Optional[float] = None) -> Dict[str, float]:
+        """Recharge to target_soc by constant-current coulomb counting.
+
+        Sequence:
+          1. cycle_end() commits any in-progress discharge half-cycle;
+          2. SOC rises linearly at I = c_rate * capacity_ah for the time needed
+             to add (target_soc - SOC) * capacity_ah * SOH; calendar aging is
+             integrated over that time;
+          3. cycle_end() commits the charge half-cycle (DoD = SOC rise).
+
+        Charge-side ECM voltages / CV phase are not modelled; RC branches are
+        assumed relaxed afterwards. Returns a small info dict.
+        """
+        t = self.temp_c if temp_c is None else float(temp_c)
+        if not (math.isfinite(target_soc) and 0.02 <= target_soc <= 1.0):
+            raise ValueError('target_soc must be in [0.02, 1]')
+        if not (math.isfinite(c_rate) and c_rate > 0):
+            raise ValueError('c_rate must be positive')
+        if not (math.isfinite(t) and -10 <= t <= 50):
+            raise ValueError('Temperature must be in [-10, 50] C')
+
+        self.cycle_end()                    # commit discharge half-cycle
+        soc0 = self.soc
+        if target_soc <= soc0:
+            return dict(charge_ah=0.0, duration_s=0.0, fd_charge_halfcycle=0.0,
+                        fd_calendar=0.0, soc=self.soc, soh=self.soh)
+
+        current_a = c_rate * self.capacity_ah
+        added_ah = (target_soc - soc0) * self.capacity_ah * self.soh
+        duration_s = added_ah / current_a * 3600.0
+        fd_before = self._fd_completed
+
+        fd_cal = 0.0
+        if self.aging_enabled:
+            fd_cal = _xu_calendar_fd(soc0, target_soc, duration_s, t + 273.15, **self._ap)
+            self._fd_completed += fd_cal
+            self._fd_calendar += fd_cal
+
+        self.soc = float(target_soc)
+        self.v1 = self.v2 = 0.0
+        self.temp_c = t
+        self.elapsed_s += duration_s
+        self.charge_ah += added_ah
+        self.cycle_end()                    # commit charge half-cycle
+        return dict(
+            charge_ah=added_ah,
+            duration_s=duration_s,
+            fd_charge_halfcycle=self._fd_completed - fd_before - fd_cal,
+            fd_calendar=fd_cal,
+            soc=self.soc,
+            soh=self.soh,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -793,7 +971,8 @@ def self_test():
     b = new(aging_enabled=False)
     b.step(25)
     prev_v1 = b.v1
-    b.step(0)
+    # Relax for one time constant (LiPo EIS taus are only milliseconds).
+    b.step(0, dt=b.parameters().tau1)
     assert 0 < b.v1 < prev_v1
     assert b.last_info['heat_energy_j'] > 0
     assert b.last_info['rc_storage_energy_j'] < 0
@@ -875,9 +1054,46 @@ def self_test():
     else:
         raise AssertionError('Unknown aging_params key accepted')
 
+    # ---- Charge half-cycle is aged, and charge() restores SOC ----
+    b = new()
+    b.step(25, dt=600)
+    b.cycle_end()
+    fd_dis = b._fd_completed
+    info = b.charge(1.0, c_rate=0.5)
+    assert b.soc == 1.0
+    assert info['fd_charge_halfcycle'] > 0, 'charge half-cycle not aged'
+    assert info['fd_calendar'] > 0, 'no calendar aging during charge'
+    assert b._fd_completed > fd_dis
+    # Discharge converts Ah->SOC with the SOH at each substep, charge() uses the
+    # SOH after discharge; they differ by the SOH drop during the discharge.
+    assert math.isclose(info['charge_ah'], b.discharge_ah,
+                        rel_tol=10 * (1.0 - b.soh) + 1e-9), \
+        'charge Ah should equal discharged Ah for a full recharge'
+
+    # ---- Calendar aging: rest ages, longer rest ages more, k_t=0 disables ----
+    r1, r2, r0 = new(), new(), new(aging_params={'k_t': 0.0})
+    r1.rest(3600)
+    r2.rest(7200)
+    r0.rest(7200)
+    assert 0 < r1.fd_calendar < r2.fd_calendar
+    assert math.isclose(r2.fd_calendar, 2 * r1.fd_calendar, rel_tol=1e-12)
+    assert r0.fd_calendar == 0.0 and r0.soh == 1.0
+    hi, lo = new(soc_init=0.9), new(soc_init=0.3)
+    hi.rest(3600)
+    lo.rest(3600)
+    assert hi.fd_calendar > lo.fd_calendar, 'calendar aging should rise with SOC'
+
+    # ---- Calendar aging during discharge is substep-independent ----
+    a, c = new(max_substep_s=1.0), new(max_substep_s=0.01)
+    for _ in range(50):
+        a.step(25)
+        c.step(25)
+    assert a.fd_calendar > 0
+    assert math.isclose(a.fd_calendar, c.fd_calendar, rel_tol=1e-6)
+
     print('PASS: SOC/SOH/T, OCV calibration lookup, RC dynamics, energy/heat/storage '
           'accounting, aging switch, current limit, rollback, Xu-model fd independence, '
-          'cycle_end, custom aging_params')
+          'cycle_end, custom aging_params, charge half-cycle, calendar aging')
 
 
 # ---------------------------------------------------------------------------

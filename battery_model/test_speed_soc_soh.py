@@ -76,7 +76,7 @@ def plot_results(speeds_mps: list[float], final_soc: list[float], final_soh: lis
 def main() -> None:
     # evaluate a grid of speed and initial SOH values
     speeds_mps = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0]
-    soh_values = [0.90]
+    soh_values = [0.85, 0.90, 0.95, 1.0]
     soc_matrix: list[list[float]] = []
     soh_matrix: list[list[float]] = []
 
