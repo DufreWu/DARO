@@ -1,0 +1,192 @@
+{
+  "train_dataset_ids": [
+    1,
+    2
+  ],
+  "val_dataset_ids": [
+    3
+  ],
+  "cell": {
+    "nominal_voltage_v": 3.7,
+    "capacity_ah": 1.0102914203219235,
+    "capacity_source": "median first Capacity_std value of training cells"
+  },
+  "ecm": {
+    "R0": {
+      "degree": 3,
+      "coefficients": [
+        -0.19889185290605757,
+        0.3275028341936145,
+        -0.17242234612721977,
+        -2.5178967591391803
+      ],
+      "reference_soc_0_5": 0.0783089244157501,
+      "coefficients_are_for": "log(parameter); predict using exp(polyval(coefficients, SOC))",
+      "units": "ohm"
+    },
+    "R1": {
+      "degree": 3,
+      "coefficients": [
+        5.770724034027494,
+        -7.074034047759617,
+        0.8998627431725381,
+        -3.1625014077743057
+      ],
+      "reference_soc_0_5": 0.023289840492259337,
+      "coefficients_are_for": "log(parameter); predict using exp(polyval(coefficients, SOC))",
+      "units": "ohm"
+    },
+    "R2": {
+      "degree": 3,
+      "coefficients": [
+        -10.875700227495653,
+        16.261113274677484,
+        -6.811879010222719,
+        -3.3490673906873916
+      ],
+      "reference_soc_0_5": 0.017436473202716518,
+      "coefficients_are_for": "log(parameter); predict using exp(polyval(coefficients, SOC))",
+      "units": "ohm"
+    },
+    "C1": {
+      "degree": 3,
+      "coefficients": [
+        5.794804317888412,
+        -7.058277056104154,
+        0.26191446634290283,
+        -2.5472357039276763
+      ],
+      "reference_soc_0_5": 0.03154004738576417,
+      "coefficients_are_for": "log(parameter); predict using exp(polyval(coefficients, SOC))",
+      "units": "farad (local R-CPE equivalent)"
+    },
+    "C2": {
+      "degree": 3,
+      "coefficients": [
+        13.104543945896308,
+        -15.583560048797722,
+        0.5557309674157668,
+        1.370405328910446
+      ],
+      "reference_soc_0_5": 0.5435947762253858,
+      "coefficients_are_for": "log(parameter); predict using exp(polyval(coefficients, SOC))",
+      "units": "farad (local R-CPE equivalent)"
+    }
+  },
+  "ecm_fit_method": "CPE Q/alpha transformed to effective C using Hsu-Mansfeld; pooled SOC-only log-polynomial cubic; not time-domain validated",
+  "ecm_metrics": {
+    "R0": {
+      "n": 106,
+      "mae": 0.004355320583103338,
+      "rmse": 0.005317906297256393,
+      "mape_pct": 5.146453228126706,
+      "non_positive_predictions": 0
+    },
+    "R1": {
+      "n": 106,
+      "mae": 0.00563757248834346,
+      "rmse": 0.006980767584463247,
+      "mape_pct": 17.957197015061233,
+      "non_positive_predictions": 0
+    },
+    "R2": {
+      "n": 106,
+      "mae": 0.0038236257112117303,
+      "rmse": 0.00498071576290546,
+      "mape_pct": 25.859852724875747,
+      "non_positive_predictions": 0
+    },
+    "C1": {
+      "n": 106,
+      "mae": 0.01767184863040441,
+      "rmse": 0.021296153903167248,
+      "mape_pct": 78.7090548050983,
+      "non_positive_predictions": 0
+    },
+    "C2": {
+      "n": 106,
+      "mae": 0.36583069398798407,
+      "rmse": 0.6121829626119081,
+      "mape_pct": 39.47212633990195,
+      "non_positive_predictions": 0
+    }
+  },
+  "ecm_rows_skipped_by_dataset": {
+    "1": 3,
+    "2": 8,
+    "3": 2
+  },
+  "effective_cycle_fade": {
+    "model": "SOH=exp(-k_eff*N)",
+    "k_eff_per_cycle": 0.0004805835624768858,
+    "cell_weighting": "equal",
+    "k_eff_pooled_points": 0.0003566946834457964,
+    "individual_train_cell_rates": {
+      "1": 0.0010153603239862702,
+      "2": 0.00022920809952420754
+    },
+    "validation_soh": {
+      "3": {
+        "n": 12,
+        "mae": 0.05883579902623968,
+        "rmse": 0.06675275717394857,
+        "mae_percentage_points": 5.883579902623968,
+        "rmse_percentage_points": 6.675275717394857,
+        "observed_final_soh": 0.6941678323736827,
+        "predicted_final_soh": 0.8055237410531466,
+        "predicted_final_soh_range_from_train_cells": [
+          0.6332359700625327,
+          0.9019973969522813
+        ],
+        "last_measured_cycle": 450.0,
+        "r2": 0.4625974046843224
+      }
+    },
+    "warning": "Only an effective rate at the dataset protocols. Does not identify Xu SoC/DoD/T stress factors."
+  },
+  "degradation": {
+    "k_sigma": 1.04,
+    "k_T": 0.0693,
+    "k_d1": 140000.0,
+    "k_d2": -0.501,
+    "k_d3": -123000.0,
+    "sigma_ref": 0.5,
+    "T_ref_k": 298.15,
+    "k_cyc": 12.029332011419044,
+    "k_t": 4.14e-10
+  },
+  "degradation_provenance": {
+    "fitted": "k_cyc (from k_eff only)",
+    "fixed_literature": [
+      "T_ref_k",
+      "k_T",
+      "k_d1",
+      "k_d2",
+      "k_d3",
+      "k_sigma",
+      "k_t",
+      "sigma_ref"
+    ],
+    "method": "k_cyc = (k_eff - calendar_fd_per_cycle) / (2 * Xu half-cycle fd at protocol DoD, k_cyc=1)",
+    "protocol": {
+      "dod_median": 0.8730029596027258,
+      "dod_p10": 0.7826736244232557,
+      "dod_p90": 0.9308116359244336,
+      "cycle_duration_s_median": 4624.55200958255,
+      "n_cycles": 524
+    },
+    "assumed_temperature_k": 298.15,
+    "cycle_fd_per_cycle_at_k_cyc_1": 3.977505305168819e-05,
+    "calendar_fd_per_cycle": 2.116243546322303e-06,
+    "calendar_share_of_k_eff": 0.004403487159268137,
+    "warning": "Stress shape is Xu (LMO) literature, transferred to LiPo; extrapolation to DoD far from the protocol median is unvalidated."
+  },
+  "warnings": [
+    "ECM is for source single cell, not a 4S pack; CPE-to-C is a local approximation.",
+    "SOC-only fit pools multiple ageing stages and does not learn an independent SOH dependence.",
+    "Do not mix dimensional ECM errors into one overall MAE.",
+    "No rainflow charge/discharge stress histories or temperature variation are identified.",
+    "The 'degradation' field is k_eff mapped through the literature Xu shape (see degradation_provenance), not a Xu calibration.",
+    "EIS RC time constants are milliseconds (high-frequency arcs); they do not capture slow diffusion dynamics."
+  ]
+}

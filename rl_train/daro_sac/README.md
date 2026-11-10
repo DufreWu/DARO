@@ -19,7 +19,14 @@ Quality-of-Service (QoS) requirements.
 ├── network_torch.py   # Neural network definitions (actor + critic)
 ├── robot_env.py       # Robot environment, battery models, reward functions
 ├── sac_agent.py       # SAC agent with replay buffer and update logic
-└── sac_training.py    # Training loop, evaluation, baselines, CLI
+├── sac_training.py    # Training loop and CLI (no test code)
+└── evaluation/        # Test environment, baselines, metrics, distance sweep
+    ├── test_env.py        # EVAL_CONFIG, SOH × SOC × complexity grid, make_test_env
+    ├── baselines.py       # AS-MF, SOC-only, Deg-only, SOC+Deg
+    ├── metrics.py         # run_episode, Xu capacity fade per mission
+    ├── runner.py          # evaluate_policies, summaries, load_daro
+    ├── lifetime.py        # missions / km to EOL (extrapolated Xu fade)
+    └── distance_sweep.py  # 500 / 1000 / 2500 / 5000 m sweep
 ```
 
 ---
@@ -52,38 +59,64 @@ environment and a physical NVIDIA Jetson TX2 board (not covered here).
 python sac_training.py
 ```
 
-Checkpoints are saved every 500 episodes to `./checkpoints/`.
-Training logs (per-episode return, energy, QoS violation %) are written to
-`./logs/train_log.json`. Evaluation results against all baselines are
-appended to `./logs/eval_log.jsonl` every 200 episodes.
+Each run writes to a per-seed folder: checkpoints every 500 episodes to
+`./checkpoints/seed_<seed>/`, and `config.json`, `train_log.json` and
+`eval_log.jsonl` (quick DARO evaluation every 200 episodes) to
+`./logs/seed_<seed>/`.
+
+### Reward curves
+
+Training ends by writing `./logs/seed_<seed>/reward_curve.png`. It shows the
+training return per mission distance (moving average) and the periodic DARO
+evaluation return. A `--seeds` run also writes `./logs/reward_curve_seeds.png`
+(mean ± std across seeds, return per km). To re-plot existing logs:
+
+```bash
+python plot_rewards.py logs/seed_42
+python plot_rewards.py logs/seed_0 logs/seed_1 logs/seed_2   # + seed comparison
+```
+
+### Random seeds
+
+```bash
+python sac_training.py --seed 7                 # single run, seed 7
+python sac_training.py --seeds 0 1 2 3 4        # five runs, one per seed
+python sac_training.py --seed 7 --deterministic # bit-reproducible torch kernels
+```
+
+The seed fixes network initialisation, SAC exploration noise, replay sampling,
+warm-up actions, the episode curriculum (SOH, initial SOC, complexity,
+distance) and the environment disturbance stream; each comes from its own
+`SeedSequence` stream. The test seeds in `evaluation/` stay the same for every
+training seed, so runs are compared on identical test episodes.
 
 ### Resume from a checkpoint
 
 ```bash
-python sac_training.py --ckpt ./checkpoints
+python sac_training.py --ckpt ./checkpoints/seed_42
 ```
 
 ### Evaluate a trained policy
 
-Runs all four policies (DARO, AS-MF, BACO, HAEM) across all SOH × complexity
-combinations with 20 independent seeds, reproducing Fig. 9 of the paper:
+All testing lives in `evaluation/` (run from this directory). Policies: DARO,
+AS-MF, SOC-only, Deg-only, SOC+Deg; grid SOH × initial SOC × complexity with
+seeded complexity disturbance and common random numbers across policies:
 
 ```bash
-python sac_training.py --eval --ckpt ./checkpoints
+python -m evaluation --ckpt ./checkpoints/seed_42          # DARO + baselines
+python -m evaluation --baselines-only --distance 1000
 ```
 
-Results are written to `./logs/eval_results.json`.
+Results (incl. extrapolated missions/km to EOL) → `./logs/test_results.json`.
 
-### Lifetime evaluation (Table II)
-
-Counts the number of repeated 10 km missions completed before battery EOL
-(SOH ≤ 0.80) for each method and complexity level:
+### Mission-distance sweep
 
 ```bash
-python sac_training.py --lifetime --ckpt ./checkpoints
+python -m evaluation.distance_sweep --ckpt ./checkpoints/seed_42   # 500/1000/2500/5000 m
+python -m evaluation.distance_sweep --baselines-only --distances 500 5000
 ```
 
-Results are written to `./logs/lifetime_results.json`.
+Results → `./logs/distance_sweep.json` and `./logs/distance_sweep.csv`.
 
 ### Override training scale
 
@@ -168,19 +201,25 @@ observe–decide–act control loop (§IV-B-4).
 | Motor speed v | 1.0 – 5.0 m/s |
 | CPU frequency f | 0.499 – 2.0 GHz |
 
-**Reward** (Eq. 10):
+**Reward** (`RobotEnv.reward_terms`):
 
 ```
-r(t) = -E_d(t) - D_d(t) + U(t)
+r_t = -E_d(t) - D_d(t) + U_t
 ```
 
-| Component | Definition | Paper eq. |
-|-----------|------------|-----------|
-| E_d(t) | Energy per metre: α · ΔSOC% / v | Eq. 11 |
-| D_d(t) | Degradation penalty: exp(κ · max(0, ΔSOH%)) / v | Eq. 12 |
-| U(t) | QoS utility: (thr/QoS_ref)^γ clipped at 1 | Eq. 13 |
+| Term | Definition | Meaning |
+|------|------------|---------|
+| E_d(t) | w_E · E_t / E_ref,  E_t = I·V·Δt [J] | Energy drawn from the pack this step |
+| D_d(t) | w_D · S_t / S_ref,  S_t = Δt·[w_I (C/C_ref)² + w_T ((T−T_th)⁺/T_s)² + w_S ((SOC−SOC_th)⁺/(1−SOC_th))²] | Battery-stress proxy (`BatteryStress`); shaping only, **not** ΔSOH |
+| U_t | B·Δx/L − w_T·Δt/(L/v_max) − w_Q·q_t·Δt/Δt_ctrl − P_fail·𝟙[fail] | Task utility: progress, time pressure, QoS, terminal failure |
 
-Default shaping parameters: α = 550, κ = 500, γ = 3.
+q_t = (max(0, 1 − min_i thr_i/QoS_ref_i))², L = mission distance.
+Defaults (`RobotParams`, `StressParams`): E_ref = 20 kJ, S_ref = 1000 s,
+w_E = w_D = w_Q = 1, w_T = 0.15, B = 2, P_fail = 3; w_I = w_T(thermal) = 1,
+w_S = 0, C_ref = 1C, T_th = 35 °C, T_s = 10 °C.
+
+Each step's `info` carries `E_d`, `D_d`, `U_t`; the training log stores the
+per-episode sums `sum_E_d`, `sum_D_d`, `sum_U_t`.
 
 **Environment modes:**
 
@@ -247,18 +286,20 @@ and environmental conditions without overfitting to a single operating point.
 
 | Baseline | Description |
 |----------|-------------|
-| `ASMFBaseline` | Static: v = 2.5 m/s, f = 2.0 GHz |
-| `BACOBaseline` | SOC-aware co-optimization (no SOH) |
-| `HAEMBaseline` | SOH-aware mechanical control; independent CPU optimization |
+| `AS-MF` | Static: v = 2.5 m/s, f = f_max (`evaluation/baselines.py`) |
+| `SOC-only` | QoS-aware DVFS, speed scaled by SOC |
+| `Deg-only` | QoS-aware DVFS, speed scaled by SOH |
+| `SOC+Deg` | QoS-aware DVFS, speed scaled by SOC × SOH (rule-based DARO counterpart) |
 
 **Key functions:**
 
 | Function | Description |
 |----------|-------------|
 | `train(config)` | Main training loop; handles warm-up, curriculum, checkpointing, periodic eval |
-| `evaluate(agent, config)` | Full cross-evaluation: all methods × SOH levels × complexity, 20 runs each |
-| `evaluate_lifetime(agent, config)` | Repeated-mission count to EOL per method per complexity (Table II) |
-| `run_episode(env, agent, train)` | Single episode rollout; accumulates metrics |
+| `periodic_eval(agent, config)` | Quick DARO check on the evaluation grid during training |
+
+Evaluation entry points are in `evaluation/` (`evaluate_policies`,
+`lifetime_from_results`, `distance_sweep.sweep`).
 
 ---
 
@@ -270,16 +311,15 @@ and environmental conditions without overfitting to a single operating point.
 # Train
 python sac_training.py
 
-# Evaluate across all SOH × complexity conditions
-python sac_training.py --eval --ckpt ./checkpoints
-# → ./logs/eval_results.json
+# Evaluate across all SOH × SOC × complexity conditions
+python -m evaluation --ckpt ./checkpoints/seed_42
+# → ./logs/test_results.json
 ```
 
 ### Battery lifetime (Table II)
 
 ```bash
-python sac_training.py --lifetime --ckpt ./checkpoints
-# → ./logs/lifetime_results.json
+python -m evaluation --ckpt ./checkpoints/seed_42   # lifetime printed and saved in test_results.json
 ```
 
 Expected results (averaged over 20 runs, medium complexity):
@@ -298,8 +338,8 @@ reward function in `robot_env.py`:
 
 | Variant | Change |
 |---------|--------|
-| SOC-only | Set `kappa = 0` in `RobotParams` to disable D_d |
-| SOH-only | Set `alpha = 0` in `RobotParams` to disable E_d |
+| SOC-only | Set `w_stress = 0` in `RobotParams` to disable D_d |
+| SOH-only | Set `w_energy = 0` in `RobotParams` to disable E_d |
 | SOC+SOH (full DARO) | Default config |
 
 ---

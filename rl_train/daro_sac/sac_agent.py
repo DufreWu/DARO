@@ -317,8 +317,6 @@ class SACAgent:
     def model_size_kb(self) -> dict:
         """
         Report parameter counts and approximate on-disk size.
-
-        Paper reports 85.43 kB per critic and 46.89 kB for the actor (§V-B).
         """
         def _count(model):
             return sum(p.numel() for p in model.parameters())

@@ -1,633 +1,451 @@
-"""
-robot_env.py
-------------
-DARO robot environment compatible with the OpenAI Gym interface.
+"""DARO mobile robot environment, revised for independent aging validation.
 
-Implements the full working scenario from §II and the battery models from
-§IV-A, including:
-  - 2nd-order Equivalent Circuit Model (ECM) for short-term SOC (Eqs. 1-5)
-  - Throughput-based fade model for long-term SOH (Eqs. 6-8)
-  - Reward function: r(t) = -E_d(t) - D_d(t) + U(t)  (Eq. 10)
-  - Rainflow-Counting stub for cycle-based SOH updates
-  - Gaussian sensor noise added during training (§V-A)
-  - EKF state estimation hook (interface only; full EKF in estimation.py)
-"""
+Training reward uses a dimensionless *battery stress proxy*, never a capacity
+fade prediction. SOH remains fixed within a mission. Actual/model-predicted
+aging must be assessed by an independently calibrated evaluator on exported
+trajectories, including recharge/rest for lifetime studies.
 
-import math
-import numpy as np
+Dependencies: numpy. Gymnasium is optional (spaces/interface if installed).
+All motor/power/OCV/thermal coefficients are illustrative, NOT calibrated.
+"""
+from __future__ import annotations
+
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple
+from typing import Optional, Sequence
+import json
+import math
+from pathlib import Path
+import numpy as np
+
+try:
+    import gymnasium as gym
+    from gymnasium import spaces
+    _Base = gym.Env
+except ImportError:
+    gym = None
+    spaces = None
+    _Base = object
 
 
-# ---------------------------------------------------------------------------
-# Battery / Robot constants (Table I)
-# ---------------------------------------------------------------------------
+DEFAULT_FIT_PATH = Path(__file__).resolve().parent / 'lipo_fit_parameters.json'
+_ECM_KEYS = ('R0', 'R1', 'R2', 'C1', 'C2')
+
 
 @dataclass
 class ECMParams:
-    """2nd-order RC equivalent circuit model parameters (Table I)."""
-    Rs: float = 0.035    # Internal resistance [Ω]
-    R1: float = 0.22     # RC branch 1 resistance [Ω]
-    C1: float = 120.0    # RC branch 1 capacitance [F]
-    R2: float = 0.019    # RC branch 2 resistance [Ω]
-    C2: float = 1500.0   # RC branch 2 capacitance [F]
-    eta: float = 0.98    # Coulombic efficiency factor
+    """Pack-level 2RC ECM parameters.
+
+    By default the SOC-dependent single-cell fit in lipo_fit_parameters.json is
+    loaded and scaled to the pack (same convention as battery_model.py):
+        Ns = V_nom / cell V,  Np = Q_n[Ah] / cell Ah,
+        R_pack = R_cell * Ns / Np,  C_pack = C_cell * Np / Ns.
+    Each component is exp(polyval(coeffs, SOC)). The constants Rs/R1/C1/R2/C2
+    below are only used as a fallback when no fit file is available.
+    """
+    Rs: float = 0.035
+    R1: float = 0.22
+    C1: float = 120.0
+    R2: float = 0.019
+    C2: float = 1500.0
+    eta: float = 1.0  # discharge coulombic efficiency convention
+    voltage_min: float = 12.0  # 4S pack, illustrative cutoff
+    current_max: float = 30.0  # illustrative; replace with datasheet/measurement
+    # A resistance multiplier can be calibrated independently of capacity SOH.
+    resistance_aging_factor: float = 0.0
+    # SOC-dependent fit: {'R0': [coeffs], ...} for log(parameter), cell level.
+    fit_coeffs: Optional[dict] = None
+    r_scale: float = 1.0  # Ns / Np, applied to R (C is divided by it)
+    soc_clip: tuple = (0.0, 1.0)  # SOC range used when evaluating the fit
+    source: str = 'constant_fallback'
+
+    @classmethod
+    def from_fit_json(cls, path=DEFAULT_FIT_PATH, pack_v_nom: float = 14.8,
+                      pack_capacity_ah: float = 5.0, **overrides) -> 'ECMParams':
+        with open(path) as fh:
+            payload = json.load(fh)
+        ecm = payload['ecm']
+        coeffs = {k: [float(c) for c in ecm[k]['coefficients']] for k in _ECM_KEYS}
+        cell = payload.get('cell', {})
+        n_s = pack_v_nom / float(cell.get('nominal_voltage_v', 3.7))
+        n_p = pack_capacity_ah / float(cell.get('capacity_ah', 1.0))
+        r_scale = n_s / n_p
+        ref = {k: math.exp(np.polyval(coeffs[k], 0.5)) for k in _ECM_KEYS}
+        kw = dict(Rs=ref['R0'] * r_scale, R1=ref['R1'] * r_scale,
+                  C1=ref['C1'] / r_scale, R2=ref['R2'] * r_scale,
+                  C2=ref['C2'] / r_scale, fit_coeffs=coeffs, r_scale=r_scale,
+                  source=f'lipo_fit:{Path(path).name}')
+        kw.update(overrides)
+        return cls(**kw)
+
+    @classmethod
+    def default(cls, robot: Optional['RobotParams'] = None, **overrides) -> 'ECMParams':
+        """Fit-file parameters when available, otherwise constant fallback."""
+        if DEFAULT_FIT_PATH.exists():
+            r = robot or RobotParams()
+            return cls.from_fit_json(DEFAULT_FIT_PATH, pack_v_nom=r.V_nom,
+                                     pack_capacity_ah=r.Q_n / 3600.0, **overrides)
+        return cls(**overrides)
+
+    def values(self, soc: float) -> tuple[float, float, float, float, float]:
+        """Pack (R0, R1, C1, R2, C2) at the given SOC, before R0 aging."""
+        if not self.fit_coeffs:
+            return self.Rs, self.R1, self.C1, self.R2, self.C2
+        s = float(np.clip(soc, *self.soc_clip))
+        v = {k: math.exp(np.polyval(self.fit_coeffs[k], s)) for k in _ECM_KEYS}
+        k = self.r_scale
+        return v['R0'] * k, v['R1'] * k, v['C1'] / k, v['R2'] * k, v['C2'] / k
 
 
 @dataclass
-class DegradationParams:
-    """Semi-empirical LiPo degradation model coefficients (Table I, Eqs. 8)."""
-    k_sigma: float = 1.04       # Average-SOC stress coefficient
-    k_T:     float = 6.93e-2    # Temperature stress coefficient
-    k_d1:    float = 1.40e5     # DOD stress coefficient (amplitude)
-    k_d2:    float = -5.01e-1   # DOD stress exponent
-    k_d3:    float = -1.23e5    # DOD stress offset
-    sigma_ref: float = 0.5      # Reference SOC
-    T_ref:     float = 298.15   # Reference temperature [K]
+class StressParams:
+    """Dimensionless per-step proxy, NOT ΔSOH or physical degradation."""
+    current_weight: float = 1.0
+    temperature_weight: float = 1.0
+    soc_weight: float = 0.0
+    c_rate_ref: float = 1.0
+    temp_threshold_c: float = 35.0
+    temp_scale_c: float = 10.0
+    soc_threshold: float = 0.85
 
 
 @dataclass
 class RobotParams:
-    """Rover platform and software stack parameters (§II-A)."""
-    # Battery
-    Q_n: float = 5.0 * 3600     # Rated capacity [As] (5 Ah)
-    V_nom: float = 14.8         # Nominal battery voltage [V]
-    SOH_EOL: float = 0.80       # End-of-life SOH threshold
-    # Motors
-    v_min: float = 0.5          # Min motor speed [m/s]
-    v_max: float = 5.0          # Max motor speed [m/s]
-    # CPU DVFS
-    f_min: float = 0.499        # Min CPU frequency [GHz]
-    f_max: float = 2.0          # Max CPU frequency [GHz]
-    # Control loop
-    dt: float = 1.0             # Control period [s]
-    T_amb: float = 25       # Ambient temperature [C]
-    # Applications (N applications)
+    Q_n: float = 5 * 3600.0  # [As], pack capacity in series remains 5 Ah
+    V_nom: float = 14.8
+    SOH_EOL: float = 0.80
+    v_min: float = 0.5
+    v_max: float = 5.0
+    a_max: float = 0.75  # m/s², illustrative acceleration limit
+    f_min: float = 0.499
+    f_max: float = 2.0
+    dt: float = 1.0
+    T_amb: float = 25.0  # Celsius
+    mission_distance_m: float = 500.0
+    max_steps: int = 1200
     n_apps: int = 2
-    qos_ref: List[float] = field(default_factory=lambda: [25.0, 25.0])
-    # Reward shaping
-    alpha: float = 550.0        # Energy reward weight (§IV-B-2)
-    kappa: float = 500.0        # Degradation penalty weight (§IV-B-2)
-    gamma_qos: float = 3.0      # QoS utility exponent (Eq. 13)
-    # Noise (§V-A)
-    noise_std_frac: float = 0.02  # Fraction of power reading as noise std
+    qos_ref: list[float] = field(default_factory=lambda: [15.0, 15.0])
+    # Mission energy objective: scale each step by constant reference energy.
+    energy_ref_j: float = 20000.0
+    stress_ref_s: float = 1000.0
+    w_energy: float = 1.0
+    w_stress: float = 1.0
+    w_time: float = 0.15  # avoid trivial crawl policies
+    w_qos: float = 1.0
+    completion_bonus: float = 2.0
+    failure_penalty: float = 3.0
+    noise_std_frac: float = 0.02  # observation only
+    # Illustrative power model coefficients; fit to robot measurements.
+    motor_base_w: float = 2.0
+    motor_linear_w_per_mps: float = 2.5
+    motor_quadratic_w_per_mps2: float = 1.8
+    motor_accel_w_per_mps2: float = 1.5
+    compute_base_w: float = 2.0
+    compute_dynamic_w: float = 1.5
+    aux_power_w: float = 2.0
+    # Simple lumped thermal model; calibration required.
+    thermal_capacity_j_per_k: float = 400.0
+    thermal_conductance_w_per_k: float = 0.8
 
 
-# ---------------------------------------------------------------------------
-# Open-circuit voltage lookup (simplified polynomial fit)
-# Voc depends on SOC and SOH: at lower SOH, internal resistance increases,
-# which lowers the effective Voc seen by the circuit.
-# ---------------------------------------------------------------------------
+class BatteryLimitError(ValueError):
+    pass
 
-def _voc(soc: float, soh: float, V_nom: float = 14.8) -> float:
+
+def _voc(soc: float, soh: float = 1.0, V_nom: float = 14.8) -> float:
+    """Illustrative 4S OCV(SOC), independent of SOH by default.
+
+    Replace with measured rested OCV-SOC curve. No artificial SOH scaling.
     """
-    Estimate open-circuit voltage from SOC and SOH.
-
-    Uses a simple polynomial model calibrated to a 4S LiPo pack.
-    The SOH scaling captures the voltage drop due to increased internal
-    impedance at lower battery health states (§II-B, Fig. 4).
-    """
-    # Polynomial fit to Voc-SOC curve of a 4S LiPo (4 × 3.7 V nominal)
-    coeffs = [2.031, -4.923, 5.565, -1.599, 13.97]
-    voc_fresh = np.polyval(coeffs, np.clip(soc, 0.0, 1.0))
-    # Slight reduction in Voc as SOH degrades (internal resistance effect)
-    soh_factor = 0.95 + 0.05 * soh   # ranges 0.95–1.0 over SOH ∈ [0,1]
-    return voc_fresh * soh_factor
+    s = float(np.clip(soc, 0.0, 1.0))
+    return 12.8 + 3.8 * s + 0.2 * s ** 8
 
 
-def _internal_resistance(soc: float, soh: float,
-                          ecm: ECMParams) -> float:
-    """
-    Effective internal resistance Rs(SOC, SOH).
-
-    Rs increases as the battery ages (higher SOH loss ↔ higher impedance).
-    Approximated from the ECM base value scaled by SOH⁻¹.
-    """
-    # Rs grows as SOH decreases
-    return ecm.Rs / max(soh, 0.01)
-
-
-# ---------------------------------------------------------------------------
-# SOC ECM update  (Eqs. 1-2)
-# ---------------------------------------------------------------------------
-
-class ECMBattery:
-    """
-    2nd-order RC ECM for real-time SOC estimation (§IV-A-1).
-
-    State: [V1, V2, SOC]
-    Input: power demand Pe [W]
-    """
-
-    def __init__(self, ecm: ECMParams, robot: RobotParams,
-                 soc_init: float = 1.0, soh_init: float = 1.0):
-        self.ecm = ecm
-        self.robot = robot
-        self.soc = soc_init
-        self.soh = soh_init
-        # RC network voltages
-        self.V1 = 0.0
-        self.V2 = 0.0
-        # Actual capacity accounts for aging: Q_act = SOH * Q_n
-        self._update_capacity()
-
-    def _update_capacity(self):
-        self.Q_act = self.soh * self.robot.Q_n  # Eq. (2) denominator
-
-    def update_soh(self, soh: float):
-        self.soh = soh
-        self._update_capacity()
-
-    def step(self, Pe: float, add_noise: bool = False,
-             noise_std_frac: float = 0.02) -> Tuple[float, float, float]:
-        """
-        Advance ECM by one timestep dt.
-
-        Parameters
-        ----------
-        Pe : total electrical power demand [W]
-        add_noise : inject Gaussian measurement noise (training only)
-
-        Returns
-        -------
-        Ib   : battery current [A]
-        Vb   : terminal voltage [V]
-        soc  : updated SOC
-        """
-        dt = self.robot.dt
-        ecm = self.ecm
-        soc = self.soc
-        soh = self.soh
-
-        Voc = _voc(soc, soh, self.robot.V_nom)
-        Rs  = _internal_resistance(soc, soh, ecm)
-
-        # Noisy power measurement during training (§V-A)
-        Pe_obs = Pe
-        if add_noise:
-            std = noise_std_frac * abs(Pe) + 1e-3
-            Pe_obs = Pe + np.random.normal(0.0, std)
-
-        # Battery current from ECM (Eq. 4)
-        discriminant = (Voc - self.V1 - self.V2) ** 2 - 4 * Rs * Pe_obs
-        discriminant = max(discriminant, 0.0)
-        Ib = (Voc - self.V1 - self.V2 - math.sqrt(discriminant)) / (2 * Rs)
-
-        # RC branch dynamics (Eqs. 1a, 1b)
-        V1_new = self.V1 * (1 - dt / (ecm.R1 * ecm.C1)) + Ib * dt / ecm.C1
-        V2_new = self.V2 * (1 - dt / (ecm.R2 * ecm.C2)) + Ib * dt / ecm.C2
-
-        # SOC update (Eq. 2)
-        soc_new = soc - ecm.eta * Ib * dt / self.Q_act
-        soc_new = float(np.clip(soc_new, 0.0, 1.0))
-
-        self.V1 = V1_new
-        self.V2 = V2_new
-        self.soc = soc_new
-
-        Vb = Voc - Ib * Rs - self.V1 - self.V2
-        return Ib, Vb, soc_new
-
-
-# ---------------------------------------------------------------------------
-# SOH fade model using Rainflow cycle counting  (Eqs. 6-8)
-# ---------------------------------------------------------------------------
-
-class SOHModel:
-    """
-    Throughput-based capacity fade model (§IV-A-2).
-
-    Accumulates degradation across charge/discharge cycles identified
-    by Rainflow counting applied to the SOC history.
-    EOL is defined as SOH ≤ SOH_EOL (default 0.80).
-    """
-
-    def __init__(self, deg: DegradationParams, robot: RobotParams,
-                 soh_init: float = 1.0):
-        self.deg = deg
-        self.robot = robot
-        self.soh = soh_init
-        self._fd_accum = -math.log(soh_init) if soh_init < 1.0 else 0.0
-        self._soc_history: List[float] = []
-
-    # ------------------------------------------------------------------
-    # Stress factors (Eqs. 8a-8c)
-    # ------------------------------------------------------------------
-
-    def _S_sigma(self, sigma: float) -> float:
-        """Average-SOC stress (Eq. 8a)."""
-        return math.exp(self.deg.k_sigma * (sigma - self.deg.sigma_ref))
-
-    def _S_delta(self, delta: float) -> float:
-        """DOD stress (Eq. 8b)."""
-        d = max(delta, 1e-6)
-        return (self.deg.k_d1 * d ** self.deg.k_d2 + self.deg.k_d3) ** -1
-
-    def _S_T(self, T: float) -> float:
-        """Temperature stress (Eq. 8c)."""
-        T_ref = self.deg.T_ref
-        return math.exp(self.deg.k_T * (T - T_ref) / T_ref * T_ref / T)
-
-    # ------------------------------------------------------------------
-    # Rainflow cycle counting (simplified 3-point method)
-    # ------------------------------------------------------------------
-
-    @staticmethod
-    def _rainflow_simple(peaks: List[float]) -> List[Tuple[float, float, float]]:
-        """
-        Simplified Rainflow counting on a list of SOC turning points.
-
-        Returns a list of (DOD δ, mean_SOC σ, count n) tuples where
-        count is 0.5 for half-cycles and 1.0 for full cycles.
-        Reference: [23] Xu et al., IEEE Trans. Smart Grid, 2016.
-        """
-        if len(peaks) < 2:
-            return []
-        cycles = []
-        stack = list(peaks)
-        while len(stack) >= 3:
-            a, b, c = stack[-3], stack[-2], stack[-1]
-            range_ab = abs(b - a)
-            range_bc = abs(c - b)
-            if range_bc >= range_ab:
-                # Count inner half-cycle (a→b)
-                dod = range_ab
-                sigma = (a + b) / 2.0
-                cycles.append((dod, sigma, 0.5))
-                stack.pop(-2)
-            else:
-                break
-        # Remaining stack entries are residual half-cycles
-        for i in range(len(stack) - 1):
-            dod = abs(stack[i + 1] - stack[i])
-            sigma = (stack[i] + stack[i + 1]) / 2.0
-            cycles.append((dod, sigma, 0.5))
-        return cycles
-
-    # ------------------------------------------------------------------
-    # Public interface
-    # ------------------------------------------------------------------
-
-    def record_soc(self, soc: float):
-        """Append current SOC to history for later Rainflow analysis."""
-        self._soc_history.append(soc)
-
-    def update_soh(self, T: float = 298.15) -> float:
-        """
-        Compute cumulative degradation from SOC history and update SOH.
-
-        Parameters
-        ----------
-        T : average temperature for the current mission segment [K]
-
-        Returns
-        -------
-        Updated SOH value.
-        """
-        if len(self._soc_history) < 2:
-            return self.soh
-
-        # Extract turning points for Rainflow
-        peaks = self._extract_turning_points(self._soc_history)
-        cycles = self._rainflow_simple(peaks)
-
-        # Accumulate degradation (Eq. 7)
-        for (delta, sigma, n_i) in cycles:
-            s_sigma = self._S_sigma(sigma)
-            s_delta = self._S_delta(delta)
-            s_T = self._S_T(T)
-            self._fd_accum += n_i * s_delta * s_sigma * s_T
-
-        # SOH from Eq. (6): SOH = e^{-f_d}
-        self.soh = float(np.clip(math.exp(-self._fd_accum), 0.0, 1.0))
-        self._soc_history.clear()
-        return self.soh
-
-    @staticmethod
-    def _extract_turning_points(series: List[float]) -> List[float]:
-        """Extract local minima/maxima (reversal points) from a time series."""
-        if len(series) < 2:
-            return series
-        peaks = [series[0]]
-        for i in range(1, len(series) - 1):
-            if (series[i] > series[i - 1] and series[i] > series[i + 1]) or \
-               (series[i] < series[i - 1] and series[i] < series[i + 1]):
-                peaks.append(series[i])
-        peaks.append(series[-1])
-        return peaks
-
-    @property
-    def is_eol(self) -> bool:
-        return self.soh <= self.robot.SOH_EOL
-
-
-# ---------------------------------------------------------------------------
-# Power models
-# ---------------------------------------------------------------------------
-
-def motor_power(speed: float) -> float:
-    """
-    Mechanical power demand of the brushless DC motor [W].
-
-    Fitted as a quadratic in speed, calibrated to the rover's 3000KV motor.
-    P_m ≈ k1 * v + k2 * v^2  (drag + inertia dominated)
-    """
-    k1, k2 = 2.5, 1.8    # empirical coefficients [W·s/m, W·s²/m²]
-    return k1 * speed + k2 * speed ** 2
+def motor_power(speed: float, acceleration: float = 0.0,
+                params: Optional[RobotParams] = None) -> float:
+    p = params or RobotParams()
+    v = max(0.0, speed)
+    return (p.motor_base_w + p.motor_linear_w_per_mps * v
+            + p.motor_quadratic_w_per_mps2 * v * v
+            + p.motor_accel_w_per_mps2 * abs(acceleration) * v)
 
 
 def compute_cpu_power(freq_ghz: float, base_power: float = 2.0,
                       alpha_cpu: float = 1.5) -> float:
-    """
-    CPU+camera electrical power [W] at a given DVFS frequency [GHz].
-
-    Simple cubic model: P_c ∝ f^3 (DVFS dynamic power scaling).
-    The camera is powered by the Jetson TX2 and included here (§II-A).
-    """
-    f_norm = freq_ghz / 2.0                  # normalise to max frequency
-    return base_power + alpha_cpu * (f_norm ** 3)
+    return base_power + alpha_cpu * (max(0.0, freq_ghz) / 2.0) ** 3
 
 
 def compute_throughput(speed: float, freq_ghz: float,
-                        complexity: float = 1.0) -> float:
+                       complexity: float = 1.0) -> float:
+    return 25.0 * (freq_ghz / 2.0) / (1.0 + 0.1 * speed * complexity)
+
+class ECMBattery:
+    """Constant-power 2RC ECM with exact first-order RC transitions."""
+    def __init__(self, ecm: ECMParams, robot: RobotParams,
+                 soc_init: float = 1.0, soh_init: float = 1.0):
+        self.ecm, self.robot = ecm, robot
+        self.soc, self.soh = float(soc_init), float(soh_init)
+        self.V1, self.V2 = 0.0, 0.0
+        self.temperature_c = float(robot.T_amb)
+        self.Q_act = self.robot.Q_n * self.soh
+        self.current_a = 0.0
+        self.voltage_v = _voc(self.soc, self.soh, robot.V_nom)
+
+    def update_soh(self, soh: float):
+        self.soh = float(soh)
+        self.Q_act = self.robot.Q_n * self.soh
+
+    def _resistance(self, r0_base: Optional[float] = None) -> float:
+        r0 = self.ecm.values(self.soc)[0] if r0_base is None else r0_base
+        return r0 * (1.0 + self.ecm.resistance_aging_factor * (1.0 - self.soh))
+
+    def step(self, power_w: float, dt: Optional[float] = None,
+             **_legacy_kwargs) -> tuple[float, float, float]:
+        dt = self.robot.dt if dt is None else float(dt)
+        if power_w < 0 or dt <= 0:
+            raise ValueError('This environment supports positive discharge power and dt > 0.')
+        e = self.ecm
+        r0_base, r1, c1, r2, c2 = e.values(self.soc)
+        r0 = self._resistance(r0_base)
+        u = _voc(self.soc, self.soh, self.robot.V_nom) - self.V1 - self.V2
+        disc = u * u - 4.0 * r0 * power_w
+        if disc < 0:
+            raise BatteryLimitError('Requested power violates the constant-power ECM limit.')
+        # Rationalized expression avoids cancellation for small loads.
+        current = 2.0 * power_w / (u + math.sqrt(disc)) if power_w else 0.0
+        v_terminal = u - current * r0
+        if current > e.current_max or v_terminal < e.voltage_min:
+            raise BatteryLimitError('Current or voltage safety limit exceeded.')
+        if self.soc - current * dt / (e.eta * self.Q_act) < 0:
+            raise BatteryLimitError('Insufficient remaining charge.')
+        def branch(vold, r, c):
+            if r <= 0 or c <= 0:
+                raise ValueError('RC branch R and C must be positive.')
+            a = math.exp(-dt / (r * c))
+            return a * vold + (1.0 - a) * r * current
+        new_v1 = branch(self.V1, r1, c1)
+        new_v2 = branch(self.V2, r2, c2)
+        new_soc = max(0.0, self.soc - current * dt / (e.eta * self.Q_act))
+        # Lumped Joule heating; RC dissipation is positive, not double counted.
+        heat_w = (current ** 2 * r0 + new_v1 ** 2 / r1 + new_v2 ** 2 / r2)
+        self.temperature_c += dt * (heat_w - self.robot.thermal_conductance_w_per_k
+                                  * (self.temperature_c - self.robot.T_amb)) / self.robot.thermal_capacity_j_per_k
+        self.V1, self.V2, self.soc = new_v1, new_v2, new_soc
+        self.current_a, self.voltage_v = current, v_terminal
+        return current, v_terminal, new_soc
+
+class BatteryStress:
+    """Instantaneous stress proxy for training, not an aging law."""
+    def __init__(self, p: StressParams, robot: RobotParams):
+        self.p, self.robot = p, robot
+
+    def step(self, current_a: float, temperature_c: float, soc: float,
+             dt: float) -> float:
+        p = self.p
+        c_rate = abs(current_a) / (self.robot.Q_n / 3600.0)
+        g_i = (c_rate / p.c_rate_ref) ** 2
+        g_t = (max(0.0, temperature_c - p.temp_threshold_c) / p.temp_scale_c) ** 2
+        g_s = (max(0.0, soc - p.soc_threshold) / max(1e-6, 1.0 - p.soc_threshold)) ** 2
+        return dt * (p.current_weight * g_i + p.temperature_weight * g_t
+                     + p.soc_weight * g_s)
+
+
+class RobotEnv(_Base):
+    """Training/test mission env. Evaluation SOH never uses training proxy.
+
+    API: Gymnasium reset -> (obs, info), step -> (obs,reward,terminated,truncated,info).
+    For old trainers call reset_legacy() and step_legacy().
     """
-    Application throughput (event batches/s) as a function of robot speed
-    and CPU frequency (§II-A).
+    metadata = {'render_modes': []}
 
-    - CPU frequency linearly scales processing throughput.
-    - Higher speed generates more events per batch (larger batch sizes),
-      indirectly reducing throughput available for QoS satisfaction.
-
-    complexity : environmental complexity multiplier (1=low, 2=medium, 3=high)
-    """
-    thr_cpu = 25.0 * (freq_ghz / 2.0)        # linear in CPU freq
-    event_load = 1.0 + 0.1 * speed * complexity  # more events at speed
-    return thr_cpu / event_load
-
-
-# ---------------------------------------------------------------------------
-# Reward components  (Eqs. 10-13)
-# ---------------------------------------------------------------------------
-
-def energy_per_distance(delta_soc: float, speed: float,
-                         Q_act: float, V_nom: float,
-                         alpha: float) -> float:
-    """
-    E_d(t): energy consumed per metre of travel (Eq. 11).
-
-    delta_soc : fractional SOC drop in one timestep (positive value)
-    speed     : observed motor speed [m/s]
-    Q_act     : actual battery capacity [As]
-    V_nom     : nominal voltage [V] (converts As → Ws)
-    alpha     : reward scaling parameter (550 in paper)
-    """
-    if speed < 1e-6:
-        return 0.0
-    delta_soc_pct = delta_soc * 100.0          # percentage drop
-    Ed = alpha * delta_soc_pct / speed
-    return Ed
-
-
-def degradation_penalty(soh_prev: float, soh_curr: float,
-                         speed: float, kappa: float) -> float:
-    """
-    D_d(t): battery degradation penalty per metre (Eq. 12).
-
-    Only true SOH decreases contribute to the penalty; spurious increases
-    (sensor noise / model recalibration) are suppressed via max(0, ...).
-    """
-    if speed < 1e-6:
-        return 0.0
-    delta_soh_pct = max(0.0, soh_prev - soh_curr) * 100.0
-    Dd = (math.exp(kappa * delta_soh_pct) - 1.0) / speed
-    return Dd
-
-
-def qos_utility(thr: float, qos_ref: float, gamma: float = 3.0) -> float:
-    """
-    U(t): per-application QoS utility (Eq. 13).
-
-    Returns 1 when thr ≥ qos_ref (full compliance), and
-    (thr/qos_ref)^gamma < 1 otherwise (sharp penalty).
-    """
-    if thr >= qos_ref:
-        return 1.0
-    return (thr / qos_ref) ** gamma
-
-
-# ---------------------------------------------------------------------------
-# Main Gym-compatible environment
-# ---------------------------------------------------------------------------
-
-class DARORobotEnv:
-    """
-    DARO robot environment (§IV, observe–decide–act loop).
-
-    Observation / state vector (§IV-B-2, Fig. 7):
-        [v_obs, f_obs, SOC, SOH, thr_1, …, thr_N, QoS_ref_1, …, QoS_ref_N]
-    dimension: 4 + 2*N
-
-    Action vector:
-        [v_cmd, f_cmd]  — desired speed [m/s] and CPU frequency [GHz]
-    dimension: 2
-
-    The environment can run in three modes:
-        'train'  : simulated, noise injected, SOH updated each episode
-        'hil'    : actual computing board power used, simulated battery
-        'real'   : full hardware (real power readings fed externally)
-    """
-
-    def __init__(self,
-                 robot: RobotParams = None,
-                 ecm: ECMParams = None,
-                 deg: DegradationParams = None,
-                 soc_init: float = 1.0,
-                 soh_init: float = 1.0,
-                 complexity: float = 1.0,
-                 mode: str = 'train',
-                 max_steps: int = 1000):
-
+    def __init__(self, robot: Optional[RobotParams] = None,
+                 ecm: Optional[ECMParams] = None,
+                 deg=None,  # old parameter accepted but intentionally not used
+                 stress: Optional[StressParams] = None,
+                 soc_init: float = 1.0, soh_init: float = 1.0,
+                 complexity: float = 1.0, mode: str = 'train',
+                 max_steps: Optional[int] = None,
+                 complexity_jitter: Optional[float] = None):
+        super().__init__()
         self.robot = robot or RobotParams()
-        self.ecm_params = ecm or ECMParams()
-        self.deg_params = deg or DegradationParams()
-
-        self.soc_init = soc_init
-        self.soh_init = soh_init
-        self.complexity = complexity   # environmental complexity level
-        self.mode = mode
-        self.max_steps = max_steps
-
+        self.ecm_params = ecm or ECMParams.default(self.robot)
+        self.stress_params = stress or StressParams()
+        self.soc_init, self.soh_init = float(soc_init), float(soh_init)
+        self.complexity, self.mode = float(complexity), mode
+        # Per-step multiplicative complexity disturbance U(1-j, 1+j); seeded by
+        # reset(seed=...). Default: 0.2 in 'train', 0 otherwise.
+        self.complexity_jitter = (0.2 if mode == 'train' else 0.0) \
+            if complexity_jitter is None else float(complexity_jitter)
+        if not 0.0 <= self.complexity_jitter < 1.0:
+            raise ValueError('complexity_jitter must be in [0, 1).')
+        if max_steps is not None:
+            self.robot.max_steps = int(max_steps)
+        if self.robot.dt <= 0 or self.robot.mission_distance_m <= 0:
+            raise ValueError('dt and mission_distance_m must be positive.')
+        if len(self.robot.qos_ref) != self.robot.n_apps:
+            raise ValueError('qos_ref length must equal n_apps.')
         self.n_apps = self.robot.n_apps
-        self.obs_dim = 4 + 2 * self.n_apps
+        self.action_low = np.array([self.robot.v_min, self.robot.f_min], dtype=np.float32)
+        self.action_high = np.array([self.robot.v_max, self.robot.f_max], dtype=np.float32)
+        # [v, f, SOC, SOH, temperature, terminal voltage, distance remaining,
+        #  last current, app throughputs..., app QoS targets...]
+        self.obs_dim = 8 + 2 * self.n_apps
         self.act_dim = 2
-
-        # Action space bounds
-        self.action_low  = np.array([self.robot.v_min, self.robot.f_min],
-                                    dtype=np.float32)
-        self.action_high = np.array([self.robot.v_max, self.robot.f_max],
-                                    dtype=np.float32)
-
+        if spaces is not None:
+            self.action_space = spaces.Box(self.action_low, self.action_high, dtype=np.float32)
+            self.observation_space = spaces.Box(low=-np.inf, high=np.inf,
+                                                shape=(self.obs_dim,), dtype=np.float32)
+        self.np_random = np.random.default_rng()
         self._reset_internal()
-
-    # ------------------------------------------------------------------
-    # Gym interface
-    # ------------------------------------------------------------------
-
-    def reset(self, soc_init: Optional[float] = None,
-              soh_init: Optional[float] = None,
-              complexity: Optional[float] = None) -> np.ndarray:
-        """Reset environment to initial conditions. Returns initial obs."""
-        if soc_init is not None:
-            self.soc_init = soc_init
-        if soh_init is not None:
-            self.soh_init = soh_init
-        if complexity is not None:
-            self.complexity = complexity
-        self._reset_internal()
-        return self._get_obs()
-
-    def step(self, action: np.ndarray,
-             ext_Pe: Optional[float] = None
-             ) -> Tuple[np.ndarray, float, bool, dict]:
-        """
-        Execute one control step (observe–decide–act, §IV-B-4).
-
-        Parameters
-        ----------
-        action  : [v_cmd, f_cmd] — clipped to valid ranges internally
-        ext_Pe  : externally measured power [W] (HIL/real modes)
-
-        Returns
-        -------
-        obs     : next state vector
-        reward  : scalar reward r(t) = -E_d - D_d + U(t)
-        done    : True if SOC depleted or max_steps reached
-        info    : diagnostic dictionary
-        """
-        v_cmd = float(np.clip(action[0], self.robot.v_min, self.robot.v_max))
-        f_cmd = float(np.clip(action[1], self.robot.f_min, self.robot.f_max))
-
-        soh_prev = self.soh_model.soh
-        soc_prev = self.battery.soc
-
-        # --- Power demand ---
-        Pe_mech = motor_power(v_cmd)
-        Pe_comp = compute_cpu_power(f_cmd)
-        Pe_total = Pe_mech + Pe_comp
-
-        if ext_Pe is not None:
-            # HIL / real mode: override computing power with measurement
-            Pe_total = ext_Pe + Pe_mech
-
-        # --- ECM step (SOC update) ---
-        add_noise = (self.mode == 'train')
-        Ib, Vb, soc_new = self.battery.step(
-            Pe_total, add_noise=add_noise,
-            noise_std_frac=self.robot.noise_std_frac
-        )
-
-        # --- SOH model: record SOC sample ---
-        self.soh_model.record_soc(soc_new)
-
-        # --- Throughput (per app) with workload fluctuation in training ---
-        thrp = []
-        for i in range(self.n_apps):
-            c = self.complexity
-            if self.mode == 'train':
-                # Randomise complexity level per step to improve robustness
-                c_fluct = c * np.random.uniform(0.8, 1.2)
-            else:
-                c_fluct = c
-            thr_i = compute_throughput(v_cmd, f_cmd, complexity=c_fluct)
-            thrp.append(thr_i)
-
-        # --- Reward components ---
-        delta_soc = max(soc_prev - soc_new, 0.0)
-        Ed = energy_per_distance(delta_soc, v_cmd,
-                                  self.battery.Q_act,
-                                  self.robot.V_nom,
-                                  self.robot.alpha)
-        Dd = degradation_penalty(soh_prev, self.soh_model.soh,
-                                  v_cmd, self.robot.kappa)
-
-        # QoS utility: use the most-critical application (highest load)
-        U_vals = [qos_utility(thrp[i], self.robot.qos_ref[i],
-                               self.robot.gamma_qos)
-                  for i in range(self.n_apps)]
-        U = min(U_vals)   # most critical (bottleneck) application
-
-        reward = -Ed - Dd + U
-
-        # --- State transitions ---
-        self.v_obs = v_cmd
-        self.f_obs = f_cmd
-        self.thr   = thrp
-        self.step_count += 1
-
-        # --- Termination ---
-        soc_depleted = soc_new <= 0.02        # ≈ empty
-        timeout      = self.step_count >= self.max_steps
-        done = soc_depleted or timeout
-
-        # --- End-of-mission SOH update (Rainflow) ---
-        if done:
-            self.soh_model.update_soh(T=self.robot.T_amb)
-            self.battery.update_soh(self.soh_model.soh)
-
-        info = {
-            'v_cmd': v_cmd, 'f_cmd': f_cmd,
-            'Pe_total': Pe_total, 'Ib': Ib, 'Vb': Vb,
-            'SOC': soc_new, 'SOH': self.soh_model.soh,
-            'Ed': Ed, 'Dd': Dd, 'U': U,
-            'throughput': thrp,
-            'is_eol': self.soh_model.is_eol,
-        }
-        return self._get_obs(), reward, done, info
-
-    # ------------------------------------------------------------------
-    # Internals
-    # ------------------------------------------------------------------
 
     def _reset_internal(self):
-        self.battery   = ECMBattery(self.ecm_params, self.robot,
-                                     self.soc_init, self.soh_init)
-        self.soh_model = SOHModel(self.deg_params, self.robot, self.soh_init)
-        self.v_obs     = (self.robot.v_min + self.robot.v_max) / 2.0
-        self.f_obs     = (self.robot.f_min + self.robot.f_max) / 2.0
-        self.thr       = list(self.robot.qos_ref)
+        self.battery = ECMBattery(self.ecm_params, self.robot, self.soc_init, self.soh_init)
+        self.stress_model = BatteryStress(self.stress_params, self.robot)
+        self.v_obs = 0.0
+        self.f_obs = self.robot.f_min
+        self.distance_m = 0.0
         self.step_count = 0
+        self.thr = [compute_throughput(0.0, self.f_obs, self.complexity)] * self.n_apps
+        self.total_energy_j = 0.0
+        self.total_stress = 0.0
+        self.trajectory: list[dict] = []
+        self._finished = False
 
-    def _get_obs(self) -> np.ndarray:
+    def reset(self, *, seed: Optional[int] = None, options: Optional[dict] = None,
+              soc_init: Optional[float] = None, soh_init: Optional[float] = None,
+              complexity: Optional[float] = None):
+        if gym is not None:
+            super().reset(seed=seed)
+        elif seed is not None:
+            self.np_random = np.random.default_rng(seed)
+        if options:
+            soc_init = options.get('soc_init', soc_init)
+            soh_init = options.get('soh_init', soh_init)
+            complexity = options.get('complexity', complexity)
+            if 'mission_distance_m' in options:
+                d = float(options['mission_distance_m'])
+                if not (math.isfinite(d) and d > 0):
+                    raise ValueError('mission_distance_m must be positive.')
+                self.robot.mission_distance_m = d
+        if soc_init is not None:
+            self.soc_init = float(soc_init)
+        if soh_init is not None:
+            self.soh_init = float(soh_init)
+        if complexity is not None:
+            self.complexity = float(complexity)
+        if not (0.0 < self.soc_init <= 1.0 and 0.0 < self.soh_init <= 1.0):
+            raise ValueError('Initial SOC/SOH must be in (0,1].')
+        self._reset_internal()
+        return self._get_obs(), {'initial_soh': self.soh_init}
+
+    def _get_obs(self):
+        vals = [self.v_obs, self.f_obs, self.battery.soc,
+                self.battery.soh, self.battery.temperature_c,
+                self.battery.voltage_v,
+                max(0.0, self.robot.mission_distance_m - self.distance_m),
+                self.battery.current_a] + list(self.thr) + list(self.robot.qos_ref)
+        arr = np.asarray(vals, dtype=np.float32)
+        if self.mode == 'train' and self.robot.noise_std_frac > 0:
+            # Sensor noise affects only agent observation, never dynamics/reward.
+            std = self.robot.noise_std_frac
+            arr[2] = np.clip(arr[2] + self.np_random.normal(0, std * 0.1), 0, 1)
+            arr[5] += self.np_random.normal(0, std * max(1.0, arr[5]))
+            arr[7] += self.np_random.normal(0, std * max(1.0, abs(arr[7])))
+        return arr
+
+    def reward_terms(self, energy_j: float, stress: float, delta_distance_m: float,
+                     dt_s: float, qos_violation: float, failed: bool = False):
+        """Per-step reward components; reward r_t = -E_d - D_d + U_t.
+
+        E_d  energy cost    w_E * E_t / E_ref
+             E_t = I*V*dt [J] drawn from the pack this step.
+        D_d  degradation    w_D * S_t / S_ref
+             S_t = dt * (w_I (C-rate/C_ref)^2 + w_T ((T-T_th)^+/T_s)^2
+                         + w_S ((SOC-SOC_th)^+/(1-SOC_th))^2)
+             = BatteryStress proxy [s]; dimensionless shaping, NOT dSOH.
+        U_t  task utility   B * dx_t/L                      progress (sums to B)
+                            - w_T * dt / (L / v_max)        time pressure
+                            - w_Q * q_t * dt / dt_ctrl      QoS penalty
+                            - P_fail * 1[failed/truncated]  terminal
+             q_t = (max(0, 1 - min_i thr_i/QoS_ref_i))^2.
+
+        L = mission distance. Returns (E_d, D_d, U_t) as floats.
         """
-        Assemble state vector s(t) (§IV-B-2):
-        [v_obs, f_obs, SOC, SOH, thr_1,...,thr_N, QoS_ref_1,...,QoS_ref_N]
-        """
-        obs = np.array(
-            [self.v_obs, self.f_obs,
-             self.battery.soc, self.soh_model.soh]
-            + list(self.thr)
-            + list(self.robot.qos_ref),
-            dtype=np.float32
-        )
-        return obs
+        p = self.robot
+        E_d = p.w_energy * energy_j / p.energy_ref_j
+        D_d = p.w_stress * stress / p.stress_ref_s
+        U_t = (p.completion_bonus * delta_distance_m / p.mission_distance_m
+               - p.w_time * dt_s / (p.mission_distance_m / p.v_max)
+               - p.w_qos * qos_violation * dt_s / p.dt
+               - (p.failure_penalty if failed else 0.0))
+        return float(E_d), float(D_d), float(U_t)
 
-    # ------------------------------------------------------------------
-    # Convenience properties
-    # ------------------------------------------------------------------
+    def step(self, action: Sequence[float], ext_Pe: Optional[float] = None):
+        if self._finished:
+            raise RuntimeError('Episode finished; call reset() before step().')
+        action = np.asarray(action, dtype=float)
+        if action.shape != (2,) or not np.all(np.isfinite(action)):
+            raise ValueError('Action must be a finite pair [speed, CPU frequency].')
+        p = self.robot
+        v_cmd = float(np.clip(action[0], p.v_min, p.v_max))
+        f_cmd = float(np.clip(action[1], p.f_min, p.f_max))
+        delta_v = np.clip(v_cmd - self.v_obs, -p.a_max * p.dt, p.a_max * p.dt)
+        v_new = max(0.0, self.v_obs + float(delta_v))
+        accel = float(delta_v) / p.dt
+        remaining = p.mission_distance_m - self.distance_m
+        delta_distance = min(remaining, v_new * p.dt)
+        active_dt = (delta_distance / v_new) if v_new > 0 else p.dt
+        motor_w = motor_power(v_new, accel, p)
+        compute_w = compute_cpu_power(f_cmd, p.compute_base_w, p.compute_dynamic_w)
+        if ext_Pe is not None:
+            if not math.isfinite(ext_Pe) or ext_Pe < 0:
+                raise ValueError('External compute electrical power must be finite and nonnegative.')
+            compute_w = float(ext_Pe)  # external compute/board power, not total pack power
+        total_w = motor_w + compute_w + p.aux_power_w
+        reason = None
+        try:
+            current, voltage, soc = self.battery.step(total_w, dt=active_dt)
+            energy_j = current * voltage * active_dt
+            stress = self.stress_model.step(current, self.battery.temperature_c, soc, active_dt)
+            self.distance_m += delta_distance
+            self.total_energy_j += energy_j
+            self.total_stress += stress
+        except BatteryLimitError as exc:
+            reason = str(exc)
+            current, voltage, soc = self.battery.current_a, self.battery.voltage_v, self.battery.soc
+            energy_j, stress, delta_distance = 0.0, 0.0, 0.0
+        self.v_obs, self.f_obs = v_new, f_cmd
+        c = self.complexity
+        if self.complexity_jitter > 0:
+            j = self.complexity_jitter
+            c *= float(self.np_random.uniform(1.0 - j, 1.0 + j))
+        self.thr = [compute_throughput(v_new, f_cmd, c)] * self.n_apps
+        qos_ratio = [self.thr[i] / p.qos_ref[i] for i in range(self.n_apps)]
+        qos_violation = max(0.0, 1.0 - min(qos_ratio)) ** 2
+        self.step_count += 1
+        completed = self.distance_m >= p.mission_distance_m - 1e-9
+        low_soc = self.battery.soc <= 0.02
+        terminated = bool(completed or low_soc or reason)
+        truncated = bool(self.step_count >= p.max_steps and not terminated)
+        failed = bool((terminated and not completed) or truncated)
 
-    @property
-    def observation_dim(self) -> int:
-        return self.obs_dim
+        # Compute reward terms and return the Gymnasium API tuple.
+        E_d, D_d, U_t = self.reward_terms(energy_j, stress, delta_distance,
+                                          active_dt, qos_violation, failed)
+        reward = -E_d - D_d + U_t
 
-    @property
-    def action_dim_prop(self) -> int:
-        return self.act_dim
-
-    def is_battery_eol(self) -> bool:
-        return self.soh_model.is_eol
-
-    def current_soh(self) -> float:
-        return self.soh_model.soh
-
-    def current_soc(self) -> float:
-        return self.battery.soc
+        self._finished = terminated or truncated
+        info = dict(t_s=self.step_count * p.dt, dt_s=active_dt, speed_mps=v_new, acceleration_mps2=accel,
+                    cpu_ghz=f_cmd, distance_m=self.distance_m, delta_distance_m=delta_distance,
+                    motor_power_w=motor_w, compute_power_w=compute_w,
+                    aux_power_w=p.aux_power_w, power_w=total_w, current_a=current,
+                    voltage_v=voltage, soc=soc, soh=self.battery.soh,
+                    temperature_c=self.battery.temperature_c,
+                    energy_j=energy_j, total_energy_j=self.total_energy_j,
+                    stress_proxy=stress, total_stress_proxy=self.total_stress,
+                    throughput=list(self.thr), qos_violation=qos_violation,
+                    E_d=E_d, D_d=D_d, U_t=U_t, reward=float(reward),
+                    completed=completed, battery_limit=reason,
+                    terminated=terminated, truncated=truncated)
+        # Save actual physical trajectories (not noisy agent observations).
+        self.trajectory.append(info.copy())
+        return self._get_obs(), float(reward), terminated, truncated, info
