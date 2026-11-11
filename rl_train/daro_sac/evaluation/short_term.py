@@ -16,10 +16,18 @@ DARO with several checkpoints is reported per seed ("DARO s<k>") and as
 Outputs (in --log-dir, default ./logs); <tag> = "" for distance, "_soh" for SOH:
     short_term_energy<tag>.json   full results
     short_term_energy<tag>.csv    one row per (distance|soh) x complexity x policy
-    short_term_energy<tag>.png    Wh/km vs complexity, one panel per distance/SOH
+    short_term_energy<tag>.png    grouped bars vs complexity, one panel per distance/SOH
 """
 
 from __future__ import annotations
+
+if __name__ == '__main__' and not __package__:
+    # Allow `python evaluation/<script>.py` as well as `python -m evaluation.<script>`.
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
+    __package__ = 'evaluation'
+    import evaluation  # noqa: F401  (initialises the package and its sys.path)
 
 import argparse
 import csv
@@ -115,33 +123,48 @@ def write_csv(table: dict, path: str, by: str = 'distance'):
 
 
 def plot(table: dict, path: str, show: List[str], by: str = 'distance', subtitle: str = ''):
+    """One panel per outer value (SOH or distance); grouped bars inside.
+
+    x = workload complexity, one bar per policy, error bar = std.
+    --by soh      : energy per mission [kJ] (distance is fixed).
+    --by distance : energy per km [Wh/km] (comparable across distances).
+    """
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
     from plot_rewards import SERIES, TEXT, TEXT_2, SURFACE, _style
 
-    dists = list(table)
-    fig, axes = plt.subplots(1, len(dists), figsize=(3.6 * len(dists), 3.9),
+    metric, ylabel = (('energy_kj', 'Energy per mission [kJ]') if by == 'soh'
+                      else ('wh_per_km', 'Energy per km [Wh/km]'))
+    outer = list(table)
+    fig, axes = plt.subplots(1, len(outer), figsize=(3.4 * len(outer) + 0.6, 4.0),
                              facecolor=SURFACE, sharey=True)
     axes = np.atleast_1d(axes)
-    for ax, d in zip(axes, dists):
+    n = len(show)
+    width = 0.8 / n
+    for ax, d in zip(axes, outer):
         _style(ax)
+        ax.grid(False, axis='x')
         cs = list(table[d])
-        for k, p in enumerate(show):
-            y = np.array([table[d][c][p]['wh_per_km'] for c in cs])
-            e = np.array([table[d][c][p].get('wh_per_km_std', 0.0) for c in cs])
-            ax.errorbar(cs, y, yerr=e, color=SERIES[k % len(SERIES)], linewidth=2,
-                        marker='o', ms=6, capsize=3, label=p, zorder=3)
-        ax.set_xticks(cs)
+        x0 = np.arange(len(cs))
+        for k, pol in enumerate(show):
+            y = np.array([table[d][c][pol][metric] for c in cs])
+            e = np.array([table[d][c][pol].get(metric + '_std', 0.0) for c in cs])
+            ax.bar(x0 + (k - (n - 1) / 2) * width, y, width,
+                   color=SERIES[k % len(SERIES)], edgecolor=SURFACE, linewidth=1.0,
+                   yerr=e, error_kw=dict(ecolor=TEXT_2, elinewidth=0.9, capsize=2),
+                   label=pol, zorder=3)
+        ax.set_xticks(x0)
         ax.set_xticklabels([f'{c:g}' for c in cs])
         ax.set_xlabel('Workload complexity')
         ax.set_title(AXES[by]['panel'](d), loc='left', fontsize=10, color=TEXT)
-    axes[0].set_ylabel('Energy per km [Wh/km]')
+        ax.set_ylim(bottom=0)
+    axes[0].set_ylabel(ylabel)
     h, l = axes[0].get_legend_handles_labels()
     fig.legend(h, l, fontsize=8.5, frameon=False, labelcolor=TEXT,
-               loc='lower center', ncol=len(show), bbox_to_anchor=(0.5, 0.0))
+               loc='lower center', ncol=n, bbox_to_anchor=(0.5, 0.0))
     fig.suptitle(f'Short-term energy by workload complexity and {AXES[by]["name"]} '
-                 f'(mean ± std){subtitle}', x=0.01, ha='left', fontsize=11, color=TEXT)
+                 f'(mean \u00b1 std){subtitle}', x=0.01, ha='left', fontsize=11, color=TEXT)
     fig.tight_layout(rect=(0, 0.07, 1, 1))
     fig.savefig(path, dpi=150, facecolor=SURFACE)
     plt.close(fig)

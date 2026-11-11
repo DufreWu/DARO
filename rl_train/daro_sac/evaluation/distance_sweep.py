@@ -9,6 +9,14 @@ Writes logs/distance_sweep.json (full results) and logs/distance_sweep.csv
 
 from __future__ import annotations
 
+if __name__ == '__main__' and not __package__:
+    # Allow `python evaluation/<script>.py` as well as `python -m evaluation.<script>`.
+    import sys as _sys
+    from pathlib import Path as _Path
+    _sys.path.insert(0, str(_Path(__file__).resolve().parents[1]))
+    __package__ = 'evaluation'
+    import evaluation  # noqa: F401  (initialises the package and its sys.path)
+
 import argparse
 import csv
 import os

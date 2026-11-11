@@ -209,14 +209,19 @@ r_t = -E_d(t) - D_d(t) + U_t
 
 | Term | Definition | Meaning |
 |------|------------|---------|
-| E_d(t) | w_E · E_t / E_ref,  E_t = I·V·Δt [J] | Energy drawn from the pack this step |
+| E_d(t) | w_E · E_t / (e_ref · L),  E_t = I·V·Δt [J] | Energy drawn this step, normalised per mission distance L |
 | D_d(t) | w_D · S_t / S_ref,  S_t = Δt·[w_I (C/C_ref)² + w_T ((T−T_th)⁺/T_s)² + w_S ((SOC−SOC_th)⁺/(1−SOC_th))²] | Battery-stress proxy (`BatteryStress`); shaping only, **not** ΔSOH |
-| U_t | B·Δx/L − w_T·Δt/(L/v_max) − w_Q·q_t·Δt/Δt_ctrl − P_fail·𝟙[fail] | Task utility: progress, time pressure, QoS, terminal failure |
+| U_t | B·Δx/L − w_T·Δt/(L/v_max) − w_S·(Δv/(a_max·Δt))²·Δt/(L/v_max) − w_Q·q_t·Δt/Δt_ctrl − P_fail·𝟙[fail] | Progress, time pressure, speed-change penalty, QoS, terminal failure |
 
-q_t = (max(0, 1 − min_i thr_i/QoS_ref_i))², L = mission distance.
-Defaults (`RobotParams`, `StressParams`): E_ref = 20 kJ, S_ref = 1000 s,
-w_E = w_D = w_Q = 1, w_T = 0.15, B = 2, P_fail = 3; w_I = w_T(thermal) = 1,
-w_S = 0, C_ref = 1C, T_th = 35 °C, T_s = 10 °C.
+q_t = max(0, 1 − min_i thr_i/QoS_ref_i) (linear), L = mission distance.
+Defaults (`RobotParams`, `StressParams`): e_ref = 1.1 Wh/km, w_E = B = 2,
+w_T = 0, w_S = 0.2, S_ref = 1000 s, w_D = w_Q = 1, P_fail = 3.
+
+Design: w_E = B and e_ref ≈ minimum energy per metre make the per-second
+(myopic, discounted) optimum equal to the per-mission energy optimum, for any L.
+`python evaluation/reward_check.py` verifies that the reward-optimal constant
+speed / CPU frequency are the energy-optimal, QoS-safe ones and that speed
+oscillation is penalised. Run it after any change to the reward or power models.
 
 Each step's `info` carries `E_d`, `D_d`, `U_t`; the training log stores the
 per-episode sums `sum_E_d`, `sum_D_d`, `sum_U_t`.

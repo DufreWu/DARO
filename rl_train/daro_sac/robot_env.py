@@ -124,12 +124,18 @@ class RobotParams:
     max_steps: int = 1200
     n_apps: int = 2
     qos_ref: list[float] = field(default_factory=lambda: [15.0, 15.0])
-    # Mission energy objective: scale each step by constant reference energy.
-    energy_ref_j: float = 20000.0
+    # Reward (see RobotEnv.reward_terms). Energy is normalised per mission:
+    # E_ref = energy_ref_wh_per_km * L, so sum(E_d) ~ w_energy at the
+    # energy-optimal speed for ANY mission distance.
+    # w_energy == completion_bonus and energy_ref ~ minimum energy per metre make
+    # the per-second (discounted, myopic) optimum coincide with the per-mission
+    # energy optimum: d/dv [B v - w_E P(v)/e_ref] = 0  <=>  P'(v) = e_ref = P/v.
+    energy_ref_wh_per_km: float = 1.1
     stress_ref_s: float = 1000.0
-    w_energy: float = 1.0
+    w_energy: float = 2.0
     w_stress: float = 1.0
-    w_time: float = 0.15  # avoid trivial crawl policies
+    w_time: float = 0.0   # time pressure; > 0 biases speed above the energy optimum
+    w_smooth: float = 0.2  # penalty on speed changes (normalised by max step change)
     w_qos: float = 1.0
     completion_bonus: float = 2.0
     failure_penalty: float = 3.0
@@ -200,14 +206,53 @@ def motor_power(speed: float, acceleration: float = 0.0,
     return float(out) if np.ndim(out) == 0 else out
 
 
-def compute_cpu_power(freq_ghz: float, base_power: float = 4.0,
-                      alpha_cpu: float = 1.5) -> float:
-    return base_power + alpha_cpu * (max(0.0, freq_ghz) / 2.0) ** 3
+def compute_cpu_power(freq_ghz, base_power: float = 4.0, alpha_cpu: float = 1.5):
+    """CPU power [W] = base + alpha (f / 2 GHz)^3. Accepts scalars or arrays."""
+    out = base_power + alpha_cpu * (np.maximum(0.0, freq_ghz) / 2.0) ** 3
+    return float(out) if np.ndim(out) == 0 else out
 
 
-def compute_throughput(speed: float, freq_ghz: float,
-                       complexity: float = 1.0) -> float:
-    return 35.0 * (freq_ghz / 2.0) / (1.0 + 0.1 * speed * complexity)
+# Throughput model (single source of truth; baselines use the inverses below):
+#   thr = THR_PEAK * (f / THR_F_REF) / (1 + THR_SPEED_COEF * v * c)
+THR_PEAK = 35.0          # throughput at f = THR_F_REF, v = 0
+THR_F_REF = 2.0          # [GHz]
+THR_SPEED_COEF = 0.1     # [1 / (m/s)] per unit complexity
+
+
+def compute_throughput(speed, freq_ghz, complexity=1.0):
+    out = (THR_PEAK * (np.asarray(freq_ghz, dtype=float) / THR_F_REF)
+           / (1.0 + THR_SPEED_COEF * np.asarray(speed, dtype=float) * complexity))
+    return float(out) if np.ndim(out) == 0 else out
+
+
+def throughput_freq_required(speed, thr_target, complexity=1.0):
+    """CPU frequency [GHz] giving throughput thr_target (inverse in f; unclipped)."""
+    v = np.asarray(speed, dtype=float)
+    out = thr_target * THR_F_REF * (1.0 + THR_SPEED_COEF * v * complexity) / THR_PEAK
+    return float(out) if np.ndim(out) == 0 else out
+
+
+def throughput_max_speed(freq_ghz: float, thr_target: float, complexity: float = 1.0) -> float:
+    """Largest speed [m/s] at which freq_ghz still reaches thr_target.
+
+    Returns 0 if thr_target is unreachable even at standstill, inf if c <= 0.
+    """
+    k = THR_PEAK * (freq_ghz / THR_F_REF) / thr_target - 1.0
+    if k <= 0.0:
+        return 0.0
+    if complexity <= 0.0:
+        return float('inf')
+    return k / (THR_SPEED_COEF * complexity)
+
+
+def throughput_complexity(speed: float, freq_ghz: float, thr: float) -> Optional[float]:
+    """Complexity implied by an observed throughput (inverse in c).
+
+    None if not identifiable (speed ~ 0 or no throughput).
+    """
+    if speed <= 1e-6 or thr <= 1e-9:
+        return None
+    return (THR_PEAK * (freq_ghz / THR_F_REF) / thr - 1.0) / (THR_SPEED_COEF * speed)
 
 class ECMBattery:
     """Constant-power 2RC ECM with exact first-order RC transitions."""
@@ -384,30 +429,41 @@ class RobotEnv(_Base):
         return arr
 
     def reward_terms(self, energy_j: float, stress: float, delta_distance_m: float,
-                     dt_s: float, qos_violation: float, failed: bool = False):
+                     dt_s: float, qos_violation: float, failed: bool = False,
+                     delta_v: float = 0.0):
         """Per-step reward components; reward r_t = -E_d - D_d + U_t.
 
-        E_d  energy cost    w_E * E_t / E_ref
-             E_t = I*V*dt [J] drawn from the pack this step.
+        E_d  energy cost    w_E * E_t / E_ref,   E_ref = e_ref * L
+             E_t = I*V*dt [J] drawn from the pack this step,
+             e_ref = energy_ref_wh_per_km [Wh/km] -> sum(E_d) ~ w_E * e/e_ref.
         D_d  degradation    w_D * S_t / S_ref
              S_t = dt * (w_I (C-rate/C_ref)^2 + w_T ((T-T_th)^+/T_s)^2
                          + w_S ((SOC-SOC_th)^+/(1-SOC_th))^2)
              = BatteryStress proxy [s]; dimensionless shaping, NOT dSOH.
         U_t  task utility   B * dx_t/L                      progress (sums to B)
-                            - w_T * dt / (L / v_max)        time pressure
+                            - w_T * dt / (L / v_max)        time pressure (default 0)
+                            - w_S * (dv/(a_max dt))^2 * dt / (L / v_max)
+                                                            speed-change penalty
                             - w_Q * q_t * dt / dt_ctrl      QoS penalty
                             - P_fail * 1[failed/truncated]  terminal
-             q_t = (max(0, 1 - min_i thr_i/QoS_ref_i))^2.
+             q_t = max(0, 1 - min_i thr_i/QoS_ref_i)  (linear: a small
+             shortfall is not "almost free", unlike the old squared form).
 
         L = mission distance. Returns (E_d, D_d, U_t) as floats.
         """
         p = self.robot
-        E_d = p.w_energy * energy_j / p.energy_ref_j
+        L = p.mission_distance_m
+        t_ref = L / p.v_max
+        E_ref = p.energy_ref_wh_per_km * 3.6 * L          # Wh/km * m -> J
+        E_d = p.w_energy * energy_j / E_ref
         D_d = p.w_stress * stress / p.stress_ref_s
-        U_t = (p.completion_bonus * delta_distance_m / p.mission_distance_m
-               - p.w_time * dt_s / (p.mission_distance_m / p.v_max)
+        dv_n = delta_v / max(p.a_max * p.dt, 1e-9)
+        U_t = (p.completion_bonus * delta_distance_m / L
+               - p.w_time * dt_s / t_ref
+               - p.w_smooth * dv_n * dv_n * dt_s / t_ref
                - p.w_qos * qos_violation * dt_s / p.dt
                - (p.failure_penalty if failed else 0.0))
+
         return float(E_d), float(D_d), float(U_t)
 
     def step(self, action: Sequence[float], ext_Pe: Optional[float] = None):
@@ -451,7 +507,7 @@ class RobotEnv(_Base):
             c *= float(self.np_random.uniform(1.0 - j, 1.0 + j))
         self.thr = [compute_throughput(v_new, f_cmd, c)] * self.n_apps
         qos_ratio = [self.thr[i] / p.qos_ref[i] for i in range(self.n_apps)]
-        qos_violation = max(0.0, 1.0 - min(qos_ratio)) ** 2
+        qos_violation = max(0.0, 1.0 - min(qos_ratio))
         self.step_count += 1
         completed = self.distance_m >= p.mission_distance_m - 1e-9
         low_soc = self.battery.soc <= 0.02
@@ -461,7 +517,8 @@ class RobotEnv(_Base):
 
         # Compute reward terms and return the Gymnasium API tuple.
         E_d, D_d, U_t = self.reward_terms(energy_j, stress, delta_distance,
-                                          active_dt, qos_violation, failed)
+                                          active_dt, qos_violation, failed,
+                                          delta_v=float(delta_v))
         reward = -E_d - D_d + U_t
 
         self._finished = terminated or truncated

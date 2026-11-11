@@ -26,7 +26,9 @@ from typing import Dict, Optional
 
 import numpy as np
 
-from robot_env import RobotParams, motor_power
+from robot_env import (RobotParams, motor_power, compute_cpu_power,
+                       throughput_freq_required, throughput_max_speed,
+                       throughput_complexity)
 from .test_env import make_robot
 
 
@@ -65,9 +67,10 @@ class RuleBasedBaseline:
 
     # --- compute side ---------------------------------------------------
     def _update_complexity(self, v, f, thr):
-        # thr = 25 (f/2) / (1 + 0.1 v c)  ->  c = (25 (f/2) / thr - 1) / (0.1 v)
-        if v > 0.1 and thr > 1e-6:
-            c = float(np.clip((25.0 * f / 2.0 / thr - 1.0) / (0.1 * v), 0.1, 10.0))
+        # Invert robot_env.compute_throughput for c (needs v > 0 to be identifiable).
+        c = throughput_complexity(v, f, thr) if v > 0.1 else None
+        if c is not None:
+            c = float(np.clip(c, 0.1, 10.0))
             self.c_hat = c if self.c_hat is None else (1 - self.ema) * self.c_hat + self.ema * c
 
     def _c_safe(self) -> float:
@@ -75,20 +78,18 @@ class RuleBasedBaseline:
         return c * (1.0 + self.jitter)
 
     def _f_required(self, v, q_ref, c):
-        f = 2.0 * q_ref * (1.0 + 0.1 * v * c) / 25.0 * self.margin
+        f = throughput_freq_required(v, q_ref * self.margin, c)
         return np.clip(f, self.p.f_min, self.p.f_max)
 
     def _v_qos_max(self, q_ref, c) -> float:
-        k = 25.0 * self.p.f_max / 2.0 / (q_ref * self.margin) - 1.0
-        if k <= 0:
-            return self.p.v_min  # QoS unreachable even at f_max
-        return max(self.p.v_min, k / (0.1 * c))
+        # 0 when QoS is unreachable even at f_max -> clipped to v_min
+        return max(self.p.v_min, throughput_max_speed(self.p.f_max, q_ref * self.margin, c))
 
     # --- speed side -----------------------------------------------------
     def _v_eco(self, q_ref, c) -> float:
         p = self.p
         f = self._f_required(self.v_grid, q_ref, c)
-        compute = p.compute_base_w + p.compute_dynamic_w * (f / 2.0) ** 3
+        compute = compute_cpu_power(f, p.compute_base_w, p.compute_dynamic_w)
         return float(self.v_grid[np.argmin((self._p_motor_aux + compute) / self.v_grid)])
 
     def _weight(self, soc, soh) -> float:

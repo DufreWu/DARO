@@ -58,9 +58,9 @@ DEFAULT_CONFIG = {
     "horizon_s":        100.0,          # [s] effective planning horizon -> gamma
     "max_steps_margin": 1.2,            # max_steps = margin * mission / (v_min * dt)
     # Training scale
-    "total_steps":      1_000_000,
+    "total_steps":      500_000,
     "max_episodes":     10_000,
-    "batch_size":       128,
+    "batch_size":       64,
     "buffer_capacity":  100_000,
     # SAC hyperparameters
     "lr":               3e-4,
