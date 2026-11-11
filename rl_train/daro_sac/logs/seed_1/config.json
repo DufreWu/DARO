@@ -37,9 +37,9 @@
   "eval_every_ep": 200,
   "eval_episodes": 2,
   "ckpt_every_ep": 500,
-  "ckpt_dir": "./checkpoints/seed_1",
-  "log_dir": "./logs/seed_1",
-  "seed": 1,
+  "ckpt_dir": "./checkpoints/seed_4",
+  "log_dir": "./logs/seed_4",
+  "seed": 4,
   "torch_deterministic": false,
   "seed_subdir": true
 }

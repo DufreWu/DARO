@@ -26,7 +26,7 @@ from typing import Dict, Optional
 
 import numpy as np
 
-from robot_env import RobotParams
+from robot_env import RobotParams, motor_power
 from .test_env import make_robot
 
 
@@ -57,8 +57,7 @@ class RuleBasedBaseline:
         self.v_grid = np.linspace(robot.v_min, robot.v_max, 91)
         p = robot
         # Motor + aux power on the grid (steady speed); compute added per step.
-        self._p_motor_aux = (p.motor_base_w + p.motor_linear_w_per_mps * self.v_grid
-                             + p.motor_quadratic_w_per_mps2 * self.v_grid ** 2 + p.aux_power_w)
+        self._p_motor_aux = motor_power(self.v_grid, 0.0, p) + p.aux_power_w
         self.reset()
 
     def reset(self):

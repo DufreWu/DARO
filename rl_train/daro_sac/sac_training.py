@@ -349,10 +349,19 @@ def train(config: dict, resume_ckpt: str = None):
             obs = next_obs
             global_step += 1
 
+        # Do not treat an episode cut short by the training budget as terminal.
+        # It has no meaningful completed-mission return or terminal penalty.
+        if not done:
+            print(f'[train] episode {episode} interrupted at step {global_step}; '
+                  'exclude partial episode from reward statistics.')
+            break
         summary = metrics.summarise()
         summary.update({'episode': episode, 'soh_init': round(soh_ep, 3),
-                        'soc_init': round(soc_ep, 3), 'distance_m': d_ep,
+                        'soc_init': round(soc_ep, 3), 'target_distance_m': d_ep,
                         'complexity': c_ep, 'global_step': global_step})
+        # The original 'distance_m' is actual travelled distance; do not overwrite.
+        summary['return_per_km'] = (summary['return'] / (summary['distance_m'] / 1000.0)
+                                    if summary['completed'] and summary['distance_m'] > 0 else None)
         train_log.append(summary)
 
         elapsed = time.time() - t_start

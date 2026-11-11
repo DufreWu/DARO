@@ -1,0 +1,213 @@
+"""Short-term (single-mission) energy test: complexity x distance, or complexity x SOH.
+
+--by distance (default): SOH and initial SOC fixed (--soh, --soc), sweep the
+                         mission distances (--distances).
+--by soh               : distance and initial SOC fixed (--distance, --soc),
+                         sweep the SOH levels (--soh-levels).
+Every policy sees the same seeded complexity disturbance (common random numbers).
+
+    python -m evaluation.short_term --ckpts ./checkpoints/seed_{0,1,2,3,4}
+    python -m evaluation.short_term --by soh --ckpts ./checkpoints/seed_{0,1,2,3,4}
+    python -m evaluation.short_term --by soh --baselines-only --distance 1000 --soc 0.6
+
+DARO with several checkpoints is reported per seed ("DARO s<k>") and as
+"DARO" = mean over seeds (std = spread across seeds).
+
+Outputs (in --log-dir, default ./logs); <tag> = "" for distance, "_soh" for SOH:
+    short_term_energy<tag>.json   full results
+    short_term_energy<tag>.csv    one row per (distance|soh) x complexity x policy
+    short_term_energy<tag>.png    Wh/km vs complexity, one panel per distance/SOH
+"""
+
+from __future__ import annotations
+
+import argparse
+import csv
+import json
+import os
+import time
+from typing import Dict, List
+
+import numpy as np
+
+from . import EVAL_CONFIG, make_baselines, evaluate_policies, load_daro
+
+DISTANCES_M = [500.0, 1000.0, 2500.0, 5000.0]
+AXES = {  # outer (panel) axis: config override, CSV column, labels
+    'distance': dict(key='mission_distance_m', col='distance_m',
+                     panel=lambda v: f'{v:.0f} m mission', name='mission distance',
+                     head=lambda v: f'Mission {v:.0f} m'),
+    'soh':      dict(key='test_soh_levels', col='soh',
+                     panel=lambda v: f'SOH = {v:.2f}', name='SOH',
+                     head=lambda v: f'SOH {v:.2f}'),
+}
+METRICS = ['energy_kj', 'wh_per_km', 'mission_time_s', 'avg_speed_mps',
+           'qos_viol_pct', 'completed', 'stress_proxy', 'delta_soc']
+
+
+def run(policies: Dict[str, object], config: dict, values, n_episodes: int,
+        by: str = 'distance') -> dict:
+    """table[value][complexity][policy] = {metric: mean, metric_std: std}.
+
+    value = mission distance (by='distance') or SOH (by='soh').
+    """
+    key = AXES[by]['key']
+    table: Dict[float, Dict[float, Dict[str, dict]]] = {}
+    for d in values:
+        cfg = dict(config, **{key: [float(d)] if by == 'soh' else float(d)})
+        t0 = time.time()
+        res = evaluate_policies(policies, cfg, n_episodes=n_episodes, verbose=False)
+        table[float(d)] = {}
+        for c in cfg['test_complexity_levels']:
+            row = {}
+            for pol, r in res.items():
+                scen = [s for s in r['scenarios'].values() if abs(s['complexity'] - c) < 1e-9]
+                assert len(scen) == 1, 'expected one scenario per complexity'
+                row[pol] = {k: scen[0][k] for k in scen[0]}
+            table[float(d)][float(c)] = row
+        print(f'[{AXES[by]["head"](d)}] done in {time.time() - t0:.0f} s')
+    return table
+
+
+def add_daro_mean(table: dict, daro_names: List[str]):
+    """Insert 'DARO' = mean over seed checkpoints (std = across-seed spread)."""
+    if len(daro_names) < 2:
+        return
+    for d in table:
+        for c in table[d]:
+            row = table[d][c]
+            m = {}
+            for k in METRICS:
+                v = np.array([row[n][k] for n in daro_names])
+                m[k], m[k + '_std'] = float(v.mean()), float(v.std())
+            table[d][c] = {'DARO': m, **row}
+
+
+def print_table(table: dict, ref: str = 'AS-MF', by: str = 'distance'):
+    pols = list(next(iter(next(iter(table.values())).values())))
+    for d, per_c in table.items():
+        print(f'\n=== {AXES[by]["head"](d)}: energy [kJ] (Wh/km) | dE vs {ref} | '
+              f'time [s] | QoS viol % | done % ===')
+        for c, row in per_c.items():
+            print(f'-- complexity {c:g}')
+            r0 = row.get(ref)
+            for p in pols:
+                m = row[p]
+                de = (f'{100 * (m["energy_kj"] / r0["energy_kj"] - 1):+6.1f}%'
+                      if r0 and p != ref else '      -')
+                print(f'  {p:<10} {m["energy_kj"]:7.2f} ({m["wh_per_km"]:5.2f})  {de}  '
+                      f'{m["mission_time_s"]:6.0f}  {m["qos_viol_pct"]:5.1f}  '
+                      f'{100 * m["completed"]:4.0f}')
+    print()
+
+
+def write_csv(table: dict, path: str, by: str = 'distance'):
+    os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
+    cols = [x for k in METRICS for x in (k, k + '_std')]
+    with open(path, 'w', newline='') as f:
+        w = csv.writer(f)
+        w.writerow([AXES[by]['col'], 'complexity', 'policy'] + cols)
+        for d, per_c in table.items():
+            for c, row in per_c.items():
+                for p, m in row.items():
+                    w.writerow([d, c, p] + [m.get(k, float('nan')) for k in cols])
+    print(f'CSV saved -> {path}')
+
+
+def plot(table: dict, path: str, show: List[str], by: str = 'distance', subtitle: str = ''):
+    import matplotlib
+    matplotlib.use('Agg')
+    import matplotlib.pyplot as plt
+    from plot_rewards import SERIES, TEXT, TEXT_2, SURFACE, _style
+
+    dists = list(table)
+    fig, axes = plt.subplots(1, len(dists), figsize=(3.6 * len(dists), 3.9),
+                             facecolor=SURFACE, sharey=True)
+    axes = np.atleast_1d(axes)
+    for ax, d in zip(axes, dists):
+        _style(ax)
+        cs = list(table[d])
+        for k, p in enumerate(show):
+            y = np.array([table[d][c][p]['wh_per_km'] for c in cs])
+            e = np.array([table[d][c][p].get('wh_per_km_std', 0.0) for c in cs])
+            ax.errorbar(cs, y, yerr=e, color=SERIES[k % len(SERIES)], linewidth=2,
+                        marker='o', ms=6, capsize=3, label=p, zorder=3)
+        ax.set_xticks(cs)
+        ax.set_xticklabels([f'{c:g}' for c in cs])
+        ax.set_xlabel('Workload complexity')
+        ax.set_title(AXES[by]['panel'](d), loc='left', fontsize=10, color=TEXT)
+    axes[0].set_ylabel('Energy per km [Wh/km]')
+    h, l = axes[0].get_legend_handles_labels()
+    fig.legend(h, l, fontsize=8.5, frameon=False, labelcolor=TEXT,
+               loc='lower center', ncol=len(show), bbox_to_anchor=(0.5, 0.0))
+    fig.suptitle(f'Short-term energy by workload complexity and {AXES[by]["name"]} '
+                 f'(mean ± std){subtitle}', x=0.01, ha='left', fontsize=11, color=TEXT)
+    fig.tight_layout(rect=(0, 0.07, 1, 1))
+    fig.savefig(path, dpi=150, facecolor=SURFACE)
+    plt.close(fig)
+    print(f'Plot saved -> {path}')
+
+
+def main():
+    ap = argparse.ArgumentParser(description='Short-term energy: complexity x distance / SOH')
+    ap.add_argument('--by', choices=list(AXES), default='distance',
+                    help='Panel axis: mission distance or SOH')
+    ap.add_argument('--ckpts', type=str, nargs='+', default=[],
+                    help='One or more DARO checkpoint directories')
+    ap.add_argument('--baselines-only', action='store_true')
+    ap.add_argument('--distances', type=float, nargs='+', default=DISTANCES_M)
+    ap.add_argument('--complexity', type=float, nargs='+', default=None,
+                    help='Complexity levels (default: EVAL_CONFIG levels)')
+    ap.add_argument('--soh', type=float, default=1.0, help='Fixed SOH (--by distance)')
+    ap.add_argument('--soh-levels', type=float, nargs='+',
+                    default=EVAL_CONFIG['test_soh_levels'], help='SOH levels (--by soh)')
+    ap.add_argument('--distance', type=float, default=EVAL_CONFIG['mission_distance_m'],
+                    help='Fixed mission distance [m] (--by soh)')
+    ap.add_argument('--soc', type=float, default=1.0, help='Initial SOC')
+    ap.add_argument('--episodes', type=int, default=10, help='Seeds per cell')
+    ap.add_argument('--log-dir', type=str, default=EVAL_CONFIG['log_dir'])
+    args = ap.parse_args()
+    if not args.baselines_only and not args.ckpts:
+        raise SystemExit('Pass --ckpts <dir> [...] or --baselines-only.')
+    bad = [c for c in args.ckpts
+           if not os.path.isfile(os.path.join(c, 'daro_checkpoint.pt'))]
+    if bad:
+        raise SystemExit(f'No daro_checkpoint.pt in: {bad}. '
+                         'Note: "[...]" in usage text means optional; do not type the brackets.')
+
+    config = dict(EVAL_CONFIG, test_soh_levels=[args.soh], test_soc_levels=[args.soc],
+                  mission_distance_m=args.distance)
+    if args.complexity:
+        config['test_complexity_levels'] = list(args.complexity)
+
+    policies, daro_names = {}, []
+    if not args.baselines_only:
+        for ck in args.ckpts:
+            name = 'DARO' if len(args.ckpts) == 1 else \
+                f"DARO s{os.path.basename(os.path.normpath(ck)).replace('seed_', '')}"
+            policies[name] = load_daro(ck, config)
+            daro_names.append(name)
+    policies.update(make_baselines(config))
+
+    by = args.by
+    values = args.distances if by == 'distance' else args.soh_levels
+    table = run(policies, config, values, args.episodes, by)
+    add_daro_mean(table, daro_names)
+    print_table(table, by=by)
+
+    os.makedirs(args.log_dir, exist_ok=True)
+    base = os.path.join(args.log_dir, 'short_term_energy' + ('' if by == 'distance' else f'_{by}'))
+    subtitle = (f', SOH {args.soh:.2f}, SOC0 {args.soc:.2f}' if by == 'distance'
+                else f', {args.distance:.0f} m, SOC0 {args.soc:.2f}')
+    with open(base + '.json', 'w') as f:
+        json.dump({'config': config, 'args': vars(args),
+                   'table': {str(d): {str(c): row for c, row in per_c.items()}
+                             for d, per_c in table.items()}}, f, indent=2, default=float)
+    print(f'Results saved -> {base}.json')
+    write_csv(table, base + '.csv', by)
+    show = (['DARO'] if daro_names else []) + list(make_baselines(config))
+    plot(table, base + '.png', show, by, subtitle)
+
+
+if __name__ == '__main__':
+    main()

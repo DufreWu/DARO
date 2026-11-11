@@ -276,6 +276,7 @@ class SACAgent:
             'critic_optim':        self.critic_optim.state_dict(),
             'actor_optim':         self.actor_optim.state_dict(),
             'total_updates':       self.total_updates,
+            'alpha_optim':         self.alpha_optim.state_dict() if self.auto_alpha else None,
         }, os.path.join(path, 'daro_checkpoint.pt'))
         print(f"[DARO] Checkpoint saved → {path}")
 
@@ -289,19 +290,25 @@ class SACAgent:
                     sets networks to eval mode for deployment.
         """
         ckpt_path = os.path.join(path, 'daro_checkpoint.pt')
-        ckpt = torch.load(ckpt_path, map_location=self.device)
+        ckpt = torch.load(ckpt_path, map_location=self.device, weights_only=True)
 
         self.critic.load_state_dict(ckpt['critic_state'])
         self.actor.load_state_dict(ckpt['actor_state'])
         self.actor.target.load_state_dict(ckpt['actor_target_state'])
-        self.log_alpha = ckpt['log_alpha'].requires_grad_(not eval_only)
-        self.log_alpha = self.log_alpha.to(self.device)
-        self.alpha = float(self.log_alpha.exp())
+        # Preserve the original tensor object used by alpha_optim.
+        # Replacing self.log_alpha breaks the optimizer parameter reference.
+        with torch.no_grad():
+            self.log_alpha.copy_(ckpt['log_alpha'].to(self.device))
+        self.log_alpha.requires_grad_(not eval_only)
+        self.alpha = float(self.log_alpha.detach().exp().item())
         self.total_updates = ckpt.get('total_updates', 0)
 
         if not eval_only:
             self.critic_optim.load_state_dict(ckpt['critic_optim'])
             self.actor_optim.load_state_dict(ckpt['actor_optim'])
+            # Older checkpoints do not contain this optional state.
+            if self.auto_alpha and ckpt.get('alpha_optim') is not None:
+                self.alpha_optim.load_state_dict(ckpt['alpha_optim'])
 
         if eval_only:
             self.critic.eval()

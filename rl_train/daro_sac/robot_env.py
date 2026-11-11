@@ -134,10 +134,13 @@ class RobotParams:
     completion_bonus: float = 2.0
     failure_penalty: float = 3.0
     noise_std_frac: float = 0.02  # observation only
-    # Illustrative power model coefficients; fit to robot measurements.
-    motor_base_w: float = 2.0
-    motor_linear_w_per_mps: float = 2.5
-    motor_quadratic_w_per_mps2: float = 1.8
+    # Motor (mechanical) power, steady-speed fit to robot measurements:
+    #   P(v) = 1.1625 + 1.14005 v + 0.10893 v^3  [W]
+    motor_base_w: float = 1.1625
+    motor_linear_w_per_mps: float = 1.14005
+    motor_quadratic_w_per_mps2: float = 0.0
+    motor_cubic_w_per_mps3: float = 0.10893
+    # Acceleration term is NOT part of the fit (illustrative); 0 disables it.
     motor_accel_w_per_mps2: float = 1.5
     compute_base_w: float = 2.0
     compute_dynamic_w: float = 1.5
@@ -151,32 +154,60 @@ class BatteryLimitError(ValueError):
     pass
 
 
-def _voc(soc: float, soh: float = 1.0, V_nom: float = 14.8) -> float:
-    """Illustrative 4S OCV(SOC), independent of SOH by default.
+# 4S discharge-voltage fit (battery_model/real_battery_discharge/
+# calibrate_battery_voltage_model.py):  V(x) = v0 - a1 x - a3 x^3 - a8 x^8 - a25 x^25,
+# x = 1 - SOC. Coefficients [v0, a1, a3, a8, a25].
+VOC_FRESH_COEFF = (15.061061, 0.0, 0.995533, 1.18033, 0.881677)
+VOC_AGED_COEFF = (15.008879, 0.077644, 1.31415, 0.976887, 0.855835)
+VOC_SOH_AGED_REF = 0.85     # SOH assigned to the aged curve (demonstration mapping)
+# The fit is a loaded terminal voltage, not a rested OCV: it already contains
+# I_fit * R_pack at the (unknown) test current. Set this to I_fit * R_pack [V]
+# once the test load is known, so the ECM's own I*R drop is not counted twice.
+VOC_LOAD_DROP_V = 0.0
 
-    Replace with measured rested OCV-SOC curve. No artificial SOH scaling.
+
+def _voc_curve(soc: float, coeff) -> float:
+    x = 1.0 - float(np.clip(soc, 0.0, 1.0))
+    v0, a1, a3, a8, a25 = coeff
+    return v0 - a1 * x - a3 * x ** 3 - a8 * x ** 8 - a25 * x ** 25
+
+
+def _voc(soc: float, soh: float = 1.0, V_nom: float = 14.8) -> float:
+    """4S open-circuit voltage OCV(SOC, SOH) from the fitted discharge curves.
+
+    SOH interpolates linearly between the fresh (SOH = 1) and aged
+    (SOH = VOC_SOH_AGED_REF) curves, clipped outside that range.
+    V_fresh: 15.06 V at SOC 1, 14.52 V at SOC 0.25, 12.00 V at SOC 0.
+    V_nom is kept for API compatibility (curves are absolute 4S volts).
     """
-    s = float(np.clip(soc, 0.0, 1.0))
-    return 12.8 + 3.8 * s + 0.2 * s ** 8
+    w = float(np.clip((1.0 - soh) / (1.0 - VOC_SOH_AGED_REF), 0.0, 1.0))
+    v = (1.0 - w) * _voc_curve(soc, VOC_FRESH_COEFF) + w * _voc_curve(soc, VOC_AGED_COEFF)
+    return v + VOC_LOAD_DROP_V
 
 
 def motor_power(speed: float, acceleration: float = 0.0,
                 params: Optional[RobotParams] = None) -> float:
+    """Motor power [W]: fitted steady-speed polynomial + acceleration term.
+
+    P = b0 + b1 v + b2 v^2 + b3 v^3 + k_a |a| v.  Accepts scalars or arrays.
+    """
     p = params or RobotParams()
-    v = max(0.0, speed)
-    return (p.motor_base_w + p.motor_linear_w_per_mps * v
-            + p.motor_quadratic_w_per_mps2 * v * v
-            + p.motor_accel_w_per_mps2 * abs(acceleration) * v)
+    v = np.maximum(0.0, speed)
+    out = (p.motor_base_w + p.motor_linear_w_per_mps * v
+           + p.motor_quadratic_w_per_mps2 * v ** 2
+           + p.motor_cubic_w_per_mps3 * v ** 3
+           + p.motor_accel_w_per_mps2 * np.abs(acceleration) * v)
+    return float(out) if np.ndim(out) == 0 else out
 
 
-def compute_cpu_power(freq_ghz: float, base_power: float = 2.0,
+def compute_cpu_power(freq_ghz: float, base_power: float = 4.0,
                       alpha_cpu: float = 1.5) -> float:
     return base_power + alpha_cpu * (max(0.0, freq_ghz) / 2.0) ** 3
 
 
 def compute_throughput(speed: float, freq_ghz: float,
                        complexity: float = 1.0) -> float:
-    return 25.0 * (freq_ghz / 2.0) / (1.0 + 0.1 * speed * complexity)
+    return 35.0 * (freq_ghz / 2.0) / (1.0 + 0.1 * speed * complexity)
 
 class ECMBattery:
     """Constant-power 2RC ECM with exact first-order RC transitions."""
