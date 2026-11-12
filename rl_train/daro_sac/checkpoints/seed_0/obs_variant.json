@@ -6,5 +6,7 @@
     "temperature",
     "voltage",
     "current"
-  ]
+  ],
+  "reward_variant": "full",
+  "reward_overrides": {}
 }

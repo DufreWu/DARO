@@ -126,25 +126,51 @@ def write_csv(table: dict, path: str, by: str = 'distance'):
     print(f'CSV saved -> {path}')
 
 
-def plot(table: dict, path: str, show: List[str], by: str = 'distance', subtitle: str = ''):
+PLOT_METRICS = {  # metric -> (y label, title noun)
+    'energy_kj':    ('Energy per mission [kJ]', 'energy'),
+    'wh_per_km':    ('Energy per km [Wh/km]', 'energy'),
+    'qos_viol_pct': ('QoS violation [% of steps]', 'QoS violation'),
+}
+
+
+def plot(table: dict, path: str, show: List[str], by: str = 'distance', subtitle: str = '',
+         metric: str = None):
     """One panel per outer value (SOH or distance); grouped bars inside.
 
     x = workload complexity, one bar per policy, error bar = std.
-    --by soh      : energy per mission [kJ] (distance is fixed).
-    --by distance : energy per km [Wh/km] (comparable across distances).
+    metric=None (energy):
+      --by soh      : energy per mission [kJ] (distance is fixed).
+      --by distance : energy per km [Wh/km] (comparable across distances).
+    metric='qos_viol_pct': share of control steps violating the QoS reference.
     """
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
     from plot_rewards import SERIES, TEXT, TEXT_2, SURFACE, _style
 
-    metric, ylabel = (('energy_kj', 'Energy per mission [kJ]') if by == 'soh'
-                      else ('wh_per_km', 'Energy per km [Wh/km]'))
+    if metric is None:
+        metric = 'energy_kj' if by == 'soh' else 'wh_per_km'
+    ylabel, noun = PLOT_METRICS[metric]
     outer = list(table)
-    fig, axes = plt.subplots(1, len(outer), figsize=(3.4 * len(outer) + 0.6, 4.0),
-                             facecolor=SURFACE, sharey=True)
-    axes = np.atleast_1d(axes)
     n = len(show)
+    n_c = len(next(iter(table.values())))
+    ncol = min(n, 4)                                  # legend columns (wraps to rows)
+    leg_rows = int(np.ceil(n / ncol))
+    # Panel grid: one panel per outer value, at most 3 per row
+    p_cols = min(len(outer), 3)
+    p_rows = int(np.ceil(len(outer) / p_cols))
+    bar_w = 0.28 if len(outer) == 1 else 0.22         # inches per bar
+    panel_w = max(3.4, bar_w * n * n_c + 0.8)
+    fig_w = max(panel_w * p_cols + 0.8, 2.3 * ncol + 0.5, 10.0)
+    leg_h = 0.3 * leg_rows + 0.15
+    fig_h = 0.5 + 3.6 * p_rows + leg_h
+    fig, axes = plt.subplots(p_rows, p_cols, figsize=(fig_w, fig_h),
+                             facecolor=SURFACE, sharey=True, squeeze=False)
+    for ax in axes.flat[len(outer):]:
+        ax.set_visible(False)
+    for r in range(p_rows):
+        axes[r, 0].set_ylabel(ylabel)
+    axes = axes.flat
     width = 0.8 / n
     for ax, d in zip(axes, outer):
         _style(ax)
@@ -162,14 +188,14 @@ def plot(table: dict, path: str, show: List[str], by: str = 'distance', subtitle
         ax.set_xticklabels([f'{c:g}' for c in cs])
         ax.set_xlabel('Workload complexity')
         ax.set_title(AXES[by]['panel'](d), loc='left', fontsize=10, color=TEXT)
-        ax.set_ylim(bottom=0)
-    axes[0].set_ylabel(ylabel)
+        ax.set_ylim(0, 100 if metric == 'qos_viol_pct' else None)
+        ax.yaxis.set_tick_params(labelleft=True)
     h, l = axes[0].get_legend_handles_labels()
     fig.legend(h, l, fontsize=8.5, frameon=False, labelcolor=TEXT,
-               loc='lower center', ncol=n, bbox_to_anchor=(0.5, 0.0))
-    fig.suptitle(f'Short-term energy by workload complexity and {AXES[by]["name"]} '
+               loc='lower center', ncol=ncol, bbox_to_anchor=(0.5, 0.0))
+    fig.suptitle(f'Short-term {noun} by workload complexity and {AXES[by]["name"]} '
                  f'(mean \u00b1 std){subtitle}', x=0.01, ha='left', fontsize=11, color=TEXT)
-    fig.tight_layout(rect=(0, 0.07, 1, 1))
+    fig.tight_layout(rect=(0, leg_h / fig_h, 1, 1))
     fig.savefig(path, dpi=150, facecolor=SURFACE)
     plt.close(fig)
     print(f'Plot saved -> {path}')
@@ -225,6 +251,8 @@ def main():
     order = ['DARO', 'RL-SOC-only', 'RL-SOH-only', 'DARO w/o D_d', 'DARO w/o E_d']
     show = sorted(groups, key=lambda g: order.index(g) if g in order else 9) + list(make_baselines(config))
     plot(table, base + '.png', show, by, subtitle)
+    plot(table, base.replace('short_term_energy', 'short_term_qos') + '.png', show, by,
+         subtitle, metric='qos_viol_pct')
 
 
 if __name__ == '__main__':

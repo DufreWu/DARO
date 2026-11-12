@@ -94,6 +94,10 @@ DEFAULT_CONFIG = {
     "log_dir":          "./logs",
     "seed":             42,             # training seed (CLI: --seed / --seeds)
     "torch_deterministic": False,       # deterministic cuDNN/torch kernels (slower)
+    # Compute device. The networks are small (batch 64, one update per env
+    # step), so CPU is faster than GPU here. CLI: --device
+    "device":           "cpu",          # 'cpu' | 'cuda' | 'auto'
+    "torch_threads":    0,              # torch intra-op threads; 0 = torch default
     "seed_subdir":      True,           # write to <ckpt_dir>/seed_<seed>, <log_dir>/seed_<seed>
     # Observation variant (obs_variants.py): 'full' = DARO, 'soc' = RL-SOC-only,
     # 'soh' = RL-SOH-only. Ablations go to <ckpt_dir>/rl_<variant>/seed_<seed>.
@@ -235,6 +239,7 @@ def build_agent(config: dict, env: RobotEnv) -> SACAgent:
         auto_alpha=config['auto_alpha'],
         buffer_capacity=config['buffer_capacity'],
         batch_size=config['batch_size'],
+        device=config.get('device', 'auto'),
     )
 
 
@@ -429,6 +434,32 @@ def train(config: dict, resume_ckpt: str = None):
 # CLI
 # ---------------------------------------------------------------------------
 
+def _train_seed(config: dict, seed: int, resume_ckpt=None, redirect: bool = False):
+    """Train one seed (module-level so it can run in a worker process).
+
+    redirect=True sends this process's stdout/stderr to
+    <log_dir>/[<variant>/]seed_<seed>/train_stdout.log (parallel runs).
+    """
+    if config.get('torch_threads', 0) > 0:
+        import torch
+        torch.set_num_threads(int(config['torch_threads']))
+    config = dict(config, seed=int(seed))
+    if not redirect:
+        train(config, resume_ckpt=resume_ckpt)
+        return
+    import contextlib
+    log_dir = config['log_dir']
+    sub = run_subdir(config.get('obs_variant', 'full'), config.get('reward_variant', 'full'))
+    if sub:
+        log_dir = os.path.join(log_dir, sub)
+    if config.get('seed_subdir', True):
+        log_dir = os.path.join(log_dir, f'seed_{seed}')
+    os.makedirs(log_dir, exist_ok=True)
+    with open(os.path.join(log_dir, 'train_stdout.log'), 'w', buffering=1) as f, \
+            contextlib.redirect_stdout(f), contextlib.redirect_stderr(f):
+        train(config, resume_ckpt=resume_ckpt)
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description='DARO SAC Training')
     parser.add_argument('--ckpt', type=str, default=None, help='Resume from checkpoint directory')
@@ -438,6 +469,12 @@ def parse_args():
                         help='Train one run per seed sequentially, e.g. --seeds 0 1 2 3 4')
     parser.add_argument('--deterministic', action='store_true',
                         help='Deterministic torch/cuDNN kernels (bit-reproducible, slower)')
+    parser.add_argument('--device', choices=['cpu', 'cuda', 'auto'], default=None,
+                        help=f"Compute device (default {DEFAULT_CONFIG['device']}; CPU is faster for these small nets)")
+    parser.add_argument('--workers', type=int, default=1,
+                        help='With --seeds: number of seeds trained in parallel processes (default 1 = sequential)')
+    parser.add_argument('--threads', type=int, default=None,
+                        help='Torch threads per run (default: 1 when --workers > 1, else torch default)')
     parser.add_argument('--steps', type=int, default=None, help='Override total training steps')
     parser.add_argument('--episodes', type=int, default=None, help='Override max training episodes')
     parser.add_argument('--control-dt', type=float, default=None,
@@ -474,8 +511,37 @@ if __name__ == '__main__':
     if args.reward is not None:
         config['reward_variant'] = args.reward
 
-    for seed in seeds:
-        train(dict(config, seed=int(seed)), resume_ckpt=args.ckpt)
+    if args.device is not None:
+        config['device'] = args.device
+    workers = max(1, min(args.workers, len(seeds)))
+    if args.threads is not None:
+        config['torch_threads'] = args.threads
+    elif workers > 1:
+        config['torch_threads'] = 1   # avoid oversubscribing cores across processes
+
+    if workers == 1:
+        for seed in seeds:
+            _train_seed(config, seed, args.ckpt)
+    else:
+        import multiprocessing as mp
+        from concurrent.futures import ProcessPoolExecutor, as_completed
+        print(f"Training {len(seeds)} seeds with {workers} parallel workers "
+              f"(device={config['device']}, torch_threads={config['torch_threads']}); "
+              f"per-seed output -> <log_dir>/seed_<seed>/train_stdout.log")
+        ctx = mp.get_context('spawn')   # safe with CUDA and torch threads
+        with ProcessPoolExecutor(max_workers=workers, mp_context=ctx) as pool:
+            futs = {pool.submit(_train_seed, config, s, None, True): s for s in seeds}
+            failed = []
+            for fut in as_completed(futs):
+                s = futs[fut]
+                try:
+                    fut.result()
+                    print(f"[seed {s}] done")
+                except Exception as exc:
+                    failed.append(s)
+                    print(f"[seed {s}] FAILED: {exc!r}")
+        if failed:
+            raise SystemExit(f"Seeds failed: {sorted(failed)}")
     if len(seeds) > 1 and config.get('seed_subdir', True):
         try:
             from plot_rewards import plot_seed_comparison

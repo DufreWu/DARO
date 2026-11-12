@@ -1,0 +1,7 @@
+Training 5 seeds with 5 parallel workers (device=cpu, torch_threads=1); per-seed output -> <log_dir>/seed_<seed>/train_stdout.log
+[seed 0] done
+[seed 2] done
+[seed 4] done
+[seed 3] done
+[seed 1] done
+Seed comparison -> ./logs/rw_no_stress/reward_curve_seeds.png

@@ -51,7 +51,7 @@ class ECMParams:
     voltage_min: float = 12.0  # 4S pack, illustrative cutoff
     current_max: float = 30.0  # illustrative; replace with datasheet/measurement
     # A resistance multiplier can be calibrated independently of capacity SOH.
-    resistance_aging_factor: float = 0.0
+    resistance_aging_factor: float = 5.0
     # SOC-dependent fit: {'R0': [coeffs], ...} for log(parameter), cell level.
     fit_coeffs: Optional[dict] = None
     r_scale: float = 1.0  # Ns / Np, applied to R (C is divided by it)
@@ -124,21 +124,20 @@ class RobotParams:
     max_steps: int = 1200
     n_apps: int = 2
     qos_ref: list[float] = field(default_factory=lambda: [15.0, 15.0])
-    # Reward (see RobotEnv.reward_terms). Energy is normalised per mission:
-    # E_ref = energy_ref_wh_per_km * L, so sum(E_d) ~ w_energy at the
-    # energy-optimal speed for ANY mission distance.
-    # w_energy == completion_bonus and energy_ref ~ minimum energy per metre make
-    # the per-second (discounted, myopic) optimum coincide with the per-mission
-    # energy optimum: d/dv [B v - w_E P(v)/e_ref] = 0  <=>  P'(v) = e_ref = P/v.
-    energy_ref_wh_per_km: float = 1.1
+    # Reward (see RobotEnv.reward_terms). E_d is energy per mission metre:
+    #   E_d = w_energy * E_t / L   [J/m], so sum(E_d) = w_energy * (mission J/m).
+    # w_energy [1/(J/m)] = w_utility / e_ref, with e_ref = 3.96 J/m (= 1.1 Wh/km,
+    # ~ minimum energy per metre). Then sum(E_d) ~ w_utility at the energy-optimal
+    # speed for ANY L, and the per-second (myopic) optimum equals the per-mission
+    # energy optimum: d/dv [w_U v - w_E P(v)] = 0  <=>  P'(v) = e_ref = P/v.
     # Stress normalised per mission: S_ref = stress_ref_s_per_km * L / 1000.
     # ~8 s/km is the stress proxy at the energy-optimal speed (~2.75 m/s, C=1),
     # so sum(D_d) ~ w_stress per mission there (same scale as E_d / w_energy).
     stress_ref_s_per_km: float = 8.0
     stress_ref_s: float = 1000.0   # legacy (unused by reward_terms)
-    # Progress utility; keep == w_energy so per-second and per-mission optima agree.
+    # Progress utility; keep w_energy * e_ref == w_utility so per-second and per-mission optima agree.
     w_utility: float = 2.0
-    w_energy: float = 2.0
+    w_energy: float = 3.0 / 3.96  # [1/(J/m)] = w_utility / e_ref  (~0.505)
     w_stress: float = 1.0
     w_time: float = 0.0   # time pressure; > 0 biases speed above the energy optimum
     w_smooth: float = 0.2  # penalty on speed changes (normalised by max step change)
@@ -438,16 +437,17 @@ class RobotEnv(_Base):
         p = self.robot
         L = p.mission_distance_m
 
-        # E_d: Normalized energy consumption
-        E_ref = p.energy_ref_wh_per_km * 3.6 * L
-        E_d = p.w_energy * energy_j / E_ref
+        # E_d: energy per mission metre [J/m], weighted by w_energy [1/(J/m)]
+        E_d = p.w_energy * energy_j / L
 
         # D_d: Normalized battery stress
         S_ref = p.stress_ref_s_per_km * L / 1000.0
         D_d = p.w_stress * stress / max(S_ref, 1e-9)
 
         # U_t: QoS-aware physical progress
-        qos_utility = 1.0 - np.clip(qos_violation, 0.0, 1.0)
+        # Cubed so small, persistent violations are no longer almost free
+        # (e.g. 6 % shortfall -> utility 0.83 instead of 0.94).
+        qos_utility = (1.0 - np.clip(qos_violation, 0.0, 1.0)) ** 3
 
         U_t = (
             p.w_utility

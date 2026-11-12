@@ -38,6 +38,8 @@
   "log_dir": "./logs/rl_soc_rw_no_stress/seed_0",
   "seed": 0,
   "torch_deterministic": false,
+  "device": "cpu",
+  "torch_threads": 1,
   "seed_subdir": true,
   "obs_variant": "soc",
   "reward_variant": "no_stress"

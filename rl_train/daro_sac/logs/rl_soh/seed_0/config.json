@@ -38,6 +38,8 @@
   "log_dir": "./logs/rl_soh/seed_0",
   "seed": 0,
   "torch_deterministic": false,
+  "device": "cpu",
+  "torch_threads": 1,
   "seed_subdir": true,
   "obs_variant": "soh",
   "reward_variant": "full"

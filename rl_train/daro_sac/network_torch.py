@@ -44,11 +44,11 @@ class QNetwork(nn.Module):
     """
     Single Q-network: Q(s, a) → scalar.
 
-    Paper uses two hidden layers of 128 and 64 neurons (§V-A).
+    Paper uses two hidden layers of 256 and 256 neurons (§V-A).
     """
 
     def __init__(self, state_dim: int, action_dim: int,
-                 hidden_sizes=(128, 64)):
+                 hidden_sizes=(256, 256)):
         super().__init__()
         self.net = mlp(
             [state_dim + action_dim] + list(hidden_sizes) + [1]
@@ -66,7 +66,7 @@ class TwinQNetwork(nn.Module):
     """
 
     def __init__(self, state_dim: int, action_dim: int,
-                 hidden_sizes=(128, 64), polyak: float = 0.995):
+                 hidden_sizes=(256, 256), polyak: float = 0.995):
         super().__init__()
         self.polyak = polyak
 

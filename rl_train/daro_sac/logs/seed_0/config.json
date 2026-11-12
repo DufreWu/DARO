@@ -38,6 +38,9 @@
   "log_dir": "./logs/seed_0",
   "seed": 0,
   "torch_deterministic": false,
+  "device": "cpu",
+  "torch_threads": 1,
   "seed_subdir": true,
-  "obs_variant": "full"
+  "obs_variant": "full",
+  "reward_variant": "full"
 }

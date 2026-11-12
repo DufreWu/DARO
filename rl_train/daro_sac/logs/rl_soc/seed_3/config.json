@@ -1,0 +1,46 @@
+{
+  "control_dt": 1.0,
+  "horizon_s": 1000.0,
+  "max_steps_margin": 1.2,
+  "total_steps": 1000000,
+  "max_episodes": 10000,
+  "batch_size": 64,
+  "buffer_capacity": 100000,
+  "lr": 0.0003,
+  "polyak": 0.995,
+  "alpha_init": 0.2,
+  "auto_alpha": true,
+  "hidden_sizes": [
+    128,
+    64
+  ],
+  "soh_range": [
+    0.8,
+    1.0
+  ],
+  "soc_range": [
+    0.2,
+    1.0
+  ],
+  "complexity_levels": [
+    1.0,
+    2.0,
+    3.0
+  ],
+  "mission_distances_m": [
+    1000.0
+  ],
+  "warmup_steps": 5000,
+  "eval_every_ep": 200,
+  "eval_episodes": 2,
+  "ckpt_every_ep": 500,
+  "ckpt_dir": "./checkpoints/rl_soc/seed_3",
+  "log_dir": "./logs/rl_soc/seed_3",
+  "seed": 3,
+  "torch_deterministic": false,
+  "device": "cpu",
+  "torch_threads": 1,
+  "seed_subdir": true,
+  "obs_variant": "soc",
+  "reward_variant": "full"
+}

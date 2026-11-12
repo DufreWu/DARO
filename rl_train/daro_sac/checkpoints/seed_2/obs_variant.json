@@ -1,0 +1,12 @@
+{
+  "obs_variant": "full",
+  "visible_battery": [
+    "soc",
+    "soh",
+    "temperature",
+    "voltage",
+    "current"
+  ],
+  "reward_variant": "full",
+  "reward_overrides": {}
+}

@@ -82,7 +82,21 @@ python plot_rewards.py logs/seed_0 logs/seed_1 logs/seed_2   # + seed comparison
 python sac_training.py --seed 7                 # single run, seed 7
 python sac_training.py --seeds 0 1 2 3 4        # five runs, one per seed
 python sac_training.py --seed 7 --deterministic # bit-reproducible torch kernels
+python sac_training.py --seeds 0 1 2 3 4 --workers 5   # five seeds in parallel processes
 ```
+
+`--workers N` trains up to N seeds at once, one process each, with
+1 torch thread per process (override with `--threads`). Each parallel run
+writes its console output to `./logs/seed_<seed>/train_stdout.log`.
+
+### Device
+
+Training runs on the CPU by default (`--device cpu`). The networks are
+small (128×64, batch 64, one update per environment step), so a GPU is
+slower here: kernel launches and host↔device copies cost more than the
+compute. On an RTX 5090 one update took 2.3 ms on CUDA and 1.7 ms on the
+CPU. Use `--device cuda` only with much larger networks or batches. To get
+more throughput, train several seeds in parallel with `--workers`.
 
 The seed fixes network initialisation, SAC exploration noise, replay sampling,
 warm-up actions, the episode curriculum (SOH, initial SOC, complexity,
@@ -209,15 +223,16 @@ r_t = -E_d(t) - D_d(t) + U_t
 
 | Term | Definition | Meaning |
 |------|------------|---------|
-| E_d(t) | w_E · E_t / (e_ref · L),  E_t = I·V·Δt [J] | Energy drawn this step, normalised per mission distance L |
+| E_d(t) | w_E · E_t / L  [J/m],  E_t = I·V·Δt [J] | Energy drawn this step per mission metre |
 | D_d(t) | w_D · S_t / S_ref,  S_t = Δt·[w_I (C/C_ref)² + w_T ((T−T_th)⁺/T_s)² + w_S ((SOC−SOC_th)⁺/(1−SOC_th))²] | Battery-stress proxy (`BatteryStress`); shaping only, **not** ΔSOH |
 | U_t | B·Δx/L − w_T·Δt/(L/v_max) − w_S·(Δv/(a_max·Δt))²·Δt/(L/v_max) − w_Q·q_t·Δt/Δt_ctrl − P_fail·𝟙[fail] | Progress, time pressure, speed-change penalty, QoS, terminal failure |
 
-q_t = max(0, 1 − min_i thr_i/QoS_ref_i) (linear), L = mission distance.
-Defaults (`RobotParams`, `StressParams`): e_ref = 1.1 Wh/km, w_E = B = 2,
+q_t = max(0, 1 − min_i thr_i/QoS_ref_i); U_t uses (1 − q_t)³. L = mission distance.
+Defaults (`RobotParams`, `StressParams`): w_E = w_U / e_ref = 2 / 3.96 ≈ 0.505 1/(J/m)
+(e_ref = 3.96 J/m = 1.1 Wh/km), w_U = B = 2,
 w_T = 0, w_S = 0.2, S_ref = 1000 s, w_D = w_Q = 1, P_fail = 3.
 
-Design: w_E = B and e_ref ≈ minimum energy per metre make the per-second
+Design: w_E · e_ref = w_U with e_ref ≈ minimum energy per metre makes the per-second
 (myopic, discounted) optimum equal to the per-mission energy optimum, for any L.
 `python evaluation/reward_check.py` verifies that the reward-optimal constant
 speed / CPU frequency are the energy-optimal, QoS-safe ones and that speed
