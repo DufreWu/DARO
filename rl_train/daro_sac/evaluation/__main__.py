@@ -1,15 +1,20 @@
-"""python -m evaluation [--ckpt DIR | --baselines-only] [--distance M] ..."""
+"""python -m evaluation [--ckpt DIR [DIR ...] | --baselines-only] [--distance M] ...
+
+--ckpt accepts DARO and RL-SOC-only / RL-SOH-only checkpoints (labelled from
+obs_variant.json), e.g. --ckpt checkpoints/seed_0 checkpoints/rl_soc/seed_0 checkpoints/rl_soh/seed_0
+"""
 
 import argparse
 import os
 
 from . import (EVAL_CONFIG, make_baselines, evaluate_policies, save_results,
-               load_daro, lifetime_from_results)
+               load_rl_policies, lifetime_from_results)
 
 
 def main():
     ap = argparse.ArgumentParser(description='DARO test-environment evaluation')
-    ap.add_argument('--ckpt', type=str, default=None, help='DARO checkpoint directory')
+    ap.add_argument('--ckpt', type=str, nargs='+', default=None,
+                    help='RL checkpoint directories (DARO / RL-SOC-only / RL-SOH-only)')
     ap.add_argument('--baselines-only', action='store_true')
     ap.add_argument('--episodes', type=int, default=None, help='Seeds per scenario')
     ap.add_argument('--distance', type=float, default=None, help='Mission distance [m]')
@@ -26,7 +31,7 @@ def main():
     if not args.baselines_only:
         if not args.ckpt:
             raise SystemExit('Pass --ckpt <dir> or --baselines-only.')
-        policies['DARO'] = load_daro(args.ckpt, config)
+        policies, _ = load_rl_policies(args.ckpt, config)
     policies.update(make_baselines(config))
     results = evaluate_policies(policies, config, n_episodes=args.episodes)
     life = lifetime_from_results(results, config)

@@ -1,0 +1,10 @@
+{
+  "obs_variant": "soc",
+  "visible_battery": [
+    "soc"
+  ],
+  "reward_variant": "no_stress",
+  "reward_overrides": {
+    "w_stress": 0.0
+  }
+}

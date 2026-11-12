@@ -131,7 +131,13 @@ class RobotParams:
     # the per-second (discounted, myopic) optimum coincide with the per-mission
     # energy optimum: d/dv [B v - w_E P(v)/e_ref] = 0  <=>  P'(v) = e_ref = P/v.
     energy_ref_wh_per_km: float = 1.1
-    stress_ref_s: float = 1000.0
+    # Stress normalised per mission: S_ref = stress_ref_s_per_km * L / 1000.
+    # ~8 s/km is the stress proxy at the energy-optimal speed (~2.75 m/s, C=1),
+    # so sum(D_d) ~ w_stress per mission there (same scale as E_d / w_energy).
+    stress_ref_s_per_km: float = 8.0
+    stress_ref_s: float = 1000.0   # legacy (unused by reward_terms)
+    # Progress utility; keep == w_energy so per-second and per-mission optima agree.
+    w_utility: float = 2.0
     w_energy: float = 2.0
     w_stress: float = 1.0
     w_time: float = 0.0   # time pressure; > 0 biases speed above the energy optimum
@@ -428,41 +434,26 @@ class RobotEnv(_Base):
             arr[7] += self.np_random.normal(0, std * max(1.0, abs(arr[7])))
         return arr
 
-    def reward_terms(self, energy_j: float, stress: float, delta_distance_m: float,
-                     dt_s: float, qos_violation: float, failed: bool = False,
-                     delta_v: float = 0.0):
-        """Per-step reward components; reward r_t = -E_d - D_d + U_t.
-
-        E_d  energy cost    w_E * E_t / E_ref,   E_ref = e_ref * L
-             E_t = I*V*dt [J] drawn from the pack this step,
-             e_ref = energy_ref_wh_per_km [Wh/km] -> sum(E_d) ~ w_E * e/e_ref.
-        D_d  degradation    w_D * S_t / S_ref
-             S_t = dt * (w_I (C-rate/C_ref)^2 + w_T ((T-T_th)^+/T_s)^2
-                         + w_S ((SOC-SOC_th)^+/(1-SOC_th))^2)
-             = BatteryStress proxy [s]; dimensionless shaping, NOT dSOH.
-        U_t  task utility   B * dx_t/L                      progress (sums to B)
-                            - w_T * dt / (L / v_max)        time pressure (default 0)
-                            - w_S * (dv/(a_max dt))^2 * dt / (L / v_max)
-                                                            speed-change penalty
-                            - w_Q * q_t * dt / dt_ctrl      QoS penalty
-                            - P_fail * 1[failed/truncated]  terminal
-             q_t = max(0, 1 - min_i thr_i/QoS_ref_i)  (linear: a small
-             shortfall is not "almost free", unlike the old squared form).
-
-        L = mission distance. Returns (E_d, D_d, U_t) as floats.
-        """
+    def reward_terms(self, energy_j: float, stress: float, delta_distance_m: float, qos_violation: float):
         p = self.robot
         L = p.mission_distance_m
-        t_ref = L / p.v_max
-        E_ref = p.energy_ref_wh_per_km * 3.6 * L          # Wh/km * m -> J
+
+        # E_d: Normalized energy consumption
+        E_ref = p.energy_ref_wh_per_km * 3.6 * L
         E_d = p.w_energy * energy_j / E_ref
-        D_d = p.w_stress * stress / p.stress_ref_s
-        dv_n = delta_v / max(p.a_max * p.dt, 1e-9)
-        U_t = (p.completion_bonus * delta_distance_m / L
-               - p.w_time * dt_s / t_ref
-               - p.w_smooth * dv_n * dv_n * dt_s / t_ref
-               - p.w_qos * qos_violation * dt_s / p.dt
-               - (p.failure_penalty if failed else 0.0))
+
+        # D_d: Normalized battery stress
+        S_ref = p.stress_ref_s_per_km * L / 1000.0
+        D_d = p.w_stress * stress / max(S_ref, 1e-9)
+
+        # U_t: QoS-aware physical progress
+        qos_utility = 1.0 - np.clip(qos_violation, 0.0, 1.0)
+
+        U_t = (
+            p.w_utility
+            * delta_distance_m / L
+            * qos_utility
+        )
 
         return float(E_d), float(D_d), float(U_t)
 
@@ -516,9 +507,7 @@ class RobotEnv(_Base):
         failed = bool((terminated and not completed) or truncated)
 
         # Compute reward terms and return the Gymnasium API tuple.
-        E_d, D_d, U_t = self.reward_terms(energy_j, stress, delta_distance,
-                                          active_dt, qos_violation, failed,
-                                          delta_v=float(delta_v))
+        E_d, D_d, U_t = self.reward_terms(energy_j, stress, delta_distance, qos_violation)
         reward = -E_d - D_d + U_t
 
         self._finished = terminated or truncated

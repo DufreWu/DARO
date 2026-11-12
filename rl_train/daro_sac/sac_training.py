@@ -28,6 +28,10 @@ Usage
     python sac_training.py --control-dt 0.5        # 2 Hz control
     python sac_training.py --seed 7                # -> checkpoints/seed_7, logs/seed_7
     python sac_training.py --seeds 0 1 2 3 4       # one run per seed
+    python sac_training.py --obs soc --seeds 0 1 2 3 4   # RL-SOC-only -> checkpoints/rl_soc/seed_k
+    python sac_training.py --obs soh --seeds 0 1 2 3 4   # RL-SOH-only -> checkpoints/rl_soh/seed_k
+    python sac_training.py --reward no_stress --seeds 0 1 2 3 4   # DARO w/o D_d -> checkpoints/rw_no_stress/seed_k
+    python sac_training.py --reward no_energy --seeds 0 1 2 3 4   # DARO w/o E_d -> checkpoints/rw_no_energy/seed_k
 
 Testing lives in the evaluation/ package (run from this directory):
     python -m evaluation --ckpt ./checkpoints/seed_42
@@ -46,6 +50,8 @@ import numpy as np
 
 from robot_env import RobotEnv, RobotParams, ECMParams, StressParams
 from sac_agent import SACAgent
+from obs_variants import (MaskedPolicy, apply_mask, apply_reward_variant, label,
+                          obs_mask, run_subdir, save_variant)
 from evaluation import make_robot
 
 # ---------------------------------------------------------------------------
@@ -55,10 +61,10 @@ from evaluation import make_robot
 DEFAULT_CONFIG = {
     # Control timing
     "control_dt":       1.0,            # [s] agent decision period (1 Hz)
-    "horizon_s":        100.0,          # [s] effective planning horizon -> gamma
+    "horizon_s":        1000.0,          # [s] effective planning horizon -> gamma
     "max_steps_margin": 1.2,            # max_steps = margin * mission / (v_min * dt)
     # Training scale
-    "total_steps":      500_000,
+    "total_steps":      1000_000,
     "max_episodes":     10_000,
     "batch_size":       64,
     "buffer_capacity":  100_000,
@@ -74,7 +80,7 @@ DEFAULT_CONFIG = {
     "complexity_levels": [1.0, 2.0, 3.0],  # low / medium / high
     # Mission distance drawn per episode; obs[6] (distance remaining) must
     # cover the tested range, otherwise DARO extrapolates at long missions.
-    "mission_distances_m": [500.0, 1000.0, 2500.0, 5000.0],
+    "mission_distances_m": [1000.0],
     # Warm-up before first update
     "warmup_steps":     5_000,
     # Periodic evaluation during training (evaluation package, DARO only;
@@ -89,6 +95,14 @@ DEFAULT_CONFIG = {
     "seed":             42,             # training seed (CLI: --seed / --seeds)
     "torch_deterministic": False,       # deterministic cuDNN/torch kernels (slower)
     "seed_subdir":      True,           # write to <ckpt_dir>/seed_<seed>, <log_dir>/seed_<seed>
+    # Observation variant (obs_variants.py): 'full' = DARO, 'soc' = RL-SOC-only,
+    # 'soh' = RL-SOH-only. Ablations go to <ckpt_dir>/rl_<variant>/seed_<seed>.
+    "obs_variant":      "full",
+    # Reward variant (obs_variants.py): 'full', 'no_stress' (w_stress = 0),
+    # 'no_energy' (w_energy = 0). Independent of obs_variant; ablations go to
+    # <ckpt_dir>/<run_subdir>/seed_<seed>, e.g. rw_no_stress, rl_soc_rw_no_energy.
+    # Training only; periodic evaluation keeps the full reward.
+    "reward_variant":   "full",
 }
 
 
@@ -198,6 +212,7 @@ def build_env(config: dict, mode: str = 'train',
     """Instantiate the environment at the configured control frequency."""
     # max_steps sized for the longest mission; the episode distance is set by reset().
     robot = make_robot(dict(config, mission_distance_m=max(config['mission_distances_m'])))
+    apply_reward_variant(robot, config.get('reward_variant', 'full'))
     ecm = ECMParams.default(robot)  # SOC-dependent LiPo fit (lipo_fit_parameters.json)
     env = RobotEnv(robot=robot, ecm=ecm, stress=StressParams(),
                    soc_init=1.0, soh_init=soh_init,
@@ -229,20 +244,21 @@ def _reset(env: RobotEnv, seed=None):
     return obs
 
 
-def periodic_eval(agent: SACAgent, config: dict) -> dict:
+def periodic_eval(agent, config: dict) -> dict:
     """Quick DARO check on the evaluation test grid (overall means only)."""
     import evaluation as ev
     # Test seeds stay EVAL_CONFIG['seed'] for every training seed, so runs
     # are compared on identical test episodes.
     ecfg = dict(ev.EVAL_CONFIG, control_dt=config['control_dt'],
                 max_steps_margin=config['max_steps_margin'])
-    res = ev.evaluate_policies({'DARO': agent}, ecfg,
+    name = label(config.get('obs_variant', 'full'), config.get('reward_variant', 'full'))
+    res = ev.evaluate_policies({name: agent}, ecfg,
                                n_episodes=config['eval_episodes'], verbose=False)
-    o = res['DARO']['overall']
-    print(f"  [eval DARO] R={o['return']:.2f} E={o['energy_kj']:.2f} kJ "
+    o = res[name]['overall']
+    print(f"  [eval {name}] R={o['return']:.2f} E={o['energy_kj']:.2f} kJ "
           f"T={o['mission_time_s']:.0f} s QoSv={o['qos_viol_pct']:.1f}% "
           f"done={100 * o['completed']:.0f}%")
-    return {'DARO': o}
+    return {name: o}
 
 
 def log_results(results: dict, log_path: str, episode: int, global_step: int = None):
@@ -271,6 +287,12 @@ def save_reward_plot(log_dir: str):
 def train(config: dict, resume_ckpt: str = None):
     """DARO training loop with per-episode SOH / complexity randomisation."""
     config = dict(config)
+    variant = config.get('obs_variant', 'full')
+    reward_variant = config.get('reward_variant', 'full')
+    sub = run_subdir(variant, reward_variant)
+    if sub:
+        config['ckpt_dir'] = os.path.join(config['ckpt_dir'], sub)
+        config['log_dir'] = os.path.join(config['log_dir'], sub)
     if config.get('seed_subdir', True):
         config['ckpt_dir'] = os.path.join(config['ckpt_dir'], f"seed_{config['seed']}")
         config['log_dir'] = os.path.join(config['log_dir'], f"seed_{config['seed']}")
@@ -284,11 +306,16 @@ def train(config: dict, resume_ckpt: str = None):
 
     ref_env = build_env(config)
     agent = build_agent(config, ref_env)
+    mask = obs_mask(variant, ref_env.obs_dim)
+    eval_policy = MaskedPolicy(agent, variant, ref_env.obs_dim)
+    save_variant(config['ckpt_dir'], variant, reward_variant)
     if resume_ckpt:
         agent.load(resume_ckpt)
 
     print("\n" + "=" * 60)
-    print("DARO SAC Training")
+    print(f"{label(variant, reward_variant)} SAC Training "
+          f"(obs '{variant}', reward '{reward_variant}': "
+          f"w_energy={ref_env.robot.w_energy}, w_stress={ref_env.robot.w_stress})")
     print(f"  Device        : {agent.device}")
     print(f"  Seed          : {config['seed']}"
           f"{' (deterministic torch)' if config.get('torch_deterministic') else ''}")
@@ -316,13 +343,16 @@ def train(config: dict, resume_ckpt: str = None):
     warmup_env = build_env(config, mode='train')
     obs, _ = warmup_env.reset(seed=rngs.warmup_env_seed,
                               options=rngs.episode_options(config))
+    obs = apply_mask(obs, mask)
     for _ in range(config['warmup_steps']):
         action = rngs.warmup_actions.uniform(warmup_env.action_low,
                                              warmup_env.action_high).astype(np.float32)
         next_obs, reward, terminated, truncated, _ = warmup_env.step(action)
+        next_obs = apply_mask(next_obs, mask)
         agent.store(obs, action, reward, next_obs, terminated)
         if terminated or truncated:
             obs, _ = warmup_env.reset(options=rngs.episode_options(config))
+            obs = apply_mask(obs, mask)
         else:
             obs = next_obs
     print("[Warm-up] done.\n")
@@ -336,12 +366,14 @@ def train(config: dict, resume_ckpt: str = None):
         soh_ep, soc_ep = opts['soh_init'], opts['soc_init']
         c_ep, d_ep = opts['complexity'], opts['mission_distance_m']
         obs, _ = env.reset(options=opts)
+        obs = apply_mask(obs, mask)
         metrics = EpisodeMetrics()
         done = False
 
         while not done and global_step < config['total_steps']:
             action = agent.select_action(obs, deterministic=False)
             next_obs, reward, terminated, truncated, info = env.step(action)
+            next_obs = apply_mask(next_obs, mask)
             done = terminated or truncated
             agent.store(obs, action, reward, next_obs, terminated)
             agent.update()
@@ -377,7 +409,7 @@ def train(config: dict, resume_ckpt: str = None):
               f"a={agent.alpha:.4f} | t={elapsed:.0f}s")
 
         if config['eval_every_ep'] and (episode + 1) % config['eval_every_ep'] == 0:
-            log_results(periodic_eval(agent, config), log_path, episode + 1, global_step)
+            log_results(periodic_eval(eval_policy, config), log_path, episode + 1, global_step)
 
         if (episode + 1) % config['ckpt_every_ep'] == 0:
             agent.save(config['ckpt_dir'])
@@ -410,6 +442,10 @@ def parse_args():
     parser.add_argument('--episodes', type=int, default=None, help='Override max training episodes')
     parser.add_argument('--control-dt', type=float, default=None,
                         help='Agent decision period in seconds (default 1.0 = 1 Hz)')
+    parser.add_argument('--obs', choices=['full', 'soc', 'soh'], default=None,
+                        help="Observation variant: full = DARO, soc = RL-SOC-only, soh = RL-SOH-only")
+    parser.add_argument('--reward', choices=['full', 'no_stress', 'no_energy'], default=None,
+                        help='Reward variant: full, no_stress (w_stress=0), no_energy (w_energy=0)')
     parser.add_argument('--horizon-s', type=float, default=None,
                         help='Effective planning horizon in seconds (sets gamma)')
     return parser.parse_args()
@@ -433,14 +469,20 @@ if __name__ == '__main__':
         config['control_dt'] = args.control_dt
     if args.horizon_s is not None:
         config['horizon_s'] = args.horizon_s
+    if args.obs is not None:
+        config['obs_variant'] = args.obs
+    if args.reward is not None:
+        config['reward_variant'] = args.reward
 
     for seed in seeds:
         train(dict(config, seed=int(seed)), resume_ckpt=args.ckpt)
     if len(seeds) > 1 and config.get('seed_subdir', True):
         try:
             from plot_rewards import plot_seed_comparison
-            dirs = [os.path.join(config['log_dir'], f'seed_{s}') for s in seeds]
-            out = plot_seed_comparison(dirs, os.path.join(config['log_dir'], 'reward_curve_seeds.png'))
+            root = os.path.join(config['log_dir'],
+                                run_subdir(config['obs_variant'], config['reward_variant']))
+            dirs = [os.path.join(root, f'seed_{s}') for s in seeds]
+            out = plot_seed_comparison(dirs, os.path.join(root, 'reward_curve_seeds.png'))
             print(f"Seed comparison -> {out}")
         except Exception as exc:
             print(f"[warn] seed comparison plot skipped: {exc}")

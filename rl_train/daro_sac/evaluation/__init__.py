@@ -3,7 +3,8 @@
 Modules
 -------
   test_env        EVAL_CONFIG, TestScenario grid, make_test_env
-  baselines       AS-MF, SOC-only, Deg-only, SOC+Deg
+  baselines       AS-MF, QoS-EPD (rule-based); RL-SOC-only / RL-SOH-only are
+                  SAC checkpoints trained with sac_training.py --obs soc|soh
   metrics         run_episode, Xu capacity-fade metrics, aggregation
   runner          evaluate_policies, summaries, DARO checkpoint loading
   lifetime        missions/km to end of life (extrapolated from Xu fade)
@@ -25,7 +26,8 @@ for _p in (_PKG_DIR.parent, _PKG_DIR.parents[2] / 'battery_model'):
 
 from .test_env import (EVAL_CONFIG, TestScenario, test_suite, make_robot,  # noqa: E402
                        episode_max_steps, make_test_env)
-from .baselines import ASMFBaseline, RuleBasedBaseline, make_baselines  # noqa: E402
+from .baselines import ASMFBaseline, QoSAwareEPD, make_baselines  # noqa: E402
 from .metrics import run_episode, aggregate  # noqa: E402
-from .runner import evaluate_policies, print_summary, save_results, load_daro  # noqa: E402
+from .runner import (evaluate_policies, print_summary, save_results, load_daro,  # noqa: E402
+                     load_rl_policies)
 from .lifetime import lifetime_from_results  # noqa: E402

@@ -7,11 +7,14 @@
 Every policy sees the same seeded complexity disturbance (common random numbers).
 
     python -m evaluation.short_term --ckpts ./checkpoints/seed_{0,1,2,3,4}
-    python -m evaluation.short_term --by soh --ckpts ./checkpoints/seed_{0,1,2,3,4}
+    python -m evaluation.short_term --by soh --ckpts ./checkpoints/seed_{0,1,2,3,4} \
+        ./checkpoints/rl_soc/seed_{0,1,2,3,4} ./checkpoints/rl_soh/seed_{0,1,2,3,4}
     python -m evaluation.short_term --by soh --baselines-only --distance 1000 --soc 0.6
 
-DARO with several checkpoints is reported per seed ("DARO s<k>") and as
-"DARO" = mean over seeds (std = spread across seeds).
+--ckpts takes DARO and RL-ablation checkpoints mixed; each is labelled from its
+obs_variant.json (DARO / RL-SOC-only / RL-SOH-only). A method with several
+checkpoints is reported per seed ("<method> s<k>") and as "<method>" = mean
+over seeds (std = spread across seeds).
 
 Outputs (in --log-dir, default ./logs); <tag> = "" for distance, "_soh" for SOH:
     short_term_energy<tag>.json   full results
@@ -38,9 +41,9 @@ from typing import Dict, List
 
 import numpy as np
 
-from . import EVAL_CONFIG, make_baselines, evaluate_policies, load_daro
+from . import EVAL_CONFIG, make_baselines, evaluate_policies, load_rl_policies
 
-DISTANCES_M = [500.0, 1000.0, 2500.0, 5000.0]
+DISTANCES_M = [1000.0]
 AXES = {  # outer (panel) axis: config override, CSV column, labels
     'distance': dict(key='mission_distance_m', col='distance_m',
                      panel=lambda v: f'{v:.0f} m mission', name='mission distance',
@@ -77,18 +80,19 @@ def run(policies: Dict[str, object], config: dict, values, n_episodes: int,
     return table
 
 
-def add_daro_mean(table: dict, daro_names: List[str]):
-    """Insert 'DARO' = mean over seed checkpoints (std = across-seed spread)."""
-    if len(daro_names) < 2:
-        return
-    for d in table:
-        for c in table[d]:
-            row = table[d][c]
-            m = {}
-            for k in METRICS:
-                v = np.array([row[n][k] for n in daro_names])
-                m[k], m[k + '_std'] = float(v.mean()), float(v.std())
-            table[d][c] = {'DARO': m, **row}
+def add_group_means(table: dict, groups: Dict[str, List[str]]):
+    """Insert '<method>' = mean over its seed checkpoints (std = across-seed spread)."""
+    for label, names in reversed(list(groups.items())):
+        if len(names) < 2:
+            continue
+        for d in table:
+            for c in table[d]:
+                row = table[d][c]
+                m = {}
+                for k in METRICS:
+                    v = np.array([row[n][k] for n in names])
+                    m[k], m[k + '_std'] = float(v.mean()), float(v.std())
+                table[d][c] = {label: m, **row}
 
 
 def print_table(table: dict, ref: str = 'AS-MF', by: str = 'distance'):
@@ -176,7 +180,7 @@ def main():
     ap.add_argument('--by', choices=list(AXES), default='distance',
                     help='Panel axis: mission distance or SOH')
     ap.add_argument('--ckpts', type=str, nargs='+', default=[],
-                    help='One or more DARO checkpoint directories')
+                    help='DARO / RL-SOC-only / RL-SOH-only checkpoint directories (mixed)')
     ap.add_argument('--baselines-only', action='store_true')
     ap.add_argument('--distances', type=float, nargs='+', default=DISTANCES_M)
     ap.add_argument('--complexity', type=float, nargs='+', default=None,
@@ -192,30 +196,20 @@ def main():
     args = ap.parse_args()
     if not args.baselines_only and not args.ckpts:
         raise SystemExit('Pass --ckpts <dir> [...] or --baselines-only.')
-    bad = [c for c in args.ckpts
-           if not os.path.isfile(os.path.join(c, 'daro_checkpoint.pt'))]
-    if bad:
-        raise SystemExit(f'No daro_checkpoint.pt in: {bad}. '
-                         'Note: "[...]" in usage text means optional; do not type the brackets.')
-
     config = dict(EVAL_CONFIG, test_soh_levels=[args.soh], test_soc_levels=[args.soc],
                   mission_distance_m=args.distance)
     if args.complexity:
         config['test_complexity_levels'] = list(args.complexity)
 
-    policies, daro_names = {}, []
+    policies, groups = {}, {}
     if not args.baselines_only:
-        for ck in args.ckpts:
-            name = 'DARO' if len(args.ckpts) == 1 else \
-                f"DARO s{os.path.basename(os.path.normpath(ck)).replace('seed_', '')}"
-            policies[name] = load_daro(ck, config)
-            daro_names.append(name)
+        policies, groups = load_rl_policies(args.ckpts, config)
     policies.update(make_baselines(config))
 
     by = args.by
     values = args.distances if by == 'distance' else args.soh_levels
     table = run(policies, config, values, args.episodes, by)
-    add_daro_mean(table, daro_names)
+    add_group_means(table, groups)
     print_table(table, by=by)
 
     os.makedirs(args.log_dir, exist_ok=True)
@@ -228,7 +222,8 @@ def main():
                              for d, per_c in table.items()}}, f, indent=2, default=float)
     print(f'Results saved -> {base}.json')
     write_csv(table, base + '.csv', by)
-    show = (['DARO'] if daro_names else []) + list(make_baselines(config))
+    order = ['DARO', 'RL-SOC-only', 'RL-SOH-only', 'DARO w/o D_d', 'DARO w/o E_d']
+    show = sorted(groups, key=lambda g: order.index(g) if g in order else 9) + list(make_baselines(config))
     plot(table, base + '.png', show, by, subtitle)
 
 

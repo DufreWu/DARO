@@ -28,8 +28,6 @@ EVAL_CONFIG = {
     "test_episodes":          10,     # seeds per scenario
     # Baselines
     "baseline_v_nom":         2.5,    # AS-MF speed [m/s]
-    "baseline_soc_low":       0.20,
-    "baseline_soc_high":      0.60,
     "baseline_qos_margin":    1.05,
     "baseline_c_ema":         0.3,
     # Lifetime (charge half-cycle after each mission)

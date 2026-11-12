@@ -108,7 +108,7 @@ class SACAgent:
         action_high,
         hidden_sizes=(128, 64),
         lr: float = 3e-4,
-        gamma: float = 0.99,
+        gamma: float = 0.999,
         polyak: float = 0.995,
         alpha_init: float = 0.2,
         auto_alpha: bool = True,

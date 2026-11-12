@@ -2,6 +2,7 @@
 
     python -m evaluation.distance_sweep --baselines-only
     python -m evaluation.distance_sweep --ckpt ./checkpoints/seed_42 --distances 500 1000 2500 5000
+    python -m evaluation.distance_sweep --ckpt ./checkpoints/seed_0 ./checkpoints/rl_soc/seed_0 ./checkpoints/rl_soh/seed_0
 
 Writes logs/distance_sweep.json (full results) and logs/distance_sweep.csv
 (one row per distance x policy, overall means + lifetime).
@@ -23,7 +24,7 @@ import os
 import time
 
 from . import (EVAL_CONFIG, make_baselines, evaluate_policies, save_results,
-               load_daro, lifetime_from_results)
+               load_rl_policies, lifetime_from_results)
 from .runner import COLS, format_header, format_row
 
 DISTANCES_M = [500.0, 1000.0, 2500.0, 5000.0]
@@ -87,7 +88,8 @@ def write_csv(sweep_res: dict, path: str):
 
 def main():
     ap = argparse.ArgumentParser(description='DARO mission-distance sweep')
-    ap.add_argument('--ckpt', type=str, default=None)
+    ap.add_argument('--ckpt', type=str, nargs='+', default=None,
+                    help='RL checkpoint directories (DARO / RL-SOC-only / RL-SOH-only)')
     ap.add_argument('--baselines-only', action='store_true')
     ap.add_argument('--distances', type=float, nargs='+', default=DISTANCES_M)
     ap.add_argument('--episodes', type=int, default=5, help='Seeds per scenario')
@@ -95,14 +97,14 @@ def main():
     args = ap.parse_args()
 
     config = dict(EVAL_CONFIG)
-    agent = None
+    agents = {}
     if not args.baselines_only:
         if not args.ckpt:
             raise SystemExit('Pass --ckpt <dir> or --baselines-only.')
-        agent = load_daro(args.ckpt, config)
+        agents, _ = load_rl_policies(args.ckpt, config)
 
     def factory(cfg):
-        pols = {} if agent is None else {'DARO': agent}
+        pols = dict(agents)
         pols.update(make_baselines(cfg))
         return pols
 

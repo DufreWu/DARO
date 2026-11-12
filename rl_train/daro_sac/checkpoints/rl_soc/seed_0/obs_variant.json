@@ -1,0 +1,6 @@
+{
+  "obs_variant": "soc",
+  "visible_battery": [
+    "soc"
+  ]
+}

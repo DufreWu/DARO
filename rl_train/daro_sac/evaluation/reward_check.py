@@ -90,7 +90,8 @@ def main():
     cfg = dict(EVAL_CONFIG)
     robot = make_robot(cfg)
     p = robot
-    print(f'Reward: w_energy={p.w_energy} e_ref={p.energy_ref_wh_per_km} Wh/km '
+    print(f'Reward: w_energy={p.w_energy} e_ref={p.energy_ref_wh_per_km} Wh/km w_utility={p.w_utility} '
+          f's_ref={p.stress_ref_s_per_km} s/km '
           f'B={p.completion_bonus} w_time={p.w_time} w_smooth={p.w_smooth} '
           f'w_stress={p.w_stress} w_qos={p.w_qos}\n')
 

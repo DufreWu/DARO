@@ -6,7 +6,7 @@ Reward curves from training logs.
   plot_training_curve(log_dir)   -> <log_dir>/reward_curve.png
       (a) training episode return vs environment steps, moving average per
           mission distance (returns scale with distance, so they are not mixed)
-      (b) periodic DARO evaluation return on the fixed test grid (if logged)
+      (b) periodic evaluation return (DARO / RL ablation) on the fixed test grid (if logged)
 
   plot_seed_comparison(log_dirs, out_path)
       mean +/- std across seeds of the moving-average return (per km, so all
@@ -125,13 +125,15 @@ def plot_training_curve(log_dir: str, window: int = 50,
         _style(ax2)
         ev = [e for e in evals if 'global_step' in e]
         x = np.array([e['global_step'] for e in ev])
-        y = np.array([e['results']['DARO']['return'] for e in ev])
+        # One method per run: 'DARO', 'RL-SOC-only' or 'RL-SOH-only'.
+        name = next(iter(ev[0]['results']))
+        y = np.array([e['results'][name]['return'] for e in ev])
         ax2.plot(x, y, color=SERIES[0], linewidth=2, marker='o', ms=4, zorder=3)
         _label_end(ax2, x[-1], y[-1], f"{y[-1]:.2f}", SERIES[0])
         ax2.set_xlim(0, x_max * 1.08)
         ax2.set_xlabel('Environment steps')
         ax2.set_ylabel('Mean test return (500 m grid)')
-        ax2.set_title('Periodic evaluation (deterministic policy, fixed test seeds)',
+        ax2.set_title(f'Periodic evaluation, {name} (deterministic, fixed test seeds)',
                       loc='left', fontsize=10.5, color=TEXT)
 
     fig.tight_layout()

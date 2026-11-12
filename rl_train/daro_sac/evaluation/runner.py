@@ -77,9 +77,50 @@ def save_results(results: dict, path: str):
 
 
 def load_daro(ckpt_dir: str, config: dict):
-    """Build a SACAgent matching the training config and load weights."""
+    """Build a SACAgent matching the training config and load weights.
+
+    The observation variant stored with the checkpoint (obs_variants.py) is
+    applied automatically: RL-SOC-only / RL-SOH-only agents get the masked obs.
+    """
     import sac_training as st
+    from obs_variants import MaskedPolicy, load_variant
     train_cfg = dict(st.DEFAULT_CONFIG, control_dt=config['control_dt'])
-    agent = st.build_agent(train_cfg, st.build_env(train_cfg))
+    env = st.build_env(train_cfg)
+    agent = st.build_agent(train_cfg, env)
     agent.load(ckpt_dir, eval_only=True)
-    return agent
+    variant = load_variant(ckpt_dir)
+    return agent if variant == 'full' else MaskedPolicy(agent, variant, env.obs_dim)
+
+
+def rl_label(ckpt_dir: str) -> str:
+    """Method name from the checkpoint's variant file, e.g. 'DARO', 'RL-SOC-only',
+    'DARO w/o D_d' (reward variant no_stress), 'RL-SOH-only w/o E_d'."""
+    from obs_variants import label, read_variants
+    v = read_variants(ckpt_dir)
+    return label(v['obs'], v['reward'])
+
+
+def load_rl_policies(ckpt_dirs, config: dict):
+    """Load several RL checkpoints, grouped by method.
+
+    Returns (policies, groups): policies[name] = agent; groups[label] = [names].
+    With one checkpoint per method the name is the label ('DARO'); with several
+    seeds the names are '<label> s<k>' (k from the 'seed_<k>' directory name).
+    """
+    import os
+    by_label = {}
+    for ck in ckpt_dirs:
+        if not os.path.isfile(os.path.join(ck, 'daro_checkpoint.pt')):
+            raise SystemExit(f'No daro_checkpoint.pt in: {ck}. '
+                             'Note: "[...]" in usage text means optional; do not type the brackets.')
+        by_label.setdefault(rl_label(ck), []).append(ck)
+    policies, groups = {}, {}
+    for label, cks in by_label.items():
+        for ck in cks:
+            seed = os.path.basename(os.path.normpath(ck)).replace('seed_', '')
+            name = label if len(cks) == 1 else f'{label} s{seed}'
+            if name in policies:
+                raise SystemExit(f'Duplicate policy name {name!r} ({ck}).')
+            policies[name] = load_daro(ck, config)
+            groups.setdefault(label, []).append(name)
+    return policies, groups

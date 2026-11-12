@@ -22,7 +22,7 @@ Quality-of-Service (QoS) requirements.
 ├── sac_training.py    # Training loop and CLI (no test code)
 └── evaluation/        # Test environment, baselines, metrics, distance sweep
     ├── test_env.py        # EVAL_CONFIG, SOH × SOC × complexity grid, make_test_env
-    ├── baselines.py       # AS-MF, SOC-only, Deg-only, SOC+Deg
+    ├── baselines.py       # AS-MF, QoS-EPD (rule-based)
     ├── metrics.py         # run_episode, Xu capacity fade per mission
     ├── runner.py          # evaluate_policies, summaries, load_daro
     ├── lifetime.py        # missions / km to EOL (extrapolated Xu fade)
@@ -99,7 +99,7 @@ python sac_training.py --ckpt ./checkpoints/seed_42
 ### Evaluate a trained policy
 
 All testing lives in `evaluation/` (run from this directory). Policies: DARO,
-AS-MF, SOC-only, Deg-only, SOC+Deg; grid SOH × initial SOC × complexity with
+RL-SOC-only, RL-SOH-only (SAC checkpoints, see below), AS-MF, QoS-EPD; grid SOH × initial SOC × complexity with
 seeded complexity disturbance and common random numbers across policies:
 
 ```bash
@@ -292,9 +292,21 @@ and environmental conditions without overfitting to a single operating point.
 | Baseline | Description |
 |----------|-------------|
 | `AS-MF` | Static: v = 2.5 m/s, f = f_max (`evaluation/baselines.py`) |
-| `SOC-only` | QoS-aware DVFS, speed scaled by SOC |
-| `Deg-only` | QoS-aware DVFS, speed scaled by SOH |
-| `SOC+Deg` | QoS-aware DVFS, speed scaled by SOC × SOH (rule-based DARO counterpart) |
+| `RL-SOC-only` | SAC, same reward/network/budget as DARO; battery observation reduced to SOC (`sac_training.py --obs soc`) |
+| `RL-SOH-only` | SAC, same reward/network/budget as DARO; battery observation reduced to SOH (`sac_training.py --obs soh`) |
+| `QoS-EPD` | Non-RL: each step minimises energy per metre (P_motor + P_aux + P_cpu(f_req(v)))/v subject to QoS; f = minimum QoS frequency, complexity estimated on-line |
+
+In the RL ablations SOH (resp. SOC), temperature, terminal voltage and current
+are zeroed in the observation, since they leak the hidden state
+(`obs_variants.py`). The variant is stored in `<ckpt>/obs_variant.json`, and
+the evaluation scripts label and mask each checkpoint from it:
+
+```bash
+python sac_training.py --obs soc --seeds 0 1 2 3 4   # -> checkpoints/rl_soc/seed_k
+python sac_training.py --obs soh --seeds 0 1 2 3 4   # -> checkpoints/rl_soh/seed_k
+python -m evaluation.short_term --by soh --ckpts checkpoints/seed_{0..4} \
+    checkpoints/rl_soc/seed_{0..4} checkpoints/rl_soh/seed_{0..4}
+```
 
 **Key functions:**
 
@@ -338,14 +350,26 @@ Expected results (averaged over 20 runs, medium complexity):
 
 ### Ablation study (Table III)
 
-Train three variants by modifying `DEFAULT_CONFIG['auto_alpha']` and the
-reward function in `robot_env.py`:
+Two independent ablation axes, set on the command line (`obs_variants.py`);
+any combination can be trained:
 
-| Variant | Change |
-|---------|--------|
-| SOC-only | Set `w_stress = 0` in `RobotParams` to disable D_d |
-| SOH-only | Set `w_energy = 0` in `RobotParams` to disable E_d |
-| SOC+SOH (full DARO) | Default config |
+| Flag | Variant | Change | Label | Output folder |
+|------|---------|--------|-------|---------------|
+| `--obs` | `soc` | battery observation reduced to SOC | RL-SOC-only | `rl_soc` |
+| `--obs` | `soh` | battery observation reduced to SOH | RL-SOH-only | `rl_soh` |
+| `--reward` | `no_stress` | `w_stress = 0` (no D_d) | DARO w/o D_d | `rw_no_stress` |
+| `--reward` | `no_energy` | `w_energy = 0` (no E_d) | DARO w/o E_d | `rw_no_energy` |
+
+Combined, e.g. `--obs soc --reward no_energy` -> `RL-SOC-only w/o E_d` in
+`checkpoints/rl_soc_rw_no_energy/seed_k`. The reward variant applies to
+training only; evaluation always scores with the full reward.
+
+```bash
+python sac_training.py --reward no_stress --seeds 0 1 2 3 4
+python sac_training.py --reward no_energy --seeds 0 1 2 3 4
+python -m evaluation.short_term --ckpts checkpoints/seed_{0..4} \
+    checkpoints/rw_no_stress/seed_{0..4} checkpoints/rw_no_energy/seed_{0..4}
+```
 
 ---
 
