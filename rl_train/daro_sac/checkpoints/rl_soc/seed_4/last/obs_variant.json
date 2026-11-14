@@ -1,0 +1,8 @@
+{
+  "obs_variant": "soc",
+  "visible_battery": [
+    "soc"
+  ],
+  "reward_variant": "full",
+  "reward_overrides": {}
+}

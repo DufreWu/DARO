@@ -22,10 +22,10 @@ mkdir -p "$OUT"
 # name | extra args
 VARIANTS=(
   "daro|"
-  "rw_no_stress|--reward no_stress"
+  "rw_with_stress|--reward with_stress"
+  "rw_no_time|--reward no_time"
   "rl_soc|--obs soc"
   "rl_soh|--obs soh"
-  "rl_soc_rw_no_stress|--obs soc --reward no_stress"
 )
 
 pids=()

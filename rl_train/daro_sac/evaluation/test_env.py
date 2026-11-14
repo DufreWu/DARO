@@ -30,8 +30,14 @@ EVAL_CONFIG = {
     "baseline_v_nom":         2.5,    # AS-MF speed [m/s]
     "baseline_qos_margin":    1.05,
     "baseline_c_ema":         0.3,
+    # BA-EPD (battery-aware QoS-EPD); v_fast ~ reward-optimal speed with enough charge
+    "baseline_v_fast":        3.9,
+    "baseline_energy_safety": 0.05,   # on the fast / optimal-above-reserve checks
+    "baseline_last_safety":   0.01,   # on the optimal-above-cutoff check (before dropping QoS)
+    "baseline_floor_margin":  0.005,  # above the SOC cutoff 0.02
+    "baseline_replan_s":      10,
     # Lifetime (charge half-cycle after each mission)
-    "charge_c_rate":          0.5,
+    "charge_c_rate":          1.0,    # pack datasheet: recommended charge 1-3 C
     "log_dir":                "./logs",
 }
 

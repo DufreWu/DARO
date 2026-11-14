@@ -49,9 +49,12 @@ class ECMParams:
     C2: float = 1500.0
     eta: float = 1.0  # discharge coulombic efficiency convention
     voltage_min: float = 12.0  # 4S pack, illustrative cutoff
-    current_max: float = 30.0  # illustrative; replace with datasheet/measurement
+    # Pack: 5000 mAh 14.8 V 4S1P LiPo, 60 C continuous discharge (300 A), EC5
+    # connector, recommended charge 1-3 C. The EC5 connector/wiring may limit
+    # current below 300 A; the robot draws < 3 A, so this limit never binds.
+    current_max: float = 300.0
     # A resistance multiplier can be calibrated independently of capacity SOH.
-    resistance_aging_factor: float = 5.0
+    resistance_aging_factor: float = 7.5
     # SOC-dependent fit: {'R0': [coeffs], ...} for log(parameter), cell level.
     fit_coeffs: Optional[dict] = None
     r_scale: float = 1.0  # Ns / Np, applied to R (C is divided by it)
@@ -106,6 +109,15 @@ class StressParams:
     temp_threshold_c: float = 35.0
     temp_scale_c: float = 10.0
     soc_threshold: float = 0.85
+    # [unit_test] C-rate relative to the ACTUAL capacity Q_n * SOH (an aged cell
+    # sees a higher C-rate for the same current). False = legacy (rated Q_n).
+    c_rate_actual_capacity: bool = True
+    # [unit_test] Low-SOC amplification of the current stress: high current at
+    # low SOC (steep OCV, high polarisation) is more damaging.
+    #   g_i *= 1 + low_soc_gain * ((low_soc_threshold - soc) / low_soc_threshold)^2
+    # 0 disables (legacy). Illustrative, not calibrated.
+    low_soc_gain: float = 3.0
+    low_soc_threshold: float = 0.5
 
 
 @dataclass
@@ -126,24 +138,51 @@ class RobotParams:
     qos_ref: list[float] = field(default_factory=lambda: [15.0, 15.0])
     # Reward (see RobotEnv.reward_terms). E_d is energy per mission metre:
     #   E_d = w_energy * E_t / L   [J/m], so sum(E_d) = w_energy * (mission J/m).
-    # w_energy [1/(J/m)] = w_utility / e_ref, with e_ref = 3.96 J/m (= 1.1 Wh/km,
-    # ~ minimum energy per metre). Then sum(E_d) ~ w_utility at the energy-optimal
+    # w_energy [1/(J/m)] = 3 / e_ref, with e_ref = 5.17 J/m (= 1.44 Wh/km, minimum
+    # cell-side energy per metre at C = 1 with the 'measured' compute model, 3.3 m/s;
+    # was 3.96 J/m with the legacy model). Then sum(E_d) ~ 3 at the energy-optimal
     # speed for ANY L, and the per-second (myopic) optimum equals the per-mission
     # energy optimum: d/dv [w_U v - w_E P(v)] = 0  <=>  P'(v) = e_ref = P/v.
     # Stress normalised per mission: S_ref = stress_ref_s_per_km * L / 1000.
-    # ~8 s/km is the stress proxy at the energy-optimal speed (~2.75 m/s, C=1),
+    # ~15.5 s/km is the stress proxy at the energy-optimal speed (3.3 m/s, C=1,
+    # SOH 1, 'measured' compute model; was 8 s/km with the legacy model),
     # so sum(D_d) ~ w_stress per mission there (same scale as E_d / w_energy).
-    stress_ref_s_per_km: float = 8.0
+    stress_ref_s_per_km: float = 15.5
     stress_ref_s: float = 1000.0   # legacy (unused by reward_terms)
-    # Progress utility; keep w_energy * e_ref == w_utility so per-second and per-mission optima agree.
+    # Progress utility: sum(U_t) = w_utility for a completed mission (pure progress,
+    # no QoS factor; QoS is penalised separately by Q_d).
     w_utility: float = 2.0
-    w_energy: float = 3.0 / 3.96  # [1/(J/m)] = w_utility / e_ref  (~0.505)
-    w_stress: float = 1.0
-    w_time: float = 0.0   # time pressure; > 0 biases speed above the energy optimum
-    w_smooth: float = 0.2  # penalty on speed changes (normalised by max step change)
-    w_qos: float = 1.0
+    w_energy: float = 3.0 / 5.17  # [1/(J/m)] = 3 / e_ref  (~0.580; was 3 / 3.96)
+    # Battery-stress proxy D_d: OFF in the main reward. It is not calibrated (low-SOC
+    # gain is illustrative; C-rate aging is negligible at this pack's ~0.15 C) and it
+    # would make the policy slow down at low SOC / SOH even when the charge suffices.
+    # Kept as the 'with_stress' ablation (obs_variants.REWARD_VARIANTS).
+    w_stress: float = 0.0
+    # Time: T_d = w_time * dt / T_ref, T_ref = L / v_ref, so sum(T_d) = w_time * T / T_ref
+    # (= w_time at v_ref for any L); sum(E_d) ~ 3 at the energy optimum. Calibrated
+    # (unit_test/check_reward_objective.py): with enough charge the reward-optimal speed
+    # is 3.6-3.9 m/s for any SOC / SOH (energy optimum 3.0-3.3 m/s; at C = 3 the QoS
+    # limit ~3.7 m/s binds). Battery state then matters only through the charge budget
+    # (SOC reserve and failure terms).
+    w_time: float = 1.0
+    v_ref_mps: float = 3.3   # reference speed for T_ref (energy-optimal speed at C = 1)
+    w_smooth: float = 0.2  # unused (kept for config compatibility)
+    # QoS: Q_d = w_qos * dt / T_ref * (1[violation > 0] + violation). The indicator
+    # makes any violation cost >> what it saves in energy or time, so the reward
+    # optimum keeps a full margin against the complexity jitter (violation ~ 0).
+    w_qos: float = 3.0
+    # Battery reserve, terminal: -w_reserve * clip((soc_reserve - SOC_end) / soc_reserve, 0, 1)
+    # at the end of every episode (completed or not).
+    soc_reserve: float = 0.05
+    w_reserve: float = 5.0
+    # [unit_test] True: energy = OCV * I * dt (cell side, incl. internal losses).
+    # False: legacy load-side V_terminal * I * dt.
+    energy_at_cell: bool = True
+    # Terminal: +completion_bonus on completion, -failure_penalty otherwise (battery
+    # limit / SOC <= 2 % / timeout). failure_penalty > max mission QoS penalty, so
+    # finishing with degraded QoS beats not finishing.
     completion_bonus: float = 2.0
-    failure_penalty: float = 3.0
+    failure_penalty: float = 10.0
     noise_std_frac: float = 0.02  # observation only
     # Motor (mechanical) power, steady-speed fit to robot measurements:
     #   P(v) = 1.1625 + 1.14005 v + 0.10893 v^3  [W]
@@ -153,12 +192,24 @@ class RobotParams:
     motor_cubic_w_per_mps3: float = 0.10893
     # Acceleration term is NOT part of the fit (illustrative); 0 disables it.
     motor_accel_w_per_mps2: float = 1.5
-    compute_base_w: float = 2.0
-    compute_dynamic_w: float = 1.5
-    aux_power_w: float = 2.0
+    # Non-motor power model (see non_motor_power):
+    #   'measured' : P_comp(v, c) from the energy-modelling tool (COMP_TABLE_*), which
+    #                covers the whole compute board incl. auxiliaries (aux_power_w unused),
+    #                plus a DVFS correction for f away from the QoS frequency.
+    #   'legacy'   : compute_base_w + compute_dynamic_w (f/2)^3 + aux_power_w.
+    compute_model: str = 'measured'
+    compute_scale: float = 1.0        # multiplies the measured table (hardware/sensor variation)
+    compute_base_w: float = 2.0       # legacy only
+    compute_dynamic_w: float = 1.5    # legacy, and DVFS slope in 'measured'
+    aux_power_w: float = 2.0          # legacy only
     # Simple lumped thermal model; calibration required.
     thermal_capacity_j_per_k: float = 400.0
     thermal_conductance_w_per_k: float = 0.8
+
+
+# RobotParams fields that reset(options={'plant': ...}) may override (true plant only;
+# rule-based baselines keep the nominal calibration).
+PLANT_KEYS = ('motor_base_w', 'motor_linear_w_per_mps', 'motor_cubic_w_per_mps3', 'compute_scale')
 
 
 class BatteryLimitError(ValueError):
@@ -224,6 +275,50 @@ THR_F_REF = 2.0          # [GHz]
 THR_SPEED_COEF = 0.1     # [1 / (m/s)] per unit complexity
 
 
+# Measured computing power [W] at the QoS-limited CPU frequency, ESTIMATED from the
+# energy-modelling tool figure (energy per metre vs speed, low/moderate/high
+# complexity): P_comp = v * (E_total/d - P_motor(v)/v), with P_motor the steady
+# motor fit above (it reproduces the tool's "Mechanical" bars). Read off a plot:
+# replace with the tool's raw data when available. Steps (e.g. 8.3 -> 9.0 -> 10.0 W)
+# look like DVFS levels.
+COMP_TABLE_V = np.array([0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0])
+COMP_TABLE_C = np.array([1.0, 2.0, 3.0])
+COMP_TABLE_W = np.array([
+    [7.40, 7.64, 7.65, 7.65, 7.86, 7.87, 8.06, 8.31, 9.03, 9.02],     # low complexity
+    [7.65, 7.65, 7.86, 8.09, 8.09, 8.32, 9.04, 9.99, 10.74, 11.52],   # moderate
+    [9.54, 9.57, 9.57, 9.59, 10.09, 10.78, 10.79, 10.83, 11.68, 11.57],  # high
+])
+
+
+def measured_compute_power(speed, freq_ghz, complexity, p: 'RobotParams'):
+    """Compute-board power [W]: table P_comp(v, c) at the QoS frequency f_q(v, c),
+    plus compute_dynamic_w * ((f/2)^3 - (f_q/2)^3) for running above/below f_q.
+
+    v and c are clipped to the table range (no extrapolation). Accepts arrays in
+    speed / freq_ghz (complexity scalar).
+    """
+    v = np.clip(np.asarray(speed, dtype=float), COMP_TABLE_V[0], COMP_TABLE_V[-1])
+    c = float(np.clip(complexity, COMP_TABLE_C[0], COMP_TABLE_C[-1]))
+    rows = np.array([np.interp(v, COMP_TABLE_V, r) for r in COMP_TABLE_W])
+    k = min(int(np.searchsorted(COMP_TABLE_C, c, side='right')) - 1, len(COMP_TABLE_C) - 2)
+    w = (c - COMP_TABLE_C[k]) / (COMP_TABLE_C[k + 1] - COMP_TABLE_C[k])
+    p_tab = (1.0 - w) * rows[k] + w * rows[k + 1]
+    f_q = np.clip(throughput_freq_required(np.asarray(speed, dtype=float), max(p.qos_ref), c),
+                  p.f_min, p.f_max)
+    f = np.maximum(0.0, np.asarray(freq_ghz, dtype=float))
+    out = p.compute_scale * p_tab + p.compute_dynamic_w * ((f / 2.0) ** 3 - (f_q / 2.0) ** 3)
+    return float(out) if np.ndim(out) == 0 else out
+
+
+def non_motor_power(speed, freq_ghz, complexity, p: 'RobotParams'):
+    """All non-motor electrical power [W] (compute + auxiliaries) for p.compute_model."""
+    if p.compute_model == 'measured':
+        return measured_compute_power(speed, freq_ghz, complexity, p)
+    if p.compute_model == 'legacy':
+        return compute_cpu_power(freq_ghz, p.compute_base_w, p.compute_dynamic_w) + p.aux_power_w
+    raise ValueError(f'unknown compute_model {p.compute_model!r}')
+
+
 def compute_throughput(speed, freq_ghz, complexity=1.0):
     out = (THR_PEAK * (np.asarray(freq_ghz, dtype=float) / THR_F_REF)
            / (1.0 + THR_SPEED_COEF * np.asarray(speed, dtype=float) * complexity))
@@ -270,6 +365,7 @@ class ECMBattery:
         self.Q_act = self.robot.Q_n * self.soh
         self.current_a = 0.0
         self.voltage_v = _voc(self.soc, self.soh, robot.V_nom)
+        self.ocv_v = self.voltage_v
 
     def update_soh(self, soh: float):
         self.soh = float(soh)
@@ -287,7 +383,8 @@ class ECMBattery:
         e = self.ecm
         r0_base, r1, c1, r2, c2 = e.values(self.soc)
         r0 = self._resistance(r0_base)
-        u = _voc(self.soc, self.soh, self.robot.V_nom) - self.V1 - self.V2
+        ocv = _voc(self.soc, self.soh, self.robot.V_nom)
+        u = ocv - self.V1 - self.V2
         disc = u * u - 4.0 * r0 * power_w
         if disc < 0:
             raise BatteryLimitError('Requested power violates the constant-power ECM limit.')
@@ -312,6 +409,7 @@ class ECMBattery:
                                   * (self.temperature_c - self.robot.T_amb)) / self.robot.thermal_capacity_j_per_k
         self.V1, self.V2, self.soc = new_v1, new_v2, new_soc
         self.current_a, self.voltage_v = current, v_terminal
+        self.ocv_v = ocv   # [unit_test] OCV used this step (cell-side energy)
         return current, v_terminal, new_soc
 
 class BatteryStress:
@@ -320,10 +418,16 @@ class BatteryStress:
         self.p, self.robot = p, robot
 
     def step(self, current_a: float, temperature_c: float, soc: float,
-             dt: float) -> float:
+             dt: float, soh: float = 1.0) -> float:
         p = self.p
-        c_rate = abs(current_a) / (self.robot.Q_n / 3600.0)
+        q_ah = self.robot.Q_n / 3600.0
+        if p.c_rate_actual_capacity:
+            q_ah *= max(float(soh), 1e-3)
+        c_rate = abs(current_a) / q_ah
         g_i = (c_rate / p.c_rate_ref) ** 2
+        if p.low_soc_gain > 0.0 and soc < p.low_soc_threshold:
+            depth = (p.low_soc_threshold - soc) / max(p.low_soc_threshold, 1e-6)
+            g_i *= 1.0 + p.low_soc_gain * depth ** 2
         g_t = (max(0.0, temperature_c - p.temp_threshold_c) / p.temp_scale_c) ** 2
         g_s = (max(0.0, soc - p.soc_threshold) / max(1e-6, 1.0 - p.soc_threshold)) ** 2
         return dt * (p.current_weight * g_i + p.temperature_weight * g_t
@@ -368,14 +472,25 @@ class RobotEnv(_Base):
         self.action_low = np.array([self.robot.v_min, self.robot.f_min], dtype=np.float32)
         self.action_high = np.array([self.robot.v_max, self.robot.f_max], dtype=np.float32)
         # [v, f, SOC, SOH, temperature, terminal voltage, distance remaining,
-        #  last current, app throughputs..., app QoS targets...]
-        self.obs_dim = 8 + 2 * self.n_apps
+        #  last current, app throughputs..., app QoS targets...,
+        #  mission length L, fraction of the mission remaining]
+        # L is needed because the reward is normalised per mission (progress 1/L per
+        # metre, time 1/T_ref per second, T_ref = L / v_ref); mission features are
+        # appended last so the indices used by the rule baselines are unchanged.
+        self.obs_dim = 10 + 2 * self.n_apps
         self.act_dim = 2
         if spaces is not None:
             self.action_space = spaces.Box(self.action_low, self.action_high, dtype=np.float32)
             self.observation_space = spaces.Box(low=-np.inf, high=np.inf,
                                                 shape=(self.obs_dim,), dtype=np.float32)
         self.np_random = np.random.default_rng()
+        # Plant parameters restored by reset(options={'plant': {...}}) (training-time
+        # model-mismatch randomisation); unspecified keys go back to these values.
+        self._nominal_plant = {k: getattr(self.robot, k) for k in PLANT_KEYS}
+        # Mid-mission complexity switching (reset option): every step, with probability
+        # dt / period, the nominal complexity is re-drawn from complexity_levels.
+        self.complexity_switch_period_s = 0.0
+        self.complexity_levels: tuple = ()
         self._reset_internal()
 
     def _reset_internal(self):
@@ -402,6 +517,19 @@ class RobotEnv(_Base):
             soc_init = options.get('soc_init', soc_init)
             soh_init = options.get('soh_init', soh_init)
             complexity = options.get('complexity', complexity)
+            if 'plant' in options:
+                plant = dict(options['plant'] or {})
+                unknown = set(plant) - set(PLANT_KEYS)
+                if unknown:
+                    raise ValueError(f'unknown plant keys {sorted(unknown)}; use {PLANT_KEYS}')
+                for k, v0 in self._nominal_plant.items():
+                    setattr(self.robot, k, float(plant.get(k, v0)))
+            if 'complexity_switch_period_s' in options:
+                period = options['complexity_switch_period_s']
+                self.complexity_switch_period_s = float(period or 0.0)
+                self.complexity_levels = tuple(float(x) for x in options.get('complexity_levels', ()))
+                if self.complexity_switch_period_s > 0 and not self.complexity_levels:
+                    raise ValueError('complexity_switch_period_s needs complexity_levels.')
             if 'mission_distance_m' in options:
                 d = float(options['mission_distance_m'])
                 if not (math.isfinite(d) and d > 0):
@@ -424,6 +552,8 @@ class RobotEnv(_Base):
                 self.battery.voltage_v,
                 max(0.0, self.robot.mission_distance_m - self.distance_m),
                 self.battery.current_a] + list(self.thr) + list(self.robot.qos_ref)
+        L = max(float(self.robot.mission_distance_m), 1e-9)
+        vals += [L, max(0.0, L - self.distance_m) / L]
         arr = np.asarray(vals, dtype=np.float32)
         if self.mode == 'train' and self.robot.noise_std_frac > 0:
             # Sensor noise affects only agent observation, never dynamics/reward.
@@ -433,9 +563,30 @@ class RobotEnv(_Base):
             arr[7] += self.np_random.normal(0, std * max(1.0, abs(arr[7])))
         return arr
 
-    def reward_terms(self, energy_j: float, stress: float, delta_distance_m: float, qos_violation: float):
+    def obs_normalization(self, max_distance_m: Optional[float] = None):
+        """[unit_test] Fixed (offset, scale) so (obs - offset) / scale is O(1).
+
+        Physical ranges, not running statistics: deterministic, identical for
+        every seed/variant, and stored with the checkpoint.
+        """
+        p = self.robot
+        d = float(max_distance_m or p.mission_distance_m)
+        q = np.asarray(p.qos_ref, dtype=np.float32)
+        offset = [0.0, 0.0, 0.5, 0.9, p.T_amb, 13.5, 0.0, 0.0] + list(q) + list(q) + [0.0, 0.0]
+        scale = [p.v_max, p.f_max, 0.5, 0.1, 10.0, 1.5, d, 2.0] + list(q) + list(q) + [d, 1.0]
+        return (np.asarray(offset, dtype=np.float32), np.asarray(scale, dtype=np.float32))
+
+    def reward_terms(self, energy_j: float, stress: float, delta_distance_m: float,
+                     qos_violation: float, dt_s: Optional[float] = None) -> dict:
+        """Per-step reward terms; reward = U_t - E_d - D_d - T_d - Q_d (+ terminal R_end).
+
+        All terms are normalised per mission (length L, reference time T_ref = L / v_ref),
+        so their mission sums do not depend on L.
+        """
         p = self.robot
         L = p.mission_distance_m
+        dt_s = p.dt if dt_s is None else float(dt_s)
+        T_ref = L / p.v_ref_mps
 
         # E_d: energy per mission metre [J/m], weighted by w_energy [1/(J/m)]
         E_d = p.w_energy * energy_j / L
@@ -444,18 +595,26 @@ class RobotEnv(_Base):
         S_ref = p.stress_ref_s_per_km * L / 1000.0
         D_d = p.w_stress * stress / max(S_ref, 1e-9)
 
-        # U_t: QoS-aware physical progress
-        # Cubed so small, persistent violations are no longer almost free
-        # (e.g. 6 % shortfall -> utility 0.83 instead of 0.94).
-        qos_utility = (1.0 - np.clip(qos_violation, 0.0, 1.0)) ** 3
+        # U_t: physical progress
+        U_t = p.w_utility * delta_distance_m / L
 
-        U_t = (
-            p.w_utility
-            * delta_distance_m / L
-            * qos_utility
-        )
+        # T_d: elapsed time
+        T_d = p.w_time * dt_s / T_ref
 
-        return float(E_d), float(D_d), float(U_t)
+        # Q_d: QoS shortfall (indicator + magnitude) per elapsed time
+        viol = float(np.clip(qos_violation, 0.0, 1.0))
+        Q_d = p.w_qos * dt_s / T_ref * ((1.0 if viol > 0.0 else 0.0) + viol)
+
+        return dict(E_d=float(E_d), D_d=float(D_d), U_t=float(U_t), T_d=float(T_d), Q_d=float(Q_d))
+
+    def terminal_reward(self, completed: bool, soc_end: float) -> float:
+        """R_end: completion bonus / failure penalty and the SOC-reserve penalty."""
+        p = self.robot
+        r = p.completion_bonus if completed else -p.failure_penalty
+        if p.soc_reserve > 0.0:
+            short = (p.soc_reserve - soc_end) / p.soc_reserve
+            r -= p.w_reserve * float(np.clip(short, 0.0, 1.0))
+        return float(r)
 
     def step(self, action: Sequence[float], ext_Pe: Optional[float] = None):
         if self._finished:
@@ -472,18 +631,35 @@ class RobotEnv(_Base):
         remaining = p.mission_distance_m - self.distance_m
         delta_distance = min(remaining, v_new * p.dt)
         active_dt = (delta_distance / v_new) if v_new > 0 else p.dt
+        # Workload complexity this step (drawn first: drives compute power and throughput).
+        if (self.complexity_switch_period_s > 0
+                and self.np_random.random() < p.dt / self.complexity_switch_period_s):
+            self.complexity = float(self.np_random.choice(self.complexity_levels))
+        c = self.complexity
+        if self.complexity_jitter > 0:
+            j = self.complexity_jitter
+            c *= float(self.np_random.uniform(1.0 - j, 1.0 + j))
         motor_w = motor_power(v_new, accel, p)
-        compute_w = compute_cpu_power(f_cmd, p.compute_base_w, p.compute_dynamic_w)
+        # compute_w = all non-motor power (compute board + auxiliaries for 'measured').
+        compute_w = non_motor_power(v_new, f_cmd, c, p)
+        aux_w = p.aux_power_w if p.compute_model == 'legacy' else 0.0
         if ext_Pe is not None:
             if not math.isfinite(ext_Pe) or ext_Pe < 0:
                 raise ValueError('External compute electrical power must be finite and nonnegative.')
-            compute_w = float(ext_Pe)  # external compute/board power, not total pack power
-        total_w = motor_w + compute_w + p.aux_power_w
+            compute_w = float(ext_Pe) + aux_w  # external compute/board power, not total pack power
+        total_w = motor_w + compute_w
         reason = None
         try:
             current, voltage, soc = self.battery.step(total_w, dt=active_dt)
-            energy_j = current * voltage * active_dt
-            stress = self.stress_model.step(current, self.battery.temperature_c, soc, active_dt)
+            if p.energy_at_cell:
+                # [unit_test] Chemical energy drawn from the cell: OCV * I * dt.
+                # Includes R0 (SOH-aged) and RC losses, which the load-side
+                # V_terminal * I * dt misses, so SOC/SOH now affect energy.
+                energy_j = current * self.battery.ocv_v * active_dt
+            else:
+                energy_j = current * voltage * active_dt
+            stress = self.stress_model.step(current, self.battery.temperature_c, soc,
+                                            active_dt, soh=self.battery.soh)
             self.distance_m += delta_distance
             self.total_energy_j += energy_j
             self.total_stress += stress
@@ -492,10 +668,6 @@ class RobotEnv(_Base):
             current, voltage, soc = self.battery.current_a, self.battery.voltage_v, self.battery.soc
             energy_j, stress, delta_distance = 0.0, 0.0, 0.0
         self.v_obs, self.f_obs = v_new, f_cmd
-        c = self.complexity
-        if self.complexity_jitter > 0:
-            j = self.complexity_jitter
-            c *= float(self.np_random.uniform(1.0 - j, 1.0 + j))
         self.thr = [compute_throughput(v_new, f_cmd, c)] * self.n_apps
         qos_ratio = [self.thr[i] / p.qos_ref[i] for i in range(self.n_apps)]
         qos_violation = max(0.0, 1.0 - min(qos_ratio))
@@ -507,22 +679,47 @@ class RobotEnv(_Base):
         failed = bool((terminated and not completed) or truncated)
 
         # Compute reward terms and return the Gymnasium API tuple.
-        E_d, D_d, U_t = self.reward_terms(energy_j, stress, delta_distance, qos_violation)
-        reward = -E_d - D_d + U_t
+        terms = self.reward_terms(energy_j, stress, delta_distance, qos_violation, active_dt)
+        R_end = self.terminal_reward(completed, self.battery.soc) if (terminated or truncated) else 0.0
+        reward = (terms['U_t'] - terms['E_d'] - terms['D_d'] - terms['T_d'] - terms['Q_d']
+                  + R_end)
 
         self._finished = terminated or truncated
         info = dict(t_s=self.step_count * p.dt, dt_s=active_dt, speed_mps=v_new, acceleration_mps2=accel,
                     cpu_ghz=f_cmd, distance_m=self.distance_m, delta_distance_m=delta_distance,
-                    motor_power_w=motor_w, compute_power_w=compute_w,
-                    aux_power_w=p.aux_power_w, power_w=total_w, current_a=current,
+                    motor_power_w=motor_w, compute_power_w=compute_w - aux_w,
+                    aux_power_w=aux_w, power_w=total_w, current_a=current,
                     voltage_v=voltage, soc=soc, soh=self.battery.soh,
                     temperature_c=self.battery.temperature_c,
                     energy_j=energy_j, total_energy_j=self.total_energy_j,
                     stress_proxy=stress, total_stress_proxy=self.total_stress,
                     throughput=list(self.thr), qos_violation=qos_violation,
-                    E_d=E_d, D_d=D_d, U_t=U_t, reward=float(reward),
-                    completed=completed, battery_limit=reason,
+                    **terms, R_end=R_end, reward=float(reward),
+                    completed=completed, failed=failed, battery_limit=reason,
                     terminated=terminated, truncated=truncated)
         # Save actual physical trajectories (not noisy agent observations).
         self.trajectory.append(info.copy())
         return self._get_obs(), float(reward), terminated, truncated, info
+
+
+def tight_soc_init(plant: dict, soh: float, c: float, distance_m: float, k: float,
+                   soc_reserve: Optional[float] = None, loss_factor: float = 1.05) -> float:
+    """SOC0 whose usable energy above the SOC reserve is k * the energy-optimal
+    (QoS-feasible, jitter-safe) mission energy of the given plant
+    (dict of PLANT_KEYS overrides, {} = nominal). Used for charge-limited
+    training episodes and test scenarios. loss_factor covers what the load-side
+    model misses (cell losses, QoS / jitter margin, start-up), calibrated so that
+    QoS-EPD with k = 1 ends at ~ the reserve."""
+    robot = RobotParams()
+    for key, val in plant.items():
+        setattr(robot, key, val)
+    v = np.linspace(1.0, robot.v_max, 81)
+    f = np.clip(throughput_freq_required(v, max(robot.qos_ref), 1.2 * c), robot.f_min, robot.f_max)
+    ok = throughput_freq_required(v, max(robot.qos_ref), 1.2 * c) <= robot.f_max
+    e = (motor_power(v, 0.0, robot) + non_motor_power(v, f, c, robot)) / v
+    e_need = loss_factor * k * distance_m * float(np.min(np.where(ok, e, np.inf)))
+    floor = robot.soc_reserve if soc_reserve is None else float(soc_reserve)
+    s = np.linspace(floor, 1.0, 501)
+    ocv = np.array([_voc(x, soh) for x in s])
+    cum = np.concatenate([[0.0], np.cumsum(0.5 * (ocv[1:] + ocv[:-1]) * np.diff(s))]) * robot.Q_n * soh
+    return float(np.clip(np.interp(e_need, cum, s), 0.03, 1.0))

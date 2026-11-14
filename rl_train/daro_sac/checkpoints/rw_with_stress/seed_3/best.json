@@ -1,0 +1,18 @@
+{
+  "return": -9.157745227486261,
+  "episode": 200,
+  "global_step": 453624,
+  "metrics": {
+    "return": -9.157745227486261,
+    "energy_kj": 23.316864959683873,
+    "mission_time_s": 1712.5686274509803,
+    "qos_viol_pct": 6.9358642462197935,
+    "completed": 0.5294117647058824,
+    "final_soc": 0.5162909661859317,
+    "reserve_viol": 0.47058823529411764,
+    "return_mismatch": -0.9806901909935092,
+    "return_nominal": -2.363572481211026,
+    "return_switch": -0.42502846544583156,
+    "return_tight": -17.90780900040249
+  }
+}

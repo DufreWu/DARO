@@ -1,0 +1,8 @@
+{
+  "obs_variant": "soh",
+  "visible_battery": [
+    "soh"
+  ],
+  "reward_variant": "full",
+  "reward_overrides": {}
+}

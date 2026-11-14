@@ -30,7 +30,8 @@ Usage
     python sac_training.py --seeds 0 1 2 3 4       # one run per seed
     python sac_training.py --obs soc --seeds 0 1 2 3 4   # RL-SOC-only -> checkpoints/rl_soc/seed_k
     python sac_training.py --obs soh --seeds 0 1 2 3 4   # RL-SOH-only -> checkpoints/rl_soh/seed_k
-    python sac_training.py --reward no_stress --seeds 0 1 2 3 4   # DARO w/o D_d -> checkpoints/rw_no_stress/seed_k
+    python sac_training.py --reward with_stress --seeds 0 1 2 3 4 # DARO + D_d -> checkpoints/rw_with_stress/seed_k
+    python sac_training.py --reward no_time --seeds 0 1 2 3 4     # DARO w/o T_d -> checkpoints/rw_no_time/seed_k
     python sac_training.py --reward no_energy --seeds 0 1 2 3 4   # DARO w/o E_d -> checkpoints/rw_no_energy/seed_k
 
 Testing lives in the evaluation/ package (run from this directory):
@@ -48,11 +49,13 @@ from typing import Dict, List
 
 import numpy as np
 
-from robot_env import RobotEnv, RobotParams, ECMParams, StressParams
+from robot_env import RobotEnv, RobotParams, ECMParams, StressParams, tight_soc_init
 from sac_agent import SACAgent
 from obs_variants import (MaskedPolicy, apply_mask, apply_reward_variant, label,
                           obs_mask, run_subdir, save_variant)
 from evaluation import make_robot
+from residual import (ResidualEnv, ResidualPolicy, build_controller, residual_setting,
+                      save_residual, zero_init_actor, hold_steps)
 
 # ---------------------------------------------------------------------------
 # Training configuration
@@ -61,7 +64,18 @@ from evaluation import make_robot
 DEFAULT_CONFIG = {
     # Control timing
     "control_dt":       1.0,            # [s] agent decision period (1 Hz)
-    "horizon_s":        1000.0,          # [s] effective planning horizon -> gamma
+    # Residual RL (residual.py): None = end-to-end; 'ba_epd' / 'qos_epd' = the agent
+    # corrects that base controller, v = v_b (1 + rho_v a0), f = f_b (1 + rho_f a1).
+    "residual":         None,
+    "residual_rho_v":   0.3,
+    "residual_rho_f":   0.3,
+    "residual_hold_s":  10.0,           # residual re-chosen every 10 s (base runs every step)
+    # 'action': correct (v, f) as above. 'model' (ba_epd only): correct BA-EPD's nominal
+    # energy model in its charge-budget plan, kappa = (1 + rho_k) ** a, a in [-1, 1].
+    "residual_mode":    "action",
+    "residual_rho_k":   1.0,            # kappa in [0.5, 2]
+    "horizon_s":        3000.0,         # [s] effective planning horizon -> gamma; covers the
+                                        # longest training mission (5 km tight ~ 1500-2500 s)
     "max_steps_margin": 1.2,            # max_steps = margin * mission / (v_min * dt)
     # Training scale
     "total_steps":      1000_000,
@@ -80,13 +94,31 @@ DEFAULT_CONFIG = {
     "complexity_levels": [1.0, 2.0, 3.0],  # low / medium / high
     # Mission distance drawn per episode; obs[6] (distance remaining) must
     # cover the tested range, otherwise DARO extrapolates at long missions.
-    "mission_distances_m": [1000.0],
+    "mission_distances_m": [1000.0, 2000.0, 5000.0],
+    "mission_distance_probs": [0.5, 0.3, 0.2],
+    # Charge-limited episodes: SOC0 = SOC giving k * (energy-optimal mission energy)
+    # above the reserve, k ~ U(tight_energy_factor). k < 1 forces using the reserve
+    # or dropping QoS; around 1.03 decides fast vs energy-optimal. Long distances only
+    # (on 1 km the fast/optimal gap is ~0.0006 SOC, below the SOC sensor noise).
+    "tight_frac":       0.3,
+    "tight_distances_m": [2000.0, 5000.0],
+    "tight_energy_factor": [0.8, 1.3],
+    # Mid-mission complexity switching (fraction of episodes; period drawn per episode).
+    "switch_frac":      0.3,
+    "switch_periods_s": [30.0, 120.0],
+    # True-plant randomisation (model mismatch: payload, terrain, compute hardware),
+    # applied in plant_rand_prob of the episodes. Scales on the nominal fit.
+    "plant_rand_prob":  0.7,
+    "motor_scale":      [0.9, 1.5],     # payload: whole motor fit
+    "terrain_scale":    [0.7, 2.0],     # v^3 term, log-uniform (smooth floor .. rough)
+    "compute_scale":    [0.8, 1.3],     # compute board (sensors / hardware)
     # Warm-up before first update
     "warmup_steps":     5_000,
-    # Periodic evaluation during training (evaluation package, DARO only;
-    # 0 disables). Uses the 500 m test grid with few seeds.
-    "eval_every_ep":    200,
-    "eval_episodes":    2,              # seeds per scenario
+    # Periodic evaluation during training (checkpoint selection; 0 disables).
+    # Scenario suite (evaluation/scenarios.py) on validation seeds.
+    "eval_every_ep":    100,
+    "eval_episodes":    1,              # seeds per scenario
+    "eval_families":    ["nominal", "tight", "switch", "mismatch"],  # evaluation/scenarios.py
     # Checkpointing
     "ckpt_every_ep":    500,
     "ckpt_dir":         "./checkpoints",
@@ -102,17 +134,28 @@ DEFAULT_CONFIG = {
     # Observation variant (obs_variants.py): 'full' = DARO, 'soc' = RL-SOC-only,
     # 'soh' = RL-SOH-only. Ablations go to <ckpt_dir>/rl_<variant>/seed_<seed>.
     "obs_variant":      "full",
-    # Reward variant (obs_variants.py): 'full', 'no_stress' (w_stress = 0),
-    # 'no_energy' (w_energy = 0). Independent of obs_variant; ablations go to
-    # <ckpt_dir>/<run_subdir>/seed_<seed>, e.g. rw_no_stress, rl_soc_rw_no_energy.
+    # Reward variant (obs_variants.py): 'full', 'with_stress' (w_stress = 1),
+    # 'no_time' (w_time = 0), 'no_energy' (w_energy = 0). Independent of obs_variant;
+    # ablations go to <ckpt_dir>/<run_subdir>/seed_<seed>, e.g. rw_no_time, rl_soc_rw_no_energy.
     # Training only; periodic evaluation keeps the full reward.
     "reward_variant":   "full",
+    # ---- [unit_test] training stability (step 1) ----
+    "obs_norm":         True,           # fixed physical obs normalisation (robot_env.obs_normalization)
+    "reward_scale":     10.0,           # critic reward scale; per-step reward is ~5e-3 otherwise
+    "alpha_min":        1e-3,           # temperature floor (on the scaled reward)
+    "grad_clip_norm":   10.0,           # max grad norm for critic and actor; 0 disables
+    "lr_final_frac":    0.1,            # linear lr decay to lr * lr_final_frac at total_steps; 1 disables
+    "val_seed":         2024,           # periodic-eval (checkpoint selection) seeds, != test seed 42
+    "save_best":        True,           # ckpt_dir/daro_checkpoint.pt = best periodic-eval return;
+                                        # latest weights go to ckpt_dir/last/
 }
 
 
 def control_gamma(config: dict) -> float:
-    """Discount so that the effective horizon is horizon_s seconds."""
-    return float(math.exp(-config['control_dt'] / config['horizon_s']))
+    """Discount per agent decision so that the effective horizon is horizon_s seconds
+    (a residual decision spans hold_steps control steps)."""
+    dt = config['control_dt'] * hold_steps(residual_setting(config), config['control_dt'])
+    return float(math.exp(-dt / config['horizon_s']))
 
 
 # ---------------------------------------------------------------------------
@@ -130,7 +173,7 @@ class EpisodeMetrics:
         self.energy_j: List[float] = []
         self.stress: List[float] = []
         self.qos_violation: List[float] = []
-        self.terms = {'E_d': 0.0, 'D_d': 0.0, 'U_t': 0.0}
+        self.terms = {'E_d': 0.0, 'D_d': 0.0, 'U_t': 0.0, 'T_d': 0.0, 'Q_d': 0.0, 'R_end': 0.0}
         self.thr_violations = 0
         self.steps = 0
         self.last_info: dict = {}
@@ -155,6 +198,9 @@ class EpisodeMetrics:
             'sum_E_d':         self.terms['E_d'],
             'sum_D_d':         self.terms['D_d'],
             'sum_U_t':         self.terms['U_t'],
+            'sum_T_d':         self.terms['T_d'],
+            'sum_Q_d':         self.terms['Q_d'],
+            'R_end':           self.terms['R_end'],
             'total_energy_j':  float(np.sum(self.energy_j)),
             'total_stress':    float(np.sum(self.stress)),
             'mean_qos_viol':   float(np.mean(self.qos_violation)) if self.steps else 0.0,
@@ -201,19 +247,43 @@ class SeedStreams:
         self.train_env_seed = int(env_t.generate_state(1)[0])
 
     def episode_options(self, config: dict) -> dict:
+        """Per-episode scenario: battery (SOH, SOC0), mission, workload and true plant."""
         r = self.curriculum
+        soh = float(r.uniform(*config['soh_range']))
+        c = float(r.choice(config['complexity_levels']))
+        # True plant (model mismatch); {} restores the nominal calibration.
+        plant = {}
+        if r.random() < config.get('plant_rand_prob', 0.0):
+            nom = RobotParams()
+            m = float(r.uniform(*config['motor_scale']))
+            t = float(np.exp(r.uniform(*np.log(config['terrain_scale']))))
+            plant = {'motor_base_w': nom.motor_base_w * m,
+                     'motor_linear_w_per_mps': nom.motor_linear_w_per_mps * m,
+                     'motor_cubic_w_per_mps3': nom.motor_cubic_w_per_mps3 * m * t,
+                     'compute_scale': float(r.uniform(*config['compute_scale']))}
+        period = (float(r.choice(config['switch_periods_s']))
+                  if r.random() < config.get('switch_frac', 0.0) else 0.0)
+        tight = r.random() < config.get('tight_frac', 0.0)
+        if tight:
+            d = float(r.choice(config['tight_distances_m']))
+            k = float(r.uniform(*config['tight_energy_factor']))
+            soc = tight_soc_init(plant, soh, c, d, k)
+        else:
+            d = float(r.choice(config['mission_distances_m'], p=config.get('mission_distance_probs')))
+            soc = float(r.uniform(*config['soc_range']))
         return {
-            'soh_init': float(r.uniform(*config['soh_range'])),
-            'soc_init': float(r.uniform(*config['soc_range'])),
-            'complexity': float(r.choice(config['complexity_levels'])),
-            'mission_distance_m': float(r.choice(config['mission_distances_m'])),
+            'soh_init': soh, 'soc_init': soc, 'complexity': c, 'mission_distance_m': d,
+            'plant': plant, 'complexity_switch_period_s': period,
+            'complexity_levels': list(config['complexity_levels']), 'tight': bool(tight),
         }
+
 
 
 def build_env(config: dict, mode: str = 'train',
               soh_init: float = 1.0,
-              complexity: float = 1.0) -> RobotEnv:
-    """Instantiate the environment at the configured control frequency."""
+              complexity: float = 1.0):
+    """Instantiate the environment at the configured control frequency
+    (wrapped in residual.ResidualEnv when config['residual'] is set)."""
     # max_steps sized for the longest mission; the episode distance is set by reset().
     robot = make_robot(dict(config, mission_distance_m=max(config['mission_distances_m'])))
     apply_reward_variant(robot, config.get('reward_variant', 'full'))
@@ -221,11 +291,22 @@ def build_env(config: dict, mode: str = 'train',
     env = RobotEnv(robot=robot, ecm=ecm, stress=StressParams(),
                    soc_init=1.0, soh_init=soh_init,
                    complexity=complexity, mode=mode)
+    setting = residual_setting(config)
+    if setting:
+        env = ResidualEnv(env, build_controller(setting, robot, config['control_dt']))
     return env
 
 
 def build_agent(config: dict, env: RobotEnv) -> SACAgent:
     """Construct SAC agent with dimensions inferred from environment."""
+    offset = scale = None
+    if config.get('obs_norm', False):
+        offset, scale = env.obs_normalization(max(config['mission_distances_m']))
+        # Hidden (masked = 0) features stay exactly 0 after normalisation.
+        m = obs_mask(config.get('obs_variant', 'full'), env.obs_dim)
+        if m is not None:
+            offset, scale = offset.copy(), scale.copy()
+            offset[m == 0], scale[m == 0] = 0.0, 1.0
     return SACAgent(
         state_dim=env.obs_dim,
         action_dim=env.act_dim,
@@ -240,6 +321,11 @@ def build_agent(config: dict, env: RobotEnv) -> SACAgent:
         buffer_capacity=config['buffer_capacity'],
         batch_size=config['batch_size'],
         device=config.get('device', 'auto'),
+        obs_offset=offset,
+        obs_scale=scale,
+        reward_scale=config.get('reward_scale', 1.0),
+        alpha_min=config.get('alpha_min', 0.0),
+        grad_clip_norm=config.get('grad_clip_norm', 0.0),
     )
 
 
@@ -250,19 +336,31 @@ def _reset(env: RobotEnv, seed=None):
 
 
 def periodic_eval(agent, config: dict) -> dict:
-    """Quick DARO check on the evaluation test grid (overall means only)."""
+    """Validation for checkpoint selection on the claim-oriented scenario suite
+    (evaluation/scenarios.py, families config['eval_families']), validation seeds.
+
+    Score = mean return over all validation scenarios (the full reward, whatever
+    the training reward variant).
+    """
     import evaluation as ev
-    # Test seeds stay EVAL_CONFIG['seed'] for every training seed, so runs
-    # are compared on identical test episodes.
+    from evaluation import scenarios as scn
     ecfg = dict(ev.EVAL_CONFIG, control_dt=config['control_dt'],
                 max_steps_margin=config['max_steps_margin'])
+    if config.get('val_seed') is not None:
+        # Checkpoint selection on validation seeds, never on the test seeds.
+        ecfg['seed'] = int(config['val_seed'])
     name = label(config.get('obs_variant', 'full'), config.get('reward_variant', 'full'))
-    res = ev.evaluate_policies({name: agent}, ecfg,
-                               n_episodes=config['eval_episodes'], verbose=False)
-    o = res[name]['overall']
-    print(f"  [eval {name}] R={o['return']:.2f} E={o['energy_kj']:.2f} kJ "
-          f"T={o['mission_time_s']:.0f} s QoSv={o['qos_viol_pct']:.1f}% "
-          f"done={100 * o['completed']:.0f}%")
+    suite = scn.build_suite(config.get('eval_families', ('nominal', 'tight', 'switch', 'mismatch')))
+    res = scn.evaluate({name: agent}, suite, ecfg, config['eval_episodes'], verbose=False)[name]
+    keys = ('return', 'energy_kj', 'mission_time_s', 'qos_viol_pct', 'completed',
+            'final_soc', 'reserve_viol')
+    o = {k: float(np.mean([r[k] for r in res.values()])) for k in keys}
+    for fam in sorted({r['family'] for r in res.values()}):
+        o[f'return_{fam}'] = float(np.mean([r['return'] for r in res.values() if r['family'] == fam]))
+    print(f"  [eval {name}] R={o['return']:.3f} "
+          + ' '.join(f"{k[7:]}={v:.3f}" for k, v in o.items() if k.startswith('return_'))
+          + f" | T={o['mission_time_s']:.0f} s QoSv={o['qos_viol_pct']:.1f}% "
+          f"done={100 * o['completed']:.0f}% res.viol={100 * o['reserve_viol']:.0f}%")
     return {name: o}
 
 
@@ -295,6 +393,10 @@ def train(config: dict, resume_ckpt: str = None):
     variant = config.get('obs_variant', 'full')
     reward_variant = config.get('reward_variant', 'full')
     sub = run_subdir(variant, reward_variant)
+    res_setting = residual_setting(config)
+    if res_setting:   # checkpoints/res_ba_epd[_model][/rl_soc...]/seed_k
+        rdir = f"res_{res_setting['base']}" + ('_model' if res_setting.get('mode') == 'model' else '')
+        sub = os.path.join(rdir, sub) if sub else rdir
     if sub:
         config['ckpt_dir'] = os.path.join(config['ckpt_dir'], sub)
         config['log_dir'] = os.path.join(config['log_dir'], sub)
@@ -313,9 +415,15 @@ def train(config: dict, resume_ckpt: str = None):
     agent = build_agent(config, ref_env)
     mask = obs_mask(variant, ref_env.obs_dim)
     eval_policy = MaskedPolicy(agent, variant, ref_env.obs_dim)
+    if res_setting:   # own base-controller instance (the base is stateful)
+        eval_policy = ResidualPolicy(eval_policy, build_controller(res_setting, ref_env.robot,
+                                                                   config['control_dt']))
     save_variant(config['ckpt_dir'], variant, reward_variant)
+    save_residual(config['ckpt_dir'], res_setting)
     if resume_ckpt:
         agent.load(resume_ckpt)
+    elif res_setting:
+        zero_init_actor(agent)
 
     print("\n" + "=" * 60)
     print(f"{label(variant, reward_variant)} SAC Training "
@@ -331,7 +439,11 @@ def train(config: dict, resume_ckpt: str = None):
     print(f"  Max ep steps  : {ref_env.robot.max_steps}")
     print(f"  ECM source    : {ref_env.ecm_params.source}")
     print(f"  State dim     : {ref_env.obs_dim}")
-    print(f"  Action dim    : {ref_env.act_dim}")
+    print(f"  Action dim    : {ref_env.act_dim}"
+          + (f" (residual on {res_setting['base']}, "
+             + (f"model kappa, rho_k={res_setting['rho_k']}" if res_setting.get('mode') == 'model'
+                else f"rho_v={res_setting['rho_v']}, rho_f={res_setting['rho_f']}")
+             + ')' if res_setting else ''))
     print(f"  Buffer cap    : {config['buffer_capacity']:,}")
     print(f"  Total steps   : {config['total_steps']:,}")
     sizes = agent.model_size_kb()
@@ -362,6 +474,17 @@ def train(config: dict, resume_ckpt: str = None):
             obs = next_obs
     print("[Warm-up] done.\n")
 
+    lr_decay = config.get('lr_final_frac', 1.0) < 1.0
+    save_best = bool(config.get('save_best', False) and config['eval_every_ep'])
+    last_dir = os.path.join(config['ckpt_dir'], 'last') if save_best else config['ckpt_dir']
+    if save_best:
+        save_variant(last_dir, variant, reward_variant)   # last/ is loadable on its own
+        save_residual(last_dir, res_setting)
+    if not resume_ckpt and os.path.exists(log_path):
+        os.remove(log_path)   # one run per eval_log.jsonl (old runs were appended)
+    best = {'return': -float('inf'), 'episode': None, 'global_step': None}
+    best_path = os.path.join(config['ckpt_dir'], 'best.json')
+
     t_start = time.time()
     env = build_env(config, mode='train')
     env.reset(seed=rngs.train_env_seed)  # seeds the env disturbance/noise stream once
@@ -376,6 +499,9 @@ def train(config: dict, resume_ckpt: str = None):
         done = False
 
         while not done and global_step < config['total_steps']:
+            if lr_decay:
+                frac = global_step / max(config['total_steps'], 1)
+                agent.set_lr(config['lr'] * (1.0 - (1.0 - config['lr_final_frac']) * frac))
             action = agent.select_action(obs, deterministic=False)
             next_obs, reward, terminated, truncated, info = env.step(action)
             next_obs = apply_mask(next_obs, mask)
@@ -395,7 +521,9 @@ def train(config: dict, resume_ckpt: str = None):
         summary = metrics.summarise()
         summary.update({'episode': episode, 'soh_init': round(soh_ep, 3),
                         'soc_init': round(soc_ep, 3), 'target_distance_m': d_ep,
-                        'complexity': c_ep, 'global_step': global_step})
+                        'complexity': c_ep, 'global_step': global_step,
+                        'tight': opts['tight'], 'switch_period_s': opts['complexity_switch_period_s'],
+                        'plant': opts['plant']})
         # The original 'distance_m' is actual travelled distance; do not overwrite.
         summary['return_per_km'] = (summary['return'] / (summary['distance_m'] / 1000.0)
                                     if summary['completed'] and summary['distance_m'] > 0 else None)
@@ -406,7 +534,8 @@ def train(config: dict, resume_ckpt: str = None):
               f"D={d_ep:4.0f} SOH={soh_ep:.2f} SOC0={soc_ep:.2f} C={c_ep:.0f} | "
               f"R={summary['return']:8.2f} "
               f"(-E {summary['sum_E_d']:.2f} -D {summary['sum_D_d']:.2f} "
-              f"+U {summary['sum_U_t']:.2f}) | "
+              f"+U {summary['sum_U_t']:.2f} -T {summary['sum_T_d']:.2f} "
+              f"-Q {summary['sum_Q_d']:.2f} {summary['R_end']:+.1f}) | "
               f"E={summary['total_energy_j'] / 1e3:6.2f} kJ | "
               f"T={summary['mission_time_s']:5.0f} s | "
               f"Viol={summary['thr_viol_pct']:5.1f}% | "
@@ -414,14 +543,28 @@ def train(config: dict, resume_ckpt: str = None):
               f"a={agent.alpha:.4f} | t={elapsed:.0f}s")
 
         if config['eval_every_ep'] and (episode + 1) % config['eval_every_ep'] == 0:
-            log_results(periodic_eval(eval_policy, config), log_path, episode + 1, global_step)
+            res = periodic_eval(eval_policy, config)
+            log_results(res, log_path, episode + 1, global_step)
+            score = float(next(iter(res.values()))['return'])
+            if save_best and score > best['return']:
+                best = {'return': score, 'episode': episode + 1, 'global_step': global_step,
+                        'metrics': next(iter(res.values()))}
+                agent.save(config['ckpt_dir'], quiet=True)
+                with open(best_path, 'w') as f:
+                    json.dump(best, f, indent=2, default=float)
+                print(f"  [best] return {score:.3f} at episode {episode + 1} -> {config['ckpt_dir']}")
 
         if (episode + 1) % config['ckpt_every_ep'] == 0:
-            agent.save(config['ckpt_dir'])
+            agent.save(last_dir)
 
         episode += 1
 
-    agent.save(config['ckpt_dir'])
+    agent.save(last_dir)
+    if save_best and best['episode'] is None:   # no eval ran: fall back to last weights
+        agent.save(config['ckpt_dir'])
+    if save_best:
+        print(f"Best checkpoint: episode {best['episode']} (val return {best['return']:.3f}); "
+              f"last weights -> {last_dir}")
     train_log_path = os.path.join(config['log_dir'], 'train_log.json')
     with open(train_log_path, 'w') as f:
         json.dump(train_log, f, indent=2)
@@ -481,8 +624,18 @@ def parse_args():
                         help='Agent decision period in seconds (default 1.0 = 1 Hz)')
     parser.add_argument('--obs', choices=['full', 'soc', 'soh'], default=None,
                         help="Observation variant: full = DARO, soc = RL-SOC-only, soh = RL-SOH-only")
-    parser.add_argument('--reward', choices=['full', 'no_stress', 'no_energy'], default=None,
-                        help='Reward variant: full, no_stress (w_stress=0), no_energy (w_energy=0)')
+    parser.add_argument('--reward', choices=['full', 'with_stress', 'no_time', 'no_energy', 'no_stress'], default=None,
+                        help='Reward variant: full, with_stress (w_stress=1), no_time (w_time=0), '
+                             'no_energy (w_energy=0); no_stress = legacy (same as full now)')
+    parser.add_argument('--residual', choices=['none', 'ba_epd', 'qos_epd'], default=None,
+                        help='Residual RL on a base controller (default: end-to-end)')
+    parser.add_argument('--rho-v', type=float, default=None, help='Residual speed range (fraction)')
+    parser.add_argument('--rho-f', type=float, default=None, help='Residual frequency range (fraction)')
+    parser.add_argument('--hold-s', type=float, default=None, help='Residual hold time [s]')
+    parser.add_argument('--residual-mode', choices=['action', 'model'], default=None,
+                        help="Residual on the action (v, f) or on BA-EPD's energy model (kappa)")
+    parser.add_argument('--rho-k', type=float, default=None,
+                        help='Model residual range: kappa in [1/(1+rho_k), 1+rho_k]')
     parser.add_argument('--horizon-s', type=float, default=None,
                         help='Effective planning horizon in seconds (sets gamma)')
     return parser.parse_args()
@@ -506,6 +659,18 @@ if __name__ == '__main__':
         config['control_dt'] = args.control_dt
     if args.horizon_s is not None:
         config['horizon_s'] = args.horizon_s
+    if args.residual is not None:
+        config['residual'] = None if args.residual == 'none' else args.residual
+    if args.rho_v is not None:
+        config['residual_rho_v'] = args.rho_v
+    if args.rho_f is not None:
+        config['residual_rho_f'] = args.rho_f
+    if args.hold_s is not None:
+        config['residual_hold_s'] = args.hold_s
+    if args.residual_mode is not None:
+        config['residual_mode'] = args.residual_mode
+    if args.rho_k is not None:
+        config['residual_rho_k'] = args.rho_k
     if args.obs is not None:
         config['obs_variant'] = args.obs
     if args.reward is not None:

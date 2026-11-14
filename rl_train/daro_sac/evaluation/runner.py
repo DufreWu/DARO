@@ -84,20 +84,38 @@ def load_daro(ckpt_dir: str, config: dict):
     """
     import sac_training as st
     from obs_variants import MaskedPolicy, load_variant
-    train_cfg = dict(st.DEFAULT_CONFIG, control_dt=config['control_dt'])
+    from residual import load_residual, build_controller, ResidualPolicy
+    setting = load_residual(ckpt_dir)
+    train_cfg = dict(st.DEFAULT_CONFIG, control_dt=config['control_dt'],
+                     residual=setting['base'] if setting else None)
+    if setting:
+        train_cfg.update(residual_mode=setting.get('mode', 'action'),
+                         residual_hold_s=setting.get('hold_s', config['control_dt']))
+        if setting.get('mode') == 'model':
+            train_cfg.update(residual_rho_k=setting['rho_k'])
+        else:
+            train_cfg.update(residual_rho_v=setting['rho_v'], residual_rho_f=setting['rho_f'])
     env = st.build_env(train_cfg)
     agent = st.build_agent(train_cfg, env)
     agent.load(ckpt_dir, eval_only=True)
     variant = load_variant(ckpt_dir)
-    return agent if variant == 'full' else MaskedPolicy(agent, variant, env.obs_dim)
+    pol = agent if variant == 'full' else MaskedPolicy(agent, variant, env.obs_dim)
+    if setting:   # residual policy: base controller + learned correction
+        pol = ResidualPolicy(pol, build_controller(setting, env.robot, config['control_dt']))
+    return pol
 
 
 def rl_label(ckpt_dir: str) -> str:
     """Method name from the checkpoint's variant file, e.g. 'DARO', 'RL-SOC-only',
-    'DARO w/o D_d' (reward variant no_stress), 'RL-SOH-only w/o E_d'."""
+    'DARO w/o T_d' (reward variant no_time), 'RL-SOH-only w/o E_d';
+    residual policies get ' [res:BA-EPD]'."""
     from obs_variants import label, read_variants
+    from residual import load_residual, BASE_LABEL
     v = read_variants(ckpt_dir)
-    return label(v['obs'], v['reward'])
+    res = load_residual(ckpt_dir)
+    tag = (f" [res:{BASE_LABEL[res['base']]}" + (' kappa' if res.get('mode') == 'model' else '') + ']'
+           if res else '')
+    return label(v['obs'], v['reward']) + tag
 
 
 def load_rl_policies(ckpt_dirs, config: dict):

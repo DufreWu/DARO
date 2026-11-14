@@ -15,13 +15,15 @@ Battery block of the observation (robot_env.RobotEnv._get_obs):
 Temperature, voltage and current are hidden as well in the ablations because
 they leak SOC/SOH (OCV(SOC, SOH), R0(SOH), I = P/V). Hidden features are set
 to 0 (same network shape as DARO; a constant input is equivalent to dropping
-it). Mission features (v, f, distance remaining, throughput, QoS targets) are
-always visible.
+it). Mission features (v, f, distance remaining, throughput, QoS targets, mission
+length L, fraction remaining) are always visible.
 
 Reward variants (which objective term is trained on; robot_env.reward_terms):
-    full       -E_d - D_d + U_t    (DARO)
-    no_stress  -E_d       + U_t    w_stress = 0
-    no_energy       - D_d + U_t    w_energy = 0
+    full       U_t - E_d - D_d - T_d - Q_d + R_end    (DARO)
+    with_stress  same with w_stress = 1 (battery-stress proxy D_d on; off in DARO)
+    no_time      same with w_time = 0 (energy-oriented, no time pressure)
+    no_energy    same with w_energy = 0
+    no_stress    legacy name (w_stress = 0, now identical to full)
 Only training uses the variant: evaluation always scores with the full reward,
 so returns stay comparable across methods.
 """
@@ -45,10 +47,13 @@ VARIANT_FILE = 'obs_variant.json'
 
 REWARD_VARIANTS = {   # variant -> RobotParams weight overrides
     'full': {},
-    'no_stress': {'w_stress': 0.0},
+    'with_stress': {'w_stress': 1.0},
+    'no_time': {'w_time': 0.0},
     'no_energy': {'w_energy': 0.0},
+    'no_stress': {'w_stress': 0.0},   # legacy checkpoints (old main reward had w_stress = 1)
 }
-REWARD_SUFFIX = {'full': '', 'no_stress': ' w/o D_d', 'no_energy': ' w/o E_d'}
+REWARD_SUFFIX = {'full': '', 'with_stress': ' + D_d', 'no_time': ' w/o T_d',
+                 'no_energy': ' w/o E_d', 'no_stress': ' w/o D_d'}
 
 
 def obs_mask(variant: str, obs_dim: int) -> Optional[np.ndarray]:
@@ -102,7 +107,7 @@ def label(obs: str = 'full', reward: str = 'full') -> str:
 def run_subdir(obs: str = 'full', reward: str = 'full') -> str:
     """Output sub-folder below checkpoints/ and logs/ ('' for DARO).
 
-    rl_soc, rl_soh, rw_no_stress, rw_no_energy, rl_soc_rw_no_stress, ...
+    rl_soc, rl_soh, rw_with_stress, rw_no_time, rw_no_energy, rl_soc_rw_no_time, ...
     """
     parts = ([f'rl_{obs}'] if obs != 'full' else []) + \
             ([f'rw_{reward}'] if reward != 'full' else [])

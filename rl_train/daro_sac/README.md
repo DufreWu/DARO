@@ -59,10 +59,12 @@ environment and a physical NVIDIA Jetson TX2 board (not covered here).
 python sac_training.py
 ```
 
-Each run writes to a per-seed folder: checkpoints every 500 episodes to
-`./checkpoints/seed_<seed>/`, and `config.json`, `train_log.json` and
-`eval_log.jsonl` (quick DARO evaluation every 200 episodes) to
-`./logs/seed_<seed>/`.
+Each run writes to a per-seed folder `./checkpoints/seed_<seed>/`:
+`daro_checkpoint.pt` is the **best** checkpoint by periodic-evaluation return
+(`best.json` records episode and metrics); the latest weights go to `last/`
+(every 500 episodes and at the end). `config.json`, `train_log.json` and
+`eval_log.jsonl` (quick evaluation every 100 episodes on validation seeds
+`val_seed`, not the test seed) go to `./logs/seed_<seed>/`.
 
 ### Reward curves
 
@@ -113,7 +115,7 @@ python sac_training.py --ckpt ./checkpoints/seed_42
 ### Evaluate a trained policy
 
 All testing lives in `evaluation/` (run from this directory). Policies: DARO,
-RL-SOC-only, RL-SOH-only (SAC checkpoints, see below), AS-MF, QoS-EPD; grid SOH × initial SOC × complexity with
+RL-SOC-only, RL-SOH-only (SAC checkpoints, see below), AS-MF, QoS-EPD, BA-EPD; grid SOH × initial SOC × complexity with
 seeded complexity disturbance and common random numbers across policies:
 
 ```bash
@@ -131,6 +133,29 @@ python -m evaluation.distance_sweep --baselines-only --distances 500 5000
 ```
 
 Results → `./logs/distance_sweep.json` and `./logs/distance_sweep.csv`.
+
+### Scenario suite (main evaluation for the claim)
+
+"Finish fast subject to charge and QoS, adapting to model mismatch, workload
+changes and battery degradation" (`evaluation/scenarios.py`): families
+`nominal` (1 km, full charge), `tight` (5 km, SOC0 = k × energy-optimal need above
+the 5 % reserve, k ∈ {0.9, 1, 1.1, 1.25}), `switch` (complexity switching every
+10/30/120 s), `mismatch` (payload / terrain / compute ≠ nominal model) and
+`degradation` (same 5 km mission and SOC0, SOH 1.0 → 0.8). Also used (minus
+`degradation`, validation seeds) for checkpoint selection during training.
+
+```bash
+python -m evaluation.scenarios --baselines-only                      # ~1 min
+python -m evaluation.scenarios --ckpts checkpoints/seed_{0..4} checkpoints/rl_soc/seed_{0..4} \
+    checkpoints/rl_soh/seed_{0..4}
+```
+
+Results → `./logs/scenarios.json` / `.csv`. Baseline reference (2 seeds):
+BA-EPD drives fast (22.5 vs 25.3 min per 5 km) while the charge allows and
+energy-optimally near end of life; Fast-QoS (fixed 3.9 m/s) ends below the
+reserve at SOH ≤ 0.825; under payload / rough terrain BA-EPD's nominal model
+makes fast driving cost more than it gains; with complexity switching every
+10 s both QoS-EPD and BA-EPD violate QoS in ~7.5 % of steps.
 
 ### Override training scale
 
@@ -223,14 +248,34 @@ r_t = -E_d(t) - D_d(t) + U_t
 
 | Term | Definition | Meaning |
 |------|------------|---------|
-| E_d(t) | w_E · E_t / L  [J/m],  E_t = I·V·Δt [J] | Energy drawn this step per mission metre |
-| D_d(t) | w_D · S_t / S_ref,  S_t = Δt·[w_I (C/C_ref)² + w_T ((T−T_th)⁺/T_s)² + w_S ((SOC−SOC_th)⁺/(1−SOC_th))²] | Battery-stress proxy (`BatteryStress`); shaping only, **not** ΔSOH |
+| E_d(t) | w_E · E_t / L  [J/m],  E_t = I·OCV(SOC,SOH)·Δt [J] | Energy drawn from the cell this step per mission metre (includes R0/RC losses) |
+| D_d(t) | w_D · S_t / S_ref,  S_t = Δt·[w_I (C/C_ref)²·g_SOC + w_T ((T−T_th)⁺/T_s)² + w_S ((SOC−SOC_th)⁺/(1−SOC_th))²] | Battery-stress proxy (`BatteryStress`); shaping only, **not** ΔSOH |
 | U_t | B·Δx/L − w_T·Δt/(L/v_max) − w_S·(Δv/(a_max·Δt))²·Δt/(L/v_max) − w_Q·q_t·Δt/Δt_ctrl − P_fail·𝟙[fail] | Progress, time pressure, speed-change penalty, QoS, terminal failure |
 
 q_t = max(0, 1 − min_i thr_i/QoS_ref_i); U_t uses (1 − q_t)³. L = mission distance.
-Defaults (`RobotParams`, `StressParams`): w_E = w_U / e_ref = 2 / 3.96 ≈ 0.505 1/(J/m)
-(e_ref = 3.96 J/m = 1.1 Wh/km), w_U = B = 2,
-w_T = 0, w_S = 0.2, S_ref = 1000 s, w_D = w_Q = 1, P_fail = 3.
+
+Battery dependence (so the optimal action depends on SOC/SOH; motivation:
+`unit_test/check_battery_sensitivity.py`):
+
+* `RobotParams.energy_at_cell = True`: E_t = I·OCV·Δt (cell side). `False` gives
+  the old load-side I·V_terminal·Δt, which is independent of SOC/SOH.
+* `StressParams.c_rate_actual_capacity = True`: C = |I| / (Q_n·SOH).
+* `StressParams.low_soc_gain = 3`, `low_soc_threshold = 0.5`:
+  g_SOC = 1 + gain·((0.5 − SOC)⁺/0.5)² amplifies current stress at low SOC (illustrative).
+
+Reward-optimal constant speed (1000 m, C = 1): 2.50 m/s at SOH 1.0 / SOC 1.0,
+2.40 at SOH 0.8 or SOC 0.3, 2.25 at SOH 0.8 and SOC 0.3 (old env: 2.45–2.50 everywhere).
+Defaults (`RobotParams`, `StressParams`): w_E = 3 / e_ref = 3 / 5.17 ≈ 0.580 1/(J/m)
+(e_ref = 5.17 J/m = 1.44 Wh/km, minimum at C = 1), w_U = B = 2,
+w_T = 0, w_S = 0.2, stress_ref = 15.5 s/km (stress at the C = 1 energy optimum), w_D = w_Q = 1, P_fail = 3.
+
+Power model: P = P_motor(v) + P_nonmotor(v, f, c). `RobotParams.compute_model = 'measured'`
+(default) takes P_comp(v, c) from the energy-modelling tool (`COMP_TABLE_*` in
+`robot_env.py`, estimated from its energy-per-metre figure; includes auxiliaries),
+interpolated in v and c, plus `compute_dynamic_w·((f/2)³ − (f_q/2)³)` for a CPU
+frequency f away from the QoS frequency f_q. Energy-optimal speed: 3.3 / 3.0 / 3.7 m/s
+at complexity 1 / 2 / 3. `'legacy'` restores base + (f/2)³ + aux (optimum ~2.9 m/s
+for all complexities). QoS-EPD uses the same `non_motor_power`.
 
 Design: w_E · e_ref = w_U with e_ref ≈ minimum energy per metre makes the per-second
 (myopic, discounted) optimum equal to the per-mission energy optimum, for any L.
@@ -274,8 +319,9 @@ agent = SACAgent(
 | `select_action(obs, deterministic)` | Returns action array; uses mean for eval, stochastic sample for training |
 | `store(s, a, r, s′, done)` | Pushes one transition to the replay buffer |
 | `update()` | One gradient step: critic MSE → actor KL loss (Eq. 14) → α update → Polyak soft-update. Returns loss dict |
-| `save(path)` | Saves networks + optimiser states to `path/daro_checkpoint.pt` |
-| `load(path, eval_only)` | Loads checkpoint; sets eval mode when `eval_only=True` |
+| `save(path)` | Saves networks + optimiser states + observation normalisation to `path/daro_checkpoint.pt` |
+| `load(path, eval_only)` | Loads checkpoint; sets eval mode when `eval_only=True`. Checkpoints without stored normalisation (older runs) load with identity normalisation |
+| `set_lr(lr)` | Sets the learning rate of all optimisers (lr decay) |
 | `model_size_kb()` | Reports parameter count and approximate size in kB |
 
 **Key hyperparameters** (§V-A):
@@ -283,7 +329,7 @@ agent = SACAgent(
 | Hyperparameter | Value |
 |----------------|-------|
 | Learning rate | 3 × 10⁻⁴ |
-| Discount factor γ | 0.99 |
+| Discount factor γ | exp(-dt / horizon_s) = 0.99967 (horizon 3000 s, covers the longest 5 km mission) |
 | Polyak coefficient τ | 0.995 |
 | Replay buffer size | 10⁵ |
 | Batch size | 128 |
@@ -291,16 +337,35 @@ agent = SACAgent(
 | Target entropy | −dim(A) = −2 |
 | Hidden layers | [128, 64] |
 
+**Training stability** (`DEFAULT_CONFIG` in `sac_training.py`, passed to `SACAgent`):
+
+| Key | Default | Effect |
+|-----|---------|--------|
+| `obs_norm` | True | Fixed `(obs − offset)/scale` from `RobotEnv.obs_normalization` (physical ranges); masked ablation features stay 0 |
+| `reward_scale` | 10 | Critic reward scale (per-step reward is ~5·10⁻³) |
+| `alpha_min` | 10⁻³ | Floor on α |
+| `grad_clip_norm` | 10 | Gradient-norm clipping, critic and actor |
+| `lr_final_frac` | 0.1 | Linear lr decay to 10 % at `total_steps` |
+| `save_best`, `val_seed` | True, 2024 | Keep the best periodic-eval checkpoint, selected on validation seeds |
+| `eval_every_ep`, `eval_episodes` | 100, 3 | Periodic evaluation frequency / seeds per scenario |
+
 ---
 
 ### `sac_training.py`
 
 End-to-end training and evaluation pipeline.
 
-**Training curriculum** — At the start of each episode, SOH is drawn
-uniformly from [0.80, 1.00] and complexity from {low, medium, high} so the
-policy learns to generalize across the full range of battery health states
-and environmental conditions without overfitting to a single operating point.
+**Training curriculum** (`SeedStreams.episode_options`) — per episode:
+
+* SOH ~ U[0.80, 1.00], complexity from {1, 2, 3};
+* mission 1 / 2 / 5 km (p = 0.5 / 0.3 / 0.2), SOC0 ~ U[0.20, 1.00];
+* 30 % charge-limited episodes: 2 or 5 km with SOC0 chosen so that the usable
+  energy above the 5 % reserve is k × the energy-optimal mission energy,
+  k ~ U[0.8, 1.3] (`tight_soc_init`; k = 1 ends at SOC ≈ 0.048 when driving energy-optimally);
+* 30 % with mid-mission complexity switching (period 30 or 120 s);
+* 70 % with a randomised true plant: motor fit × U[0.9, 1.5] (payload), v³ term
+  × log-U[0.7, 2.0] (terrain), compute × U[0.8, 1.3] (hardware). Rule-based
+  baselines keep the nominal model.
 
 **Baseline policies** (§V-A):
 
@@ -310,6 +375,8 @@ and environmental conditions without overfitting to a single operating point.
 | `RL-SOC-only` | SAC, same reward/network/budget as DARO; battery observation reduced to SOC (`sac_training.py --obs soc`) |
 | `RL-SOH-only` | SAC, same reward/network/budget as DARO; battery observation reduced to SOH (`sac_training.py --obs soh`) |
 | `QoS-EPD` | Non-RL: each step minimises energy per metre (P_motor + P_aux + P_cpu(f_req(v)))/v subject to QoS; f = minimum QoS frequency, complexity estimated on-line |
+| `BA-EPD` | Battery-aware QoS-EPD (strong baseline): fast (3.9 m/s, QoS-capped) if the energy for the rest of the mission fits above the 5 % reserve (observed SOC, SOH, distance), else energy-optimal (using the reserve before giving up QoS), else best QoS within the budget |
+| `Fast-QoS` | Constant 3.9 m/s (QoS-capped), QoS frequency; battery-agnostic (scenario suite only) |
 
 In the RL ablations SOH (resp. SOC), temperature, terminal voltage and current
 are zeroed in the observation, since they leak the hidden state
@@ -372,7 +439,8 @@ any combination can be trained:
 |------|---------|--------|-------|---------------|
 | `--obs` | `soc` | battery observation reduced to SOC | RL-SOC-only | `rl_soc` |
 | `--obs` | `soh` | battery observation reduced to SOH | RL-SOH-only | `rl_soh` |
-| `--reward` | `no_stress` | `w_stress = 0` (no D_d) | DARO w/o D_d | `rw_no_stress` |
+| `--reward` | `with_stress` | `w_stress = 1` (adds battery-stress proxy D_d) | DARO + D_d | `rw_with_stress` |
+| `--reward` | `no_time` | `w_time = 0` (no T_d, energy-oriented) | DARO w/o T_d | `rw_no_time` |
 | `--reward` | `no_energy` | `w_energy = 0` (no E_d) | DARO w/o E_d | `rw_no_energy` |
 
 Combined, e.g. `--obs soc --reward no_energy` -> `RL-SOC-only w/o E_d` in
@@ -380,10 +448,12 @@ Combined, e.g. `--obs soc --reward no_energy` -> `RL-SOC-only w/o E_d` in
 training only; evaluation always scores with the full reward.
 
 ```bash
-python sac_training.py --reward no_stress --seeds 0 1 2 3 4
+python sac_training.py --reward with_stress --seeds 0 1 2 3 4
+python sac_training.py --reward no_time --seeds 0 1 2 3 4
 python sac_training.py --reward no_energy --seeds 0 1 2 3 4
 python -m evaluation.short_term --ckpts checkpoints/seed_{0..4} \
-    checkpoints/rw_no_stress/seed_{0..4} checkpoints/rw_no_energy/seed_{0..4}
+    checkpoints/rw_with_stress/seed_{0..4} checkpoints/rw_no_time/seed_{0..4} \
+    checkpoints/rw_no_energy/seed_{0..4}
 ```
 
 ---
@@ -393,7 +463,9 @@ python -m evaluation.short_term --ckpts checkpoints/seed_{0..4} \
 ### Adding a new application or sensor
 
 Increase `RobotParams.n_apps` and extend `RobotParams.qos_ref`. The
-observation dimension updates automatically to `4 + 2 * n_apps`.
+observation dimension updates automatically to `10 + 2 * n_apps`
+(8 robot/battery features, throughput and QoS target per app, mission length L and
+fraction of the mission remaining).
 
 ### Deploying on hardware
 

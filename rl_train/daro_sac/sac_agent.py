@@ -116,6 +116,11 @@ class SACAgent:
         buffer_capacity: int = 100_000,
         batch_size: int = 128,
         device: str = 'auto',
+        obs_offset=None,
+        obs_scale=None,
+        reward_scale: float = 1.0,
+        alpha_min: float = 0.0,
+        grad_clip_norm: float = 0.0,
     ):
         # Device selection
         if device == 'auto':
@@ -127,6 +132,12 @@ class SACAgent:
         self.gamma      = gamma
         self.batch_size = batch_size
         self.auto_alpha = auto_alpha
+        self.lr         = lr
+        # [unit_test] training-stability options
+        self.reward_scale   = float(reward_scale)    # critic sees r * reward_scale
+        self.alpha_min      = float(alpha_min)       # floor on the SAC temperature
+        self.grad_clip_norm = float(grad_clip_norm)  # 0 disables
+        self._log_alpha_min = float(np.log(alpha_min)) if alpha_min > 0 else None
 
         # Convert action bounds to tensors
         act_low  = torch.FloatTensor(action_low).to(self.device)
@@ -162,7 +173,15 @@ class SACAgent:
         if auto_alpha:
             self.alpha_optim = optim.Adam([self.log_alpha], lr=lr)
 
-        # ---- Replay buffer ----
+        # ---- Fixed observation normalisation (obs - offset) / scale ----
+        off = np.zeros(state_dim, np.float32) if obs_offset is None else np.asarray(obs_offset, np.float32)
+        scl = np.ones(state_dim, np.float32) if obs_scale is None else np.asarray(obs_scale, np.float32)
+        if off.shape != (state_dim,) or scl.shape != (state_dim,) or np.any(scl <= 0):
+            raise ValueError('obs_offset/obs_scale must have shape (state_dim,) and scale > 0.')
+        self.obs_offset = torch.as_tensor(off, device=self.device)
+        self.obs_scale = torch.as_tensor(scl, device=self.device)
+
+        # ---- Replay buffer (stores raw observations) ----
         self.buffer = ReplayBuffer(state_dim, action_dim, buffer_capacity)
 
         # ---- Logging ----
@@ -176,9 +195,25 @@ class SACAgent:
                        deterministic: bool = False) -> np.ndarray:
         """Select action for a single observation (no gradient)."""
         with torch.no_grad():
-            s = torch.FloatTensor(state).unsqueeze(0).to(self.device)
+            s = self._norm(torch.FloatTensor(state).unsqueeze(0).to(self.device))
             action = self.actor.act(s, deterministic=deterministic)
         return action.cpu().numpy().flatten()
+
+    def _norm(self, s: torch.Tensor) -> torch.Tensor:
+        return (s - self.obs_offset) / self.obs_scale
+
+    def set_lr(self, lr: float):
+        """Set the learning rate of all optimisers (used for lr decay)."""
+        opts = [self.critic_optim, self.actor_optim]
+        if self.auto_alpha:
+            opts.append(self.alpha_optim)
+        for opt in opts:
+            for g in opt.param_groups:
+                g['lr'] = lr
+
+    def _clip(self, params):
+        if self.grad_clip_norm > 0:
+            torch.nn.utils.clip_grad_norm_(params, self.grad_clip_norm)
 
     def store(self, state, action, reward, next_state, done):
         """Push one transition to the replay buffer."""
@@ -199,6 +234,8 @@ class SACAgent:
 
         # Step 1: sample minibatch (s, a, r, s′, done)
         s, a, r, s_next, done = self.buffer.sample(self.batch_size, self.device)
+        s, s_next = self._norm(s), self._norm(s_next)
+        r = r * self.reward_scale
 
         # ------------------------------------------------------------------
         # Step 2: Bellman target  y = r + γ(1-done) · [min Q_target(s′,a′) - α·log π(a′|s′)]
@@ -216,6 +253,7 @@ class SACAgent:
 
         self.critic_optim.zero_grad()
         critic_loss.backward()
+        self._clip(self.critic.parameters())
         self.critic_optim.step()
 
         # ------------------------------------------------------------------
@@ -227,6 +265,7 @@ class SACAgent:
 
         self.actor_optim.zero_grad()
         actor_loss.backward()
+        self._clip(self.actor.parameters())
         self.actor_optim.step()
 
         # ------------------------------------------------------------------
@@ -238,6 +277,9 @@ class SACAgent:
             self.alpha_optim.zero_grad()
             alpha_loss.backward()
             self.alpha_optim.step()
+            if self._log_alpha_min is not None:
+                with torch.no_grad():
+                    self.log_alpha.clamp_(min=self._log_alpha_min)
             self.alpha = float(self.log_alpha.exp())
 
         # ------------------------------------------------------------------
@@ -260,7 +302,7 @@ class SACAgent:
     # Checkpoint save / load
     # ------------------------------------------------------------------
 
-    def save(self, path: str):
+    def save(self, path: str, quiet: bool = False):
         """
         Persist model weights to disk.
 
@@ -277,8 +319,11 @@ class SACAgent:
             'actor_optim':         self.actor_optim.state_dict(),
             'total_updates':       self.total_updates,
             'alpha_optim':         self.alpha_optim.state_dict() if self.auto_alpha else None,
+            'obs_offset':          self.obs_offset.cpu(),
+            'obs_scale':           self.obs_scale.cpu(),
         }, os.path.join(path, 'daro_checkpoint.pt'))
-        print(f"[DARO] Checkpoint saved → {path}")
+        if not quiet:
+            print(f"[DARO] Checkpoint saved → {path}")
 
     def load(self, path: str, eval_only: bool = False):
         """
@@ -295,6 +340,13 @@ class SACAgent:
         self.critic.load_state_dict(ckpt['critic_state'])
         self.actor.load_state_dict(ckpt['actor_state'])
         self.actor.target.load_state_dict(ckpt['actor_target_state'])
+        # Normalisation travels with the weights (absent in legacy checkpoints).
+        if 'obs_offset' in ckpt:
+            self.obs_offset = ckpt['obs_offset'].to(self.device)
+            self.obs_scale = ckpt['obs_scale'].to(self.device)
+        else:   # legacy checkpoint trained on raw observations
+            self.obs_offset = torch.zeros_like(self.obs_offset)
+            self.obs_scale = torch.ones_like(self.obs_scale)
         # Preserve the original tensor object used by alpha_optim.
         # Replacing self.log_alpha breaks the optimizer parameter reference.
         with torch.no_grad():

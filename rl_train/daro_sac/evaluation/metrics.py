@@ -48,8 +48,10 @@ def xu_mission_fd(env: RobotEnv, charge_c_rate: float) -> dict:
 
 
 def run_episode(env: RobotEnv, policy, seed: Optional[int] = None,
-                deterministic: bool = True, charge_c_rate: float = 0.5) -> dict:
-    obs, _ = env.reset(seed=seed)
+                deterministic: bool = True, charge_c_rate: float = 1.0,
+                options: Optional[dict] = None) -> dict:
+    """One episode; options are passed to env.reset (plant, complexity switching, ...)."""
+    obs, _ = env.reset(seed=seed, options=options)
     if hasattr(policy, 'reset'):
         policy.reset()
     ret, viol_steps, steps, info, done = 0.0, 0, 0, {}, False
@@ -72,6 +74,9 @@ def run_episode(env: RobotEnv, policy, seed: Optional[int] = None,
         'qos_viol_pct':   100.0 * viol_steps / max(steps, 1),
         'stress_proxy':   env.total_stress,
         'delta_soc':      env.soc_init - float(env.battery.soc),
+        'final_soc':      float(env.battery.soc),
+        # ended below the SOC reserve (whether or not the mission was completed)
+        'reserve_viol':   float(float(env.battery.soc) < env.robot.soc_reserve - 1e-9),
         'delta_soh_ppm':  1e6 * fade['delta_soh'],
         'fd_cycle':       fade['fd_cycle'],
         'peak_temp_c':    max((s['temperature_c'] for s in env.trajectory),
