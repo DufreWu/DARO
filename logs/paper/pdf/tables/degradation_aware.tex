@@ -1,0 +1,20 @@
+\begin{table}[t]
+\centering
+\caption{Adding the predicted Xu ageing to the objective (DA-Lag-RLS, J = return $-$ w$\cdot$$\Delta$SOH/(1 $-$ SOH\_EOL)). Mean over all scenarios.}
+\label{tab:degradation_aware}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrrrr}
+\toprule
+Method & Return & $\Delta$SOH [ppm] & km to EOL [10$^3$] & J (w=1000) & J (w=4000) & J (w=16000) \\
+\midrule
+Lag-RLS & $-$0.4732 & 29.90 & 35.61 & $-$0.6227 & $-$1.0712 & $-$2.8653 \\
+DA-Lag-RLS (w=1000) & $-$0.4728 & 29.89 & 35.63 & $-$0.6222 & $-$1.0706 & $-$2.8640 \\
+DA-Lag-RLS (w=4000) & $-$0.4722 & 29.86 & 35.67 & $-$0.6215 & $-$1.0695 & $-$2.8613 \\
+DA-Lag-RLS (w=16000) & $-$0.4731 & 29.80 & 35.74 & $-$0.6221 & $-$1.0691 & $-$2.8571 \\
+\midrule
+BA-EPD+SOH & $-$0.6190 & 30.50 & 35.19 & $-$0.7715 & $-$1.2290 & $-$3.0589 \\
+\bottomrule
+\end{tabular}
+\par\vspace{2pt}\parbox{\linewidth}{\scriptsize Even w = 16000 reduces $\Delta$SOH by only 0.3 \%: in the Xu model, fade is driven by depth of discharge (mission energy) and the SOC window, not by C-rate, and the pack runs at ~0.15 C. Speed/DVFS control therefore barely changes long-term fade.}
+\end{table}

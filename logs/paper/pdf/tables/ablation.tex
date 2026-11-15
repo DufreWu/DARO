@@ -1,0 +1,24 @@
+\begin{table}[t]
+\centering
+\caption{Ablation: paired return difference against the full Lag-RLS (all scenarios; < 0 means the removed component helps). $^{*}$ = 95 \% CI excludes 0.}
+\label{tab:ablation}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrr}
+\toprule
+Variant & $\Delta$ return (test) & Res.\% (test) & $\Delta$ return (val.) & Res.\% (val.) \\
+\midrule
+Full Lag-RLS (reference) & 0 & 5.7 & 0 & 6.2 \\
+\midrule
+w/o SOH estimation (SOH = 1) & $-$0.009$^{*}$ & 11.6 & – & – \\
+w/o Lagrangian price ($\lambda$ = 0) & $-$0.030$^{*}$ & 8.7 & – & – \\
+tier $\lambda$ selection (not cost-based) & $-$0.016$^{*}$ & 14.2 & – & – \\
+w/o RLS power-model adaptation & $-$0.040$^{*}$ & 10.5 & – & – \\
+w/o speed probing & +0.005$^{*}$ & 5.4 & +0.005$^{*}$ & 5.7 \\
+w/o online loss factor $\eta$ & +0.001 & 6.5 & +0.000 & 6.8 \\
+w/o coordinate descent (grid only) & $-$0.063$^{*}$ & 13.7 & – & – \\
+w/o probing and w/o $\eta$ & – & – & +0.004$^{*}$ & 6.3 \\
+\bottomrule
+\end{tabular}
+\par\vspace{2pt}\parbox{\linewidth}{\scriptsize Test: base seed 42; validation: base seed 2024 (different episodes); 168 scenarios x 10 episodes each.}
+\end{table}

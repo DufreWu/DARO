@@ -49,13 +49,20 @@ from typing import Dict, List
 
 import numpy as np
 
-from robot_env import RobotEnv, RobotParams, ECMParams, StressParams, tight_soc_init
+import sys
+from pathlib import Path
+
+_REPO = Path(__file__).resolve().parents[2]   # repository root: envs / methods / evaluation
+if str(_REPO) not in sys.path:
+    sys.path.insert(0, str(_REPO))
+
+from envs.robot_env import RobotEnv, RobotParams, ECMParams, StressParams, tight_soc_init
 from sac_agent import SACAgent
 from obs_variants import (MaskedPolicy, apply_mask, apply_reward_variant, label,
                           obs_mask, run_subdir, save_variant)
 from evaluation import make_robot
-from residual import (ResidualEnv, ResidualPolicy, build_controller, residual_setting,
-                      save_residual, zero_init_actor, hold_steps)
+from hierarchical import (HierEnv, HierPolicy, build_layer, decision_steps, hier_setting,
+                          save_hier)
 
 # ---------------------------------------------------------------------------
 # Training configuration
@@ -64,16 +71,18 @@ from residual import (ResidualEnv, ResidualPolicy, build_controller, residual_se
 DEFAULT_CONFIG = {
     # Control timing
     "control_dt":       1.0,            # [s] agent decision period (1 Hz)
-    # Residual RL (residual.py): None = end-to-end; 'ba_epd' / 'qos_epd' = the agent
-    # corrects that base controller, v = v_b (1 + rho_v a0), f = f_b (1 + rho_f a1).
-    "residual":         None,
-    "residual_rho_v":   0.3,
-    "residual_rho_f":   0.3,
-    "residual_hold_s":  10.0,           # residual re-chosen every 10 s (base runs every step)
-    # 'action': correct (v, f) as above. 'model' (ba_epd only): correct BA-EPD's nominal
-    # energy model in its charge-budget plan, kappa = (1 + rho_k) ** a, a in [-1, 1].
-    "residual_mode":    "action",
-    "residual_rho_k":   1.0,            # kappa in [0.5, 2]
+    # Hierarchical control (hierarchical.py): SAC sets a speed set-point every
+    # hier_decision_s seconds (or at once on a workload jump > hier_trigger_rel); a 1 s
+    # QoS layer picks (v, f). False = flat 1 s SAC on (v, f).
+    # Battery-state observation (robot_env.RobotParams.battery_obs): 'true' = true SOC / SOH,
+    # 'bms' = BMS coulomb-counted SOC (rated capacity) and unknown SOH.
+    "battery_obs":      "true",
+    "battery_realism":  False,          # sensor noise + per-episode cell variation (test_env.make_robot)
+    "hierarchical":     False,
+    "hier_decision_s":  10.0,
+    "hier_trigger_rel": 0.25,
+    "hier_charge_feature": True,        # add the charge-margin observation (hierarchical.py)
+    "hier_shaping_w":   0.0,            # potential-based charge-margin shaping (training only)
     "horizon_s":        3000.0,         # [s] effective planning horizon -> gamma; covers the
                                         # longest training mission (5 km tight ~ 1500-2500 s)
     "max_steps_margin": 1.2,            # max_steps = margin * mission / (v_min * dt)
@@ -153,8 +162,8 @@ DEFAULT_CONFIG = {
 
 def control_gamma(config: dict) -> float:
     """Discount per agent decision so that the effective horizon is horizon_s seconds
-    (a residual decision spans hold_steps control steps)."""
-    dt = config['control_dt'] * hold_steps(residual_setting(config), config['control_dt'])
+    (a hierarchical decision spans decision_steps control steps)."""
+    dt = config['control_dt'] * decision_steps(hier_setting(config), config['control_dt'])
     return float(math.exp(-dt / config['horizon_s']))
 
 
@@ -282,8 +291,7 @@ class SeedStreams:
 def build_env(config: dict, mode: str = 'train',
               soh_init: float = 1.0,
               complexity: float = 1.0):
-    """Instantiate the environment at the configured control frequency
-    (wrapped in residual.ResidualEnv when config['residual'] is set)."""
+    """Instantiate the environment at the configured control frequency."""
     # max_steps sized for the longest mission; the episode distance is set by reset().
     robot = make_robot(dict(config, mission_distance_m=max(config['mission_distances_m'])))
     apply_reward_variant(robot, config.get('reward_variant', 'full'))
@@ -291,9 +299,10 @@ def build_env(config: dict, mode: str = 'train',
     env = RobotEnv(robot=robot, ecm=ecm, stress=StressParams(),
                    soc_init=1.0, soh_init=soh_init,
                    complexity=complexity, mode=mode)
-    setting = residual_setting(config)
+    setting = hier_setting(config)
     if setting:
-        env = ResidualEnv(env, build_controller(setting, robot, config['control_dt']))
+        env = HierEnv(env, build_layer(setting, robot, config['control_dt']),
+                      shaping_w=setting['shaping_w'], gamma=control_gamma(config))
     return env
 
 
@@ -393,10 +402,9 @@ def train(config: dict, resume_ckpt: str = None):
     variant = config.get('obs_variant', 'full')
     reward_variant = config.get('reward_variant', 'full')
     sub = run_subdir(variant, reward_variant)
-    res_setting = residual_setting(config)
-    if res_setting:   # checkpoints/res_ba_epd[_model][/rl_soc...]/seed_k
-        rdir = f"res_{res_setting['base']}" + ('_model' if res_setting.get('mode') == 'model' else '')
-        sub = os.path.join(rdir, sub) if sub else rdir
+    h_setting = hier_setting(config)
+    if h_setting:   # checkpoints/hier[/rl_soc...]/seed_k
+        sub = os.path.join('hier', sub) if sub else 'hier'
     if sub:
         config['ckpt_dir'] = os.path.join(config['ckpt_dir'], sub)
         config['log_dir'] = os.path.join(config['log_dir'], sub)
@@ -415,15 +423,13 @@ def train(config: dict, resume_ckpt: str = None):
     agent = build_agent(config, ref_env)
     mask = obs_mask(variant, ref_env.obs_dim)
     eval_policy = MaskedPolicy(agent, variant, ref_env.obs_dim)
-    if res_setting:   # own base-controller instance (the base is stateful)
-        eval_policy = ResidualPolicy(eval_policy, build_controller(res_setting, ref_env.robot,
-                                                                   config['control_dt']))
+    if h_setting:   # own fast-layer instance (it is stateful)
+        eval_policy = HierPolicy(eval_policy, build_layer(h_setting, ref_env.robot,
+                                                          config['control_dt']))
     save_variant(config['ckpt_dir'], variant, reward_variant)
-    save_residual(config['ckpt_dir'], res_setting)
+    save_hier(config['ckpt_dir'], h_setting)
     if resume_ckpt:
         agent.load(resume_ckpt)
-    elif res_setting:
-        zero_init_actor(agent)
 
     print("\n" + "=" * 60)
     print(f"{label(variant, reward_variant)} SAC Training "
@@ -440,10 +446,8 @@ def train(config: dict, resume_ckpt: str = None):
     print(f"  ECM source    : {ref_env.ecm_params.source}")
     print(f"  State dim     : {ref_env.obs_dim}")
     print(f"  Action dim    : {ref_env.act_dim}"
-          + (f" (residual on {res_setting['base']}, "
-             + (f"model kappa, rho_k={res_setting['rho_k']}" if res_setting.get('mode') == 'model'
-                else f"rho_v={res_setting['rho_v']}, rho_f={res_setting['rho_f']}")
-             + ')' if res_setting else ''))
+          + (f" (hierarchical: v_ref every {h_setting['decision_s']:g} s, "
+             f"trigger {h_setting['trigger_rel']:g})" if h_setting else ''))
     print(f"  Buffer cap    : {config['buffer_capacity']:,}")
     print(f"  Total steps   : {config['total_steps']:,}")
     sizes = agent.model_size_kb()
@@ -479,7 +483,7 @@ def train(config: dict, resume_ckpt: str = None):
     last_dir = os.path.join(config['ckpt_dir'], 'last') if save_best else config['ckpt_dir']
     if save_best:
         save_variant(last_dir, variant, reward_variant)   # last/ is loadable on its own
-        save_residual(last_dir, res_setting)
+        save_hier(last_dir, h_setting)
     if not resume_ckpt and os.path.exists(log_path):
         os.remove(log_path)   # one run per eval_log.jsonl (old runs were appended)
     best = {'return': -float('inf'), 'episode': None, 'global_step': None}
@@ -627,15 +631,10 @@ def parse_args():
     parser.add_argument('--reward', choices=['full', 'with_stress', 'no_time', 'no_energy', 'no_stress'], default=None,
                         help='Reward variant: full, with_stress (w_stress=1), no_time (w_time=0), '
                              'no_energy (w_energy=0); no_stress = legacy (same as full now)')
-    parser.add_argument('--residual', choices=['none', 'ba_epd', 'qos_epd'], default=None,
-                        help='Residual RL on a base controller (default: end-to-end)')
-    parser.add_argument('--rho-v', type=float, default=None, help='Residual speed range (fraction)')
-    parser.add_argument('--rho-f', type=float, default=None, help='Residual frequency range (fraction)')
-    parser.add_argument('--hold-s', type=float, default=None, help='Residual hold time [s]')
-    parser.add_argument('--residual-mode', choices=['action', 'model'], default=None,
-                        help="Residual on the action (v, f) or on BA-EPD's energy model (kappa)")
-    parser.add_argument('--rho-k', type=float, default=None,
-                        help='Model residual range: kappa in [1/(1+rho_k), 1+rho_k]')
+    parser.add_argument('--hierarchical', action='store_true',
+                        help='SAC sets a speed set-point; a 1 s QoS layer picks (v, f)')
+    parser.add_argument('--decision-s', type=float, default=None,
+                        help='Hierarchical decision period [s] (default 10)')
     parser.add_argument('--horizon-s', type=float, default=None,
                         help='Effective planning horizon in seconds (sets gamma)')
     return parser.parse_args()
@@ -659,18 +658,10 @@ if __name__ == '__main__':
         config['control_dt'] = args.control_dt
     if args.horizon_s is not None:
         config['horizon_s'] = args.horizon_s
-    if args.residual is not None:
-        config['residual'] = None if args.residual == 'none' else args.residual
-    if args.rho_v is not None:
-        config['residual_rho_v'] = args.rho_v
-    if args.rho_f is not None:
-        config['residual_rho_f'] = args.rho_f
-    if args.hold_s is not None:
-        config['residual_hold_s'] = args.hold_s
-    if args.residual_mode is not None:
-        config['residual_mode'] = args.residual_mode
-    if args.rho_k is not None:
-        config['residual_rho_k'] = args.rho_k
+    if args.hierarchical:
+        config['hierarchical'] = True
+    if args.decision_s is not None:
+        config['hier_decision_s'] = args.decision_s
     if args.obs is not None:
         config['obs_variant'] = args.obs
     if args.reward is not None:

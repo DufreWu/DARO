@@ -15,18 +15,25 @@ Quality-of-Service (QoS) requirements.
 ## Repository layout
 
 ```
-.
-├── network_torch.py   # Neural network definitions (actor + critic)
-├── robot_env.py       # Robot environment, battery models, reward functions
-├── sac_agent.py       # SAC agent with replay buffer and update logic
-├── sac_training.py    # Training loop and CLI (no test code)
-└── evaluation/        # Test environment, baselines, metrics, distance sweep
-    ├── test_env.py        # EVAL_CONFIG, SOH × SOC × complexity grid, make_test_env
-    ├── baselines.py       # AS-MF, QoS-EPD (rule-based)
-    ├── metrics.py         # run_episode, Xu capacity fade per mission
-    ├── runner.py          # evaluate_policies, summaries, load_daro
-    ├── lifetime.py        # missions / km to EOL (extrapolated Xu fade)
-    └── distance_sweep.py  # 500 / 1000 / 2500 / 5000 m sweep
+<repository root>
+├── envs/                  # Simulation environment
+│   ├── robot_env.py           # RobotEnv, battery ECM (OCV(SOC,SOH), R0(SOH)), power models, BMS, reward
+│   ├── lipo_fit_parameters.json
+│   ├── test_env.py            # EVAL_CONFIG, make_robot (battery realism), test grid, make_test_env
+│   └── scenarios.py           # paper scenario suite (6 families), true-plant overrides, make_env
+├── methods/               # Controllers
+│   ├── baselines.py           # AS-MF, QoS-EPD, BA-EPD, BA-EPD+SOH (rule-based)
+│   ├── soh_estimator.py       # on-line SOH estimation from BMS voltage / current
+│   ├── lag_rls.py             # Lag-RLS (proposed)
+│   ├── degradation_aware.py   # DA-Lag-RLS (Xu ageing in the objective)
+│   └── oracle.py              # Lagrangian oracle on the true plant (reference)
+├── evaluation/            # Metrics, runners, benchmark, paper figures / tables (outputs: logs/)
+├── unit_test/             # Environment / baseline checks
+├── battery_model/         # Xu ageing model, LiPo data and fits
+└── rl_train/daro_sac/     # THIS DIRECTORY: SAC (RL) only
+    ├── network_torch.py, sac_agent.py, sac_training.py, hierarchical.py, obs_variants.py
+    ├── plot_rewards.py, train_all.sh, short_term_eval.ipynb
+    └── checkpoints/, logs/    # RL checkpoints and training logs
 ```
 
 ---
@@ -114,12 +121,12 @@ python sac_training.py --ckpt ./checkpoints/seed_42
 
 ### Evaluate a trained policy
 
-All testing lives in `evaluation/` (run from this directory). Policies: DARO,
+All testing lives in `evaluation/` at the repository root: run the `python -m evaluation...` commands below from the repository root (checkpoints are under `rl_train/daro_sac/checkpoints/`; training commands still run from this directory). Policies: DARO,
 RL-SOC-only, RL-SOH-only (SAC checkpoints, see below), AS-MF, QoS-EPD, BA-EPD; grid SOH × initial SOC × complexity with
 seeded complexity disturbance and common random numbers across policies:
 
 ```bash
-python -m evaluation --ckpt ./checkpoints/seed_42          # DARO + baselines
+python -m evaluation --ckpt rl_train/daro_sac/checkpoints/seed_42          # DARO + baselines
 python -m evaluation --baselines-only --distance 1000
 ```
 
@@ -128,7 +135,7 @@ Results (incl. extrapolated missions/km to EOL) → `./logs/test_results.json`.
 ### Mission-distance sweep
 
 ```bash
-python -m evaluation.distance_sweep --ckpt ./checkpoints/seed_42   # 500/1000/2500/5000 m
+python -m evaluation.distance_sweep --ckpt rl_train/daro_sac/checkpoints/seed_42   # 500/1000/2500/5000 m
 python -m evaluation.distance_sweep --baselines-only --distances 500 5000
 ```
 
@@ -146,14 +153,13 @@ the 5 % reserve, k ∈ {0.9, 1, 1.1, 1.25}), `switch` (complexity switching ever
 
 ```bash
 python -m evaluation.scenarios --baselines-only                      # ~1 min
-python -m evaluation.scenarios --ckpts checkpoints/seed_{0..4} checkpoints/rl_soc/seed_{0..4} \
-    checkpoints/rl_soh/seed_{0..4}
+python -m evaluation.scenarios --ckpts rl_train/daro_sac/checkpoints/seed_{0..4} rl_train/daro_sac/checkpoints/rl_soc/seed_{0..4} \
+    rl_train/daro_sac/checkpoints/rl_soh/seed_{0..4}
 ```
 
 Results → `./logs/scenarios.json` / `.csv`. Baseline reference (2 seeds):
 BA-EPD drives fast (22.5 vs 25.3 min per 5 km) while the charge allows and
-energy-optimally near end of life; Fast-QoS (fixed 3.9 m/s) ends below the
-reserve at SOH ≤ 0.825; under payload / rough terrain BA-EPD's nominal model
+energy-optimally near end of life; under payload / rough terrain BA-EPD's nominal model
 makes fast driving cost more than it gains; with complexity switching every
 10 s both QoS-EPD and BA-EPD violate QoS in ~7.5 % of steps.
 
@@ -182,7 +188,7 @@ Both networks use two hidden layers of **128 → 64** neurons, matching §V-A.
 
 ---
 
-### `robot_env.py`
+### `envs/robot_env.py`
 
 Self-contained robot environment and battery models. Has no PyTorch
 dependency and can be used or tested independently.
@@ -376,7 +382,6 @@ End-to-end training and evaluation pipeline.
 | `RL-SOH-only` | SAC, same reward/network/budget as DARO; battery observation reduced to SOH (`sac_training.py --obs soh`) |
 | `QoS-EPD` | Non-RL: each step minimises energy per metre (P_motor + P_aux + P_cpu(f_req(v)))/v subject to QoS; f = minimum QoS frequency, complexity estimated on-line |
 | `BA-EPD` | Battery-aware QoS-EPD (strong baseline): fast (3.9 m/s, QoS-capped) if the energy for the rest of the mission fits above the 5 % reserve (observed SOC, SOH, distance), else energy-optimal (using the reserve before giving up QoS), else best QoS within the budget |
-| `Fast-QoS` | Constant 3.9 m/s (QoS-capped), QoS frequency; battery-agnostic (scenario suite only) |
 
 In the RL ablations SOH (resp. SOC), temperature, terminal voltage and current
 are zeroed in the observation, since they leak the hidden state
@@ -386,8 +391,9 @@ the evaluation scripts label and mask each checkpoint from it:
 ```bash
 python sac_training.py --obs soc --seeds 0 1 2 3 4   # -> checkpoints/rl_soc/seed_k
 python sac_training.py --obs soh --seeds 0 1 2 3 4   # -> checkpoints/rl_soh/seed_k
-python -m evaluation.short_term --by soh --ckpts checkpoints/seed_{0..4} \
-    checkpoints/rl_soc/seed_{0..4} checkpoints/rl_soh/seed_{0..4}
+cd ../..   # evaluation runs from the repository root
+python -m evaluation.short_term --by soh --ckpts rl_train/daro_sac/checkpoints/seed_{0..4} \
+    rl_train/daro_sac/checkpoints/rl_soc/seed_{0..4} rl_train/daro_sac/checkpoints/rl_soh/seed_{0..4}
 ```
 
 **Key functions:**
@@ -410,15 +416,15 @@ Evaluation entry points are in `evaluation/` (`evaluate_policies`,
 # Train
 python sac_training.py
 
-# Evaluate across all SOH × SOC × complexity conditions
-python -m evaluation --ckpt ./checkpoints/seed_42
-# → ./logs/test_results.json
+# Evaluate across all SOH × SOC × complexity conditions (from the repository root)
+cd ../.. && python -m evaluation --ckpt rl_train/daro_sac/checkpoints/seed_42
+# → logs/test_results.json
 ```
 
 ### Battery lifetime (Table II)
 
 ```bash
-python -m evaluation --ckpt ./checkpoints/seed_42   # lifetime printed and saved in test_results.json
+python -m evaluation --ckpt rl_train/daro_sac/checkpoints/seed_42   # lifetime printed and saved in test_results.json
 ```
 
 Expected results (averaged over 20 runs, medium complexity):
@@ -451,9 +457,10 @@ training only; evaluation always scores with the full reward.
 python sac_training.py --reward with_stress --seeds 0 1 2 3 4
 python sac_training.py --reward no_time --seeds 0 1 2 3 4
 python sac_training.py --reward no_energy --seeds 0 1 2 3 4
-python -m evaluation.short_term --ckpts checkpoints/seed_{0..4} \
-    checkpoints/rw_with_stress/seed_{0..4} checkpoints/rw_no_time/seed_{0..4} \
-    checkpoints/rw_no_energy/seed_{0..4}
+cd ../..   # evaluation runs from the repository root
+C=rl_train/daro_sac/checkpoints
+python -m evaluation.short_term --ckpts $C/seed_{0..4} \
+    $C/rw_with_stress/seed_{0..4} $C/rw_no_time/seed_{0..4} $C/rw_no_energy/seed_{0..4}
 ```
 
 ---

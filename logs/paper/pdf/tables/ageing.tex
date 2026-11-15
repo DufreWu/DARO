@@ -1,0 +1,25 @@
+\begin{table*}[t]
+\centering
+\caption{Ageing family: same 5 km mission and the same initial charge on a pack of decreasing (unknown) SOH. R = return, Res.\% = missions ending below the SOC reserve.}
+\label{tab:ageing}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrrrrrrr}
+\toprule
+Method & R @1.00 & Res.\% @1.00 & R @0.90 & Res.\% @0.90 & R @0.85 & Res.\% @0.85 & R @0.80 & Res.\% @0.80 & km to EOL [10$^3$ km] \\
+\midrule
+AS-MF & $-$0.942 & \textbf{0} & $-$0.959 & \textbf{0} & $-$1.439 & 93 & $-$2.500 & 100 & 33.28 \\
+QoS-EPD & $-$0.310 & \textbf{0} & $-$0.327 & \textbf{0} & $-$0.341 & \textbf{0} & $-$0.499 & 67 & 35.55 \\
+BA-EPD & $-$0.249 & \textbf{0} & $-$0.269 & \textbf{0} & $-$0.284 & \textbf{0} & $-$0.615 & 100 & 35.12 \\
+BA-EPD+SOH & $-$0.249 & \textbf{0} & $-$0.269 & \textbf{0} & $-$0.299 & \textbf{0} & $-$0.495 & 77 & 35.19 \\
+\midrule
+Lag-RLS & \textbf{$-$0.219} & \textbf{0} & \textbf{$-$0.236} & \textbf{0} & $-$0.257 & \textbf{0} & \textbf{$-$0.294} & \textbf{23} & 35.61 \\
+Lag-RLS w/o SOH est & \textbf{$-$0.219} & \textbf{0} & \textbf{$-$0.236} & \textbf{0} & \textbf{$-$0.252} & \textbf{0} & $-$0.353 & 67 & 35.58 \\
+\midrule
+Lag-RLS (full info) & $-$0.218 & 0 & $-$0.236 & 0 & $-$0.252 & 0 & $-$0.287 & 0 & 35.60 \\
+Oracle-obs & $-$0.243 & 0 & $-$0.261 & 0 & $-$0.275 & 0 & $-$0.356 & 50 & 35.51 \\
+Oracle & $-$0.207 & 0 & $-$0.226 & 0 & $-$0.240 & 0 & $-$0.253 & 10 & 35.71 \\
+\bottomrule
+\end{tabular}
+\par\vspace{2pt}\parbox{\linewidth}{\scriptsize km to EOL: distance until SOH 0.8 under repeated missions (Xu model, mean over C = 1, 2, 3).}
+\end{table*}

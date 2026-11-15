@@ -1,0 +1,41 @@
+\begin{table}[t]
+\centering
+\caption{Robustness sweeps: return / reserve violation [\%].}
+\label{tab:robustness}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrr}
+\toprule
+Sweep / method & x1 & x2 & x3 & x4 \\
+\midrule
+Voltage noise [mV] & 0 & 15 & 30 & 60 \\
+   BA-EPD & $-$0.599 / 36 & $-$0.599 / 36 & $-$0.599 / 36 & $-$0.599 / 36 \\
+   BA-EPD+SOH & $-$0.560 / 33 & $-$0.562 / 33 & $-$0.563 / 33 & $-$0.565 / 33 \\
+   Lag-RLS w/o SOH est & $-$0.476 / 27 & $-$0.477 / 27 & $-$0.476 / 27 & $-$0.476 / 27 \\
+   Lag-RLS & $-$0.453 / 19 & $-$0.455 / 19 & $-$0.456 / 19 & $-$0.458 / 19 \\
+   Lag-RLS (full info) & $-$0.449 / 18 & $-$0.450 / 18 & $-$0.450 / 18 & $-$0.450 / 18 \\
+\midrule
+Cell variation [$\times$] & 0 & 1 & 2 &  \\
+   BA-EPD & $-$0.592 / 37 & $-$0.599 / 36 & $-$0.675 / 35 &  \\
+   BA-EPD+SOH & $-$0.550 / 31 & $-$0.562 / 33 & $-$0.589 / 33 &  \\
+   Lag-RLS w/o SOH est & $-$0.471 / 27 & $-$0.477 / 27 & $-$0.480 / 26 &  \\
+   Lag-RLS & $-$0.446 / 18 & $-$0.455 / 19 & $-$0.482 / 22 &  \\
+   Lag-RLS (full info) & $-$0.446 / 18 & $-$0.450 / 18 & $-$0.453 / 19 &  \\
+\midrule
+Payload [$\times$] & 1 & 1.25 & 1.5 & 1.75 \\
+   BA-EPD & $-$0.402 / 50 & $-$1.020 / 50 & $-$1.674 / 50 & $-$2.929 / 60 \\
+   BA-EPD+SOH & $-$0.329 / 50 & $-$0.872 / 50 & $-$1.539 / 50 & $-$2.186 / 50 \\
+   Lag-RLS w/o SOH est & $-$0.243 / 25 & $-$0.692 / 25 & $-$1.083 / 25 & $-$1.454 / 20 \\
+   Lag-RLS & $-$0.228 / 5 & $-$0.641 / 5 & $-$1.036 / 0 & $-$1.424 / 0 \\
+   Lag-RLS (full info) & $-$0.224 / 0 & $-$0.637 / 0 & $-$1.035 / 0 & $-$1.424 / 0 \\
+\midrule
+Terrain v$^3$ [$\times$] & 1 & 1.5 & 2 & 3 \\
+   BA-EPD & $-$0.402 / 50 & $-$1.187 / 60 & $-$4.733 / 100 & $-$10.114 / 100 \\
+   BA-EPD+SOH & $-$0.329 / 50 & $-$0.915 / 50 & $-$1.907 / 100 & $-$7.359 / 100 \\
+   Lag-RLS w/o SOH est & $-$0.243 / 25 & $-$0.633 / 25 & $-$0.913 / 20 & $-$1.531 / 25 \\
+   Lag-RLS & $-$0.228 / 5 & $-$0.584 / 5 & $-$0.902 / 0 & $-$1.570 / 15 \\
+   Lag-RLS (full info) & $-$0.224 / 0 & $-$0.583 / 0 & $-$0.898 / 0 & $-$1.449 / 0 \\
+\bottomrule
+\end{tabular}
+\par\vspace{2pt}\parbox{\linewidth}{\scriptsize Voltage noise and cell variation on charge-limited scenarios (tight + ageing C = 2); payload/terrain: plant differs from the controller model (SOH 1.0/0.85, k = 1.0/1.1).}
+\end{table}

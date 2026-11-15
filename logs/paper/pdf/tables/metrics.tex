@@ -1,0 +1,24 @@
+\begin{table*}[t]
+\centering
+\caption{Short- and long-term metrics, mean over all scenarios and episodes.}
+\label{tab:metrics}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrrrrr}
+\toprule
+Method & Done [\%] & Time [min] & Energy [kJ] & QoS viol. [\%] & Reserve viol. [\%] & $\Delta$SOH [ppm/mission] & Decision [ms] \\
+\midrule
+AS-MF & 98.8 & 29.91 & 29.24 & \textbf{0.00} & 38.8 & 31.73 & <0.001 \\
+QoS-EPD & \textbf{100.0} & 22.65 & 27.13 & 0.14 & 17.2 & 30.11 & 0.057 \\
+BA-EPD & 99.2 & 20.39 & 27.69 & 0.15 & 23.9 & 30.56 & 0.057 \\
+BA-EPD+SOH & \textbf{100.0} & 20.78 & 27.61 & 0.32 & 21.7 & 30.50 & 0.89 \\
+\midrule
+Lag-RLS & \textbf{100.0} & 21.64 & \textbf{26.84} & 0.10 & \textbf{5.7} & \textbf{29.90} & 1.42 \\
+\midrule
+Lag-RLS (full info) & 100.0 & 21.62 & 26.85 & 0.03 & 4.0 & 29.90 & 0.42 \\
+Oracle-obs & 100.0 & 21.66 & 26.95 & 0.13 & 8.8 & 29.97 & – \\
+Oracle & 100.0 & 21.52 & 26.75 & 0.03 & 4.6 & 29.82 & – \\
+\bottomrule
+\end{tabular}
+\par\vspace{2pt}\parbox{\linewidth}{\scriptsize Reserve viol.: share of missions ending below SOC 0.05. $\Delta$SOH: Xu et al. cycle-ageing model per mission. Decision time: Python, one core, per control step (1 s).}
+\end{table*}

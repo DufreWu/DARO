@@ -1,0 +1,19 @@
+\begin{table*}[t]
+\centering
+\caption{On-line SOH estimation from BMS voltage/current (true SOH unknown). Mean absolute error at time t, bias and 95th percentile of |error| at mission end, median time after which |error| stays $\leq$ 0.02.}
+\label{tab:soh_est}
+\footnotesize
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lrrrrrrrrr}
+\toprule
+True SOH & |e| 30s & |e| 60s & |e| 120s & |e| 300s & |e| 600s & |e| 1200s & Bias (end) & P95 |e| & t\_conv [s] \\
+\midrule
+1.00 & 0.009 & 0.011 & 0.012 & 0.014 & 0.012 & 0.012 & $-$0.011 & 0.040 & 1 \\
+0.95 & 0.018 & 0.016 & 0.016 & 0.018 & 0.016 & 0.015 & $-$0.011 & 0.040 & 30 \\
+0.90 & 0.023 & 0.022 & 0.023 & 0.023 & 0.021 & 0.019 & $-$0.013 & 0.050 & 64 \\
+0.85 & 0.037 & 0.035 & 0.035 & 0.035 & 0.031 & 0.025 & $-$0.017 & 0.080 & 520 \\
+0.80 & 0.054 & 0.056 & 0.057 & 0.053 & 0.046 & 0.036 & $-$0.024 & 0.100 & 840 \\
+\bottomrule
+\end{tabular}
+\par\vspace{2pt}\parbox{\linewidth}{\scriptsize 5 SOH levels $\times$ C = 1, 2, 3 $\times$ full/charge-limited start; BMS + battery realism. The estimate is biased low, i.e. conservative.}
+\end{table*}
