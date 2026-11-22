@@ -28,6 +28,9 @@ except ImportError:
 
 
 DEFAULT_FIT_PATH = Path(__file__).resolve().parent / 'lipo_fit_parameters.json'
+# Time-domain 2RC (battery_model/fit_pulse_rc.py: 1C pulses, slow polarisation, data-fitted ageing).
+PULSE_FIT_PATH = Path(__file__).resolve().parent / 'pulse_rc_fit.json'
+ECM_MODEL = 'timedomain'   # 'timedomain' (default) | 'eis' (ms-scale EIS 2RC, legacy)
 _ECM_KEYS = ('R0', 'R1', 'R2', 'C1', 'C2')
 
 
@@ -59,6 +62,13 @@ class ECMParams:
     fit_coeffs: Optional[dict] = None
     r_scale: float = 1.0  # Ns / Np, applied to R (C is divided by it)
     soc_clip: tuple = (0.0, 1.0)  # SOC range used when evaluating the fit
+    # Time-domain model: R_j(SOC, SOH) = exp(poly(SOC)) * r_scale * (1 + k_j (1 - SOH)), fixed taus
+    # (C_j = tau_j / R_j). k_R0 = resistance_aging_factor. EIS model: R1, R2 do not age.
+    model: str = 'eis'
+    tau1_s: float = 0.0
+    tau2_s: float = 0.0
+    k_r1: float = 0.0
+    k_r2: float = 0.0
     source: str = 'constant_fallback'
 
     @classmethod
@@ -81,12 +91,42 @@ class ECMParams:
         return cls(**kw)
 
     @classmethod
+    def from_pulse_json(cls, path=PULSE_FIT_PATH, pack_v_nom: float = 14.8,
+                        pack_capacity_ah: float = 5.0, cell_json=DEFAULT_FIT_PATH,
+                        **overrides) -> 'ECMParams':
+        """Time-domain 2RC identified from the 1C pulses (fit_pulse_rc.py): R_i (resistance at
+        1 s, incl. the ms EIS arcs), two slow branches with fixed taus, SOH factors per branch."""
+        with open(path) as fh:
+            m = json.load(fh)['model']
+        cell = {}
+        if Path(cell_json).exists():
+            with open(cell_json) as fh:
+                cell = json.load(fh).get('cell', {})
+        n_s = pack_v_nom / float(cell.get('nominal_voltage_v', 3.7))
+        n_p = pack_capacity_ah / float(cell.get('capacity_ah', 1.0))
+        r_scale = n_s / n_p
+        coeffs = {'R0': m['R_i']['coefficients'], 'R1': m['R_1']['coefficients'],
+                  'R2': m['R_2']['coefficients']}
+        ref = {k: math.exp(np.polyval(c, 0.5)) * r_scale for k, c in coeffs.items()}
+        kw = dict(Rs=ref['R0'], R1=ref['R1'], C1=m['tau1'] / ref['R1'], R2=ref['R2'],
+                  C2=m['tau2'] / ref['R2'], fit_coeffs=coeffs, r_scale=r_scale,
+                  soc_clip=(0.15, 1.0),        # range covered by the pulse data
+                  model='timedomain', tau1_s=float(m['tau1']), tau2_s=float(m['tau2']),
+                  resistance_aging_factor=float(m['R_i']['k_soh']),
+                  k_r1=float(m['R_1']['k_soh']), k_r2=float(m['R_2']['k_soh']),
+                  source=f'pulse_fit:{Path(path).name}')
+        kw.update(overrides)
+        return cls(**kw)
+
+    @classmethod
     def default(cls, robot: Optional['RobotParams'] = None, **overrides) -> 'ECMParams':
-        """Fit-file parameters when available, otherwise constant fallback."""
+        """ECM_MODEL fit when available ('timedomain' pulse fit or 'eis' fit), else constant fallback."""
+        r = robot or RobotParams()
+        kw = dict(pack_v_nom=r.V_nom, pack_capacity_ah=r.Q_n / 3600.0)
+        if ECM_MODEL == 'timedomain' and PULSE_FIT_PATH.exists():
+            return cls.from_pulse_json(PULSE_FIT_PATH, **kw, **overrides)
         if DEFAULT_FIT_PATH.exists():
-            r = robot or RobotParams()
-            return cls.from_fit_json(DEFAULT_FIT_PATH, pack_v_nom=r.V_nom,
-                                     pack_capacity_ah=r.Q_n / 3600.0, **overrides)
+            return cls.from_fit_json(DEFAULT_FIT_PATH, **kw, **overrides)
         return cls(**overrides)
 
     def values(self, soc: float) -> tuple[float, float, float, float, float]:
@@ -94,9 +134,20 @@ class ECMParams:
         if not self.fit_coeffs:
             return self.Rs, self.R1, self.C1, self.R2, self.C2
         s = float(np.clip(soc, *self.soc_clip))
-        v = {k: math.exp(np.polyval(self.fit_coeffs[k], s)) for k in _ECM_KEYS}
         k = self.r_scale
+        if self.model == 'timedomain':
+            r0, r1, r2 = (math.exp(np.polyval(self.fit_coeffs[n], s)) * k for n in ('R0', 'R1', 'R2'))
+            return r0, r1, self.tau1_s / r1, r2, self.tau2_s / r2
+        v = {n: math.exp(np.polyval(self.fit_coeffs[n], s)) for n in _ECM_KEYS}
         return v['R0'] * k, v['R1'] * k, v['C1'] / k, v['R2'] * k, v['C2'] / k
+
+    def aged(self, soc: float, soh: float) -> tuple[float, float, float, float, float]:
+        """(R0, R1, C1, R2, C2) at SOC and SOH: R_j x (1 + k_j (1 - SOH)), time constants kept."""
+        r0, r1, c1, r2, c2 = self.values(soc)
+        g0 = 1.0 + self.resistance_aging_factor * (1.0 - soh)
+        g1 = 1.0 + self.k_r1 * (1.0 - soh)
+        g2 = 1.0 + self.k_r2 * (1.0 - soh)
+        return r0 * g0, r1 * g1, c1 / g1, r2 * g2, c2 / g2
 
 
 @dataclass
@@ -120,6 +171,33 @@ class StressParams:
     low_soc_threshold: float = 0.5
 
 
+# Discrete CPU DVFS levels (cpufreq scaling_available_frequencies, kHz). The action's
+# frequency component is a level INDEX 0..N_FREQ_LEVELS-1; observations report GHz.
+CPU_CLOCK_KHZ = (499200, 652800, 806400, 960000, 1113600, 1267200, 1420800,
+                 1574400, 1728000, 1881600, 2035200)
+CPU_FREQ_GHZ = np.array(CPU_CLOCK_KHZ, dtype=float) / 1e6
+N_FREQ_LEVELS = len(CPU_CLOCK_KHZ)
+
+
+def freq_level(freq_ghz):
+    """Index of the lowest DVFS level >= freq_ghz (clipped to the table). Rounding UP
+    keeps a frequency that meets QoS meeting it. Accepts scalars or arrays."""
+    f = np.asarray(freq_ghz, dtype=float)
+    k = np.clip(np.searchsorted(CPU_FREQ_GHZ, f - 1e-9, side='left'), 0, N_FREQ_LEVELS - 1)
+    return int(k) if np.ndim(k) == 0 else k
+
+
+def quantize_freq(freq_ghz):
+    """Frequency [GHz] of freq_level(freq_ghz), i.e. the level the CPU actually runs at."""
+    out = CPU_FREQ_GHZ[freq_level(freq_ghz)]
+    return float(out) if np.ndim(out) == 0 else out
+
+
+def freq_action(speed: float, freq_ghz: float) -> np.ndarray:
+    """Env action [speed, level index] for a desired (speed, frequency in GHz)."""
+    return np.array([speed, freq_level(freq_ghz)], dtype=np.float32)
+
+
 @dataclass
 class RobotParams:
     Q_n: float = 5 * 3600.0  # [As], pack capacity in series remains 5 Ah
@@ -128,14 +206,17 @@ class RobotParams:
     v_min: float = 0.5
     v_max: float = 5.0
     a_max: float = 0.75  # m/s², illustrative acceleration limit
-    f_min: float = 0.499
-    f_max: float = 2.0
+    f_min: float = float(CPU_FREQ_GHZ[0])    # lowest / highest DVFS level [GHz]
+    f_max: float = float(CPU_FREQ_GHZ[-1])
     dt: float = 1.0
     T_amb: float = 25.0  # Celsius
     mission_distance_m: float = 500.0
     max_steps: int = 1200
     n_apps: int = 2
-    qos_ref: list[float] = field(default_factory=lambda: [15.0, 15.0])
+    # QoS target [batch/s] for the fitted throughput model: with the 1.05 margin at the worst-case
+    # workload (1.2 c) the QoS frequency spans the DVFS range (C=1: 0.65-1.27 GHz over 1-5 m/s,
+    # C=2: 0.81-1.73, C=3: 0.96-1.88 GHz up to 4.3 m/s). Was 15 with the old 1/(1+0.1 v c) model.
+    qos_ref: list[float] = field(default_factory=lambda: [25.0, 25.0])
     # Reward (see RobotEnv.reward_terms). E_d is energy per mission metre:
     #   E_d = w_energy * E_t / L   [J/m], so sum(E_d) = w_energy * (mission J/m).
     # w_energy [1/(J/m)] = 3 / e_ref, with e_ref = 5.17 J/m (= 1.44 Wh/km, minimum
@@ -220,6 +301,18 @@ class RobotParams:
     compute_base_w: float = 2.0       # legacy only
     compute_dynamic_w: float = 1.5    # legacy, and DVFS slope in 'measured'
     aux_power_w: float = 2.0          # legacy only
+    # Motor winding thermal model (illustrative, NOT calibrated): the hotter the motor,
+    # the higher its copper resistance and losses, so fast driving costs extra energy.
+    #   P_motor = P_poly(v, a) * (1 + beta * dT),   dT = winding temperature above ambient
+    #   C_m d(dT)/dt = h * P_poly + (P_motor - P_poly) - G_m * dT
+    # Steady state dT_ss = h P_poly / (G_m - beta P_poly); the extra loss grows ~ P_poly^2
+    # (~ v^6): +4 % at 3 m/s, +8 % at 4 m/s, +16 % at 5 m/s (dT_ss 17 / 32 / 62 K).
+    # Time constant C_m / G_m = 300 s. motor_thermal_loss = False restores the cold-motor fit.
+    motor_thermal_loss: bool = True
+    motor_heat_frac: float = 0.3                     # h: share of P_poly dissipated as heat
+    motor_temp_coeff_per_k: float = 0.0025           # beta: loss increase per kelvin
+    motor_thermal_capacity_j_per_k: float = 45.0     # C_m
+    motor_thermal_conductance_w_per_k: float = 0.15  # G_m
     # Simple lumped thermal model; calibration required.
     thermal_capacity_j_per_k: float = 400.0
     thermal_conductance_w_per_k: float = 0.8
@@ -265,10 +358,9 @@ def _voc(soc: float, soh: float = 1.0, V_nom: float = 14.8) -> float:
     return v + VOC_LOAD_DROP_V
 
 
-def motor_power(speed: float, acceleration: float = 0.0,
-                params: Optional[RobotParams] = None) -> float:
-    """Motor power [W]: fitted steady-speed polynomial + acceleration term.
-
+def motor_power_cold(speed: float, acceleration: float = 0.0,
+                     params: Optional[RobotParams] = None) -> float:
+    """Motor power [W] of the steady-speed fit (motor at ambient temperature):
     P = b0 + b1 v + b2 v^2 + b3 v^3 + k_a |a| v.  Accepts scalars or arrays.
     """
     p = params or RobotParams()
@@ -280,17 +372,59 @@ def motor_power(speed: float, acceleration: float = 0.0,
     return float(out) if np.ndim(out) == 0 else out
 
 
+def motor_temp_rise_ss(p_cold, params: Optional[RobotParams] = None):
+    """Steady-state winding temperature above ambient [K] at cold-fit power p_cold [W]."""
+    p = params or RobotParams()
+    pc = np.maximum(0.0, np.asarray(p_cold, dtype=float))
+    den = np.maximum(p.motor_thermal_conductance_w_per_k - p.motor_temp_coeff_per_k * pc,
+                     0.2 * p.motor_thermal_conductance_w_per_k)     # no thermal runaway
+    out = p.motor_heat_frac * pc / den
+    return float(out) if np.ndim(out) == 0 else out
+
+
+def motor_power(speed: float, acceleration: float = 0.0,
+                params: Optional[RobotParams] = None, temp_rise: Optional[float] = None) -> float:
+    """Motor electrical power [W] incl. the temperature-dependent loss:
+    P = P_cold(v, a) * (1 + beta * dT). temp_rise = winding temperature above ambient
+    [K]; None = steady state for this speed (what planners / steady analyses use).
+    Accepts scalars or arrays."""
+    p = params or RobotParams()
+    pc = motor_power_cold(speed, acceleration, p)
+    if not p.motor_thermal_loss:
+        return pc
+    dT = motor_temp_rise_ss(pc, p) if temp_rise is None else temp_rise
+    out = np.asarray(pc) * (1.0 + p.motor_temp_coeff_per_k * np.asarray(dT))
+    return float(out) if np.ndim(out) == 0 else out
+
+
+def motor_thermal_factor(speed, params: Optional[RobotParams] = None):
+    """Steady-state P_motor / P_cold at constant speed (1 if the thermal loss is off)."""
+    p = params or RobotParams()
+    pc = motor_power_cold(speed, 0.0, p)
+    return np.asarray(motor_power(speed, 0.0, p)) / np.maximum(pc, 1e-9)
+
+
 def compute_cpu_power(freq_ghz, base_power: float = 4.0, alpha_cpu: float = 1.5):
     """CPU power [W] = base + alpha (f / 2 GHz)^3. Accepts scalars or arrays."""
     out = base_power + alpha_cpu * (np.maximum(0.0, freq_ghz) / 2.0) ** 3
     return float(out) if np.ndim(out) == 0 else out
 
 
-# Throughput model (single source of truth; baselines use the inverses below):
-#   thr = THR_PEAK * (f / THR_F_REF) / (1 + THR_SPEED_COEF * v * c)
-THR_PEAK = 35.0          # throughput at f = THR_F_REF, v = 0
-THR_F_REF = 2.0          # [GHz]
-THR_SPEED_COEF = 0.1     # [1 / (m/s)] per unit complexity
+# Throughput model (single source of truth; baselines use the inverses below), fitted to
+# the measured high-complexity curves of the energy-modelling tool
+# (figures/data/throughput_high_complexity.csv: DVFS levels 499.2-2035.2 MHz at 1 and 4 m/s,
+# endpoints at 2/3/5 m/s; RMSE 0.43 batch/s, max error 0.85 batch/s):
+#   s   = v * c / THR_C_REF          workload load: speed x complexity, 1 = 1 m/s at high complexity
+#   thr = A - B s^P + (G + D s^R) (f - THR_F_REF),   clipped at THR_MIN
+# Linear in f (closed-form inverse), strictly decreasing in s for f <= THR_F_REF (inverse by
+# bisection). Throughput saturates in f (0.5 -> 2.04 GHz gains 20 % at 1 m/s, 70 % at 5 m/s,
+# high complexity); speed costs throughput mostly at low frequency.
+THR_A, THR_B, THR_P = 29.972693795717916, 0.0012670335270440827, 4.862540015188641
+THR_G, THR_D, THR_R = 2.2952112821311688, 0.8116839357565258, 1.1262643686746012
+THR_F_REF = float(CPU_FREQ_GHZ[-1])   # [GHz] top DVFS level (fit reference)
+THR_C_REF = 3.0                       # complexity of the measured curves ('high')
+THR_MIN = 0.1                         # [batch/s] floor (model extrapolated far beyond the data)
+THR_S_MAX = 20.0                      # bisection bracket for s (thr(s_max) is at the floor)
 
 
 # Measured computing power [W] at the QoS-limited CPU frequency, ESTIMATED from the
@@ -321,8 +455,7 @@ def measured_compute_power(speed, freq_ghz, complexity, p: 'RobotParams'):
     k = min(int(np.searchsorted(COMP_TABLE_C, c, side='right')) - 1, len(COMP_TABLE_C) - 2)
     w = (c - COMP_TABLE_C[k]) / (COMP_TABLE_C[k + 1] - COMP_TABLE_C[k])
     p_tab = (1.0 - w) * rows[k] + w * rows[k + 1]
-    f_q = np.clip(throughput_freq_required(np.asarray(speed, dtype=float), max(p.qos_ref), c),
-                  p.f_min, p.f_max)
+    f_q = quantize_freq(throughput_freq_required(np.asarray(speed, dtype=float), max(p.qos_ref), c))
     f = np.maximum(0.0, np.asarray(freq_ghz, dtype=float))
     out = p.compute_scale * p_tab + p.compute_dynamic_w * ((f / 2.0) ** 3 - (f_q / 2.0) ** 3)
     return float(out) if np.ndim(out) == 0 else out
@@ -337,16 +470,36 @@ def non_motor_power(speed, freq_ghz, complexity, p: 'RobotParams'):
     raise ValueError(f'unknown compute_model {p.compute_model!r}')
 
 
+def _thr_raw(s, f):
+    """Unclipped throughput at workload load s and frequency f (f capped at THR_F_REF)."""
+    s = np.maximum(0.0, s)
+    df = np.minimum(f, THR_F_REF) - THR_F_REF
+    return THR_A - THR_B * s ** THR_P + (THR_G + THR_D * s ** THR_R) * df
+
+
+def _thr_load(freq_ghz, thr):
+    """Workload load s >= 0 at which frequency f gives throughput thr (bisection; the model
+    is strictly decreasing in s). 0 if thr >= thr(s=0), THR_S_MAX if below the bracket."""
+    f, q = np.broadcast_arrays(np.asarray(freq_ghz, dtype=float), np.asarray(thr, dtype=float))
+    lo, hi = np.zeros(f.shape), np.full(f.shape, THR_S_MAX)
+    for _ in range(50):
+        mid = 0.5 * (lo + hi)
+        above = _thr_raw(mid, f) >= q
+        lo, hi = np.where(above, mid, lo), np.where(above, hi, mid)
+    return 0.5 * (lo + hi)
+
+
 def compute_throughput(speed, freq_ghz, complexity=1.0):
-    out = (THR_PEAK * (np.asarray(freq_ghz, dtype=float) / THR_F_REF)
-           / (1.0 + THR_SPEED_COEF * np.asarray(speed, dtype=float) * complexity))
+    s = np.asarray(speed, dtype=float) * complexity / THR_C_REF
+    out = np.maximum(THR_MIN, _thr_raw(s, np.asarray(freq_ghz, dtype=float)))
     return float(out) if np.ndim(out) == 0 else out
 
 
 def throughput_freq_required(speed, thr_target, complexity=1.0):
-    """CPU frequency [GHz] giving throughput thr_target (inverse in f; unclipped)."""
-    v = np.asarray(speed, dtype=float)
-    out = thr_target * THR_F_REF * (1.0 + THR_SPEED_COEF * v * complexity) / THR_PEAK
+    """CPU frequency [GHz] giving throughput thr_target (inverse in f; unclipped, may exceed
+    f_max when the target is unreachable)."""
+    s = np.maximum(0.0, np.asarray(speed, dtype=float) * complexity / THR_C_REF)
+    out = THR_F_REF + (thr_target - THR_A + THR_B * s ** THR_P) / (THR_G + THR_D * s ** THR_R)
     return float(out) if np.ndim(out) == 0 else out
 
 
@@ -355,22 +508,21 @@ def throughput_max_speed(freq_ghz: float, thr_target: float, complexity: float =
 
     Returns 0 if thr_target is unreachable even at standstill, inf if c <= 0.
     """
-    k = THR_PEAK * (freq_ghz / THR_F_REF) / thr_target - 1.0
-    if k <= 0.0:
+    if _thr_raw(0.0, freq_ghz) < thr_target:
         return 0.0
     if complexity <= 0.0:
         return float('inf')
-    return k / (THR_SPEED_COEF * complexity)
+    return float(_thr_load(freq_ghz, thr_target)) * THR_C_REF / complexity
 
 
 def throughput_complexity(speed: float, freq_ghz: float, thr: float) -> Optional[float]:
     """Complexity implied by an observed throughput (inverse in c).
 
-    None if not identifiable (speed ~ 0 or no throughput).
+    None if not identifiable (speed ~ 0, or throughput at the floor).
     """
-    if speed <= 1e-6 or thr <= 1e-9:
+    if speed <= 1e-6 or thr <= THR_MIN + 1e-9:
         return None
-    return (THR_PEAK * (freq_ghz / THR_F_REF) / thr - 1.0) / (THR_SPEED_COEF * speed)
+    return float(_thr_load(freq_ghz, thr)) * THR_C_REF / speed
 
 class ECMBattery:
     """Constant-power 2RC ECM with exact first-order RC transitions."""
@@ -412,6 +564,8 @@ class ECMBattery:
         e = self.ecm
         r0_base, r1, c1, r2, c2 = e.values(self.soc)
         r0 = self._resistance(r0_base)
+        if e.k_r1 or e.k_r2:         # time-domain model: the slow branches age too (tau kept)
+            _, r1, c1, r2, c2 = e.aged(self.soc, self.soh)
         ocv = self._ocv()
         u = ocv - self.V1 - self.V2
         disc = u * u - 4.0 * r0 * power_w
@@ -487,7 +641,7 @@ class RobotEnv(_Base):
         self.complexity, self.mode = float(complexity), mode
         # Per-step multiplicative complexity disturbance U(1-j, 1+j); seeded by
         # reset(seed=...). Default: 0.2 in 'train', 0 otherwise.
-        self.complexity_jitter = (0.2 if mode == 'train' else 0.0) \
+        self.complexity_jitter = (0.05 if mode == 'train' else 0.0) \
             if complexity_jitter is None else float(complexity_jitter)
         if not 0.0 <= self.complexity_jitter < 1.0:
             raise ValueError('complexity_jitter must be in [0, 1).')
@@ -498,8 +652,10 @@ class RobotEnv(_Base):
         if len(self.robot.qos_ref) != self.robot.n_apps:
             raise ValueError('qos_ref length must equal n_apps.')
         self.n_apps = self.robot.n_apps
-        self.action_low = np.array([self.robot.v_min, self.robot.f_min], dtype=np.float32)
-        self.action_high = np.array([self.robot.v_max, self.robot.f_max], dtype=np.float32)
+        # Action [speed (m/s), CPU DVFS level index 0..N_FREQ_LEVELS-1]. Continuous agents
+        # (SAC) use action_low/high and the index is rounded in step().
+        self.action_low = np.array([self.robot.v_min, 0.0], dtype=np.float32)
+        self.action_high = np.array([self.robot.v_max, N_FREQ_LEVELS - 1.0], dtype=np.float32)
         # [v, f, SOC, SOH, temperature, terminal voltage, distance remaining,
         #  last current, app throughputs..., app QoS targets...,
         #  mission length L, fraction of the mission remaining]
@@ -509,7 +665,9 @@ class RobotEnv(_Base):
         self.obs_dim = 10 + 2 * self.n_apps
         self.act_dim = 2
         if spaces is not None:
-            self.action_space = spaces.Box(self.action_low, self.action_high, dtype=np.float32)
+            self.action_space = spaces.Tuple((
+                spaces.Box(self.action_low[:1], self.action_high[:1], dtype=np.float32),
+                spaces.Discrete(N_FREQ_LEVELS)))
             self.observation_space = spaces.Box(low=-np.inf, high=np.inf,
                                                 shape=(self.obs_dim,), dtype=np.float32)
         self.np_random = np.random.default_rng()
@@ -520,6 +678,10 @@ class RobotEnv(_Base):
         # dt / period, the nominal complexity is re-drawn from complexity_levels.
         self.complexity_switch_period_s = 0.0
         self.complexity_levels: tuple = ()
+        # Deterministic schedule (reset option 'complexity_schedule': (period_s, [levels])):
+        # complexity = levels[k % len(levels)] during [k period, (k + 1) period).
+        self.complexity_schedule: tuple = ()
+        self.complexity_schedule_period_s = 0.0
         self._reset_internal()
 
     def _reset_internal(self):
@@ -529,6 +691,7 @@ class RobotEnv(_Base):
         self.stress_model = BatteryStress(self.stress_params, self.robot)
         self.v_obs = 0.0
         self.f_obs = self.robot.f_min
+        self.motor_temp_rise_k = 0.0     # winding temperature above ambient (cold start)
         self.distance_m = 0.0
         self.step_count = 0
         self.thr = [compute_throughput(0.0, self.f_obs, self.complexity)] * self.n_apps
@@ -572,6 +735,14 @@ class RobotEnv(_Base):
                 self.complexity_levels = tuple(float(x) for x in options.get('complexity_levels', ()))
                 if self.complexity_switch_period_s > 0 and not self.complexity_levels:
                     raise ValueError('complexity_switch_period_s needs complexity_levels.')
+            if 'complexity_schedule' in options:
+                sched = options['complexity_schedule']
+                if sched:
+                    self.complexity_schedule_period_s = float(sched[0])
+                    self.complexity_schedule = tuple(float(x) for x in sched[1])
+                    complexity = self.complexity_schedule[0]
+                else:
+                    self.complexity_schedule, self.complexity_schedule_period_s = (), 0.0
             if 'mission_distance_m' in options:
                 d = float(options['mission_distance_m'])
                 if not (math.isfinite(d) and d > 0):
@@ -672,12 +843,14 @@ class RobotEnv(_Base):
     def step(self, action: Sequence[float], ext_Pe: Optional[float] = None):
         if self._finished:
             raise RuntimeError('Episode finished; call reset() before step().')
+        if isinstance(action, tuple) and len(action) == 2:      # action_space.sample()
+            action = [float(np.asarray(action[0]).reshape(-1)[0]), float(action[1])]
         action = np.asarray(action, dtype=float)
         if action.shape != (2,) or not np.all(np.isfinite(action)):
-            raise ValueError('Action must be a finite pair [speed, CPU frequency].')
+            raise ValueError('Action must be a finite pair [speed, CPU DVFS level index].')
         p = self.robot
         v_cmd = float(np.clip(action[0], p.v_min, p.v_max))
-        f_cmd = float(np.clip(action[1], p.f_min, p.f_max))
+        f_cmd = float(CPU_FREQ_GHZ[int(np.clip(np.rint(action[1]), 0, N_FREQ_LEVELS - 1))])
         delta_v = np.clip(v_cmd - self.v_obs, -p.a_max * p.dt, p.a_max * p.dt)
         v_new = max(0.0, self.v_obs + float(delta_v))
         accel = float(delta_v) / p.dt
@@ -688,11 +861,15 @@ class RobotEnv(_Base):
         if (self.complexity_switch_period_s > 0
                 and self.np_random.random() < p.dt / self.complexity_switch_period_s):
             self.complexity = float(self.np_random.choice(self.complexity_levels))
+        if self.complexity_schedule:
+            k = int(self.step_count * p.dt // self.complexity_schedule_period_s)
+            self.complexity = self.complexity_schedule[k % len(self.complexity_schedule)]
         c = self.complexity
         if self.complexity_jitter > 0:
             j = self.complexity_jitter
             c *= float(self.np_random.uniform(1.0 - j, 1.0 + j))
-        motor_w = motor_power(v_new, accel, p)
+        motor_cold_w = motor_power_cold(v_new, accel, p)
+        motor_w = motor_power(v_new, accel, p, temp_rise=self.motor_temp_rise_k)
         # compute_w = all non-motor power (compute board + auxiliaries for 'measured').
         compute_w = non_motor_power(v_new, f_cmd, c, p)
         aux_w = p.aux_power_w if p.compute_model == 'legacy' else 0.0
@@ -721,6 +898,11 @@ class RobotEnv(_Base):
             reason = str(exc)
             current, voltage, soc = self.battery.current_a, self.battery.voltage_v, self.battery.soc
             energy_j, stress, delta_distance = 0.0, 0.0, 0.0
+        if p.motor_thermal_loss and reason is None:   # winding heats with the losses
+            heat_w = p.motor_heat_frac * motor_cold_w + (motor_w - motor_cold_w)
+            self.motor_temp_rise_k += active_dt * (
+                heat_w - p.motor_thermal_conductance_w_per_k * self.motor_temp_rise_k
+            ) / p.motor_thermal_capacity_j_per_k
         self.v_obs, self.f_obs = v_new, f_cmd
         self.thr = [compute_throughput(v_new, f_cmd, c)] * self.n_apps
         qos_ratio = [self.thr[i] / p.qos_ref[i] for i in range(self.n_apps)]
@@ -745,9 +927,10 @@ class RobotEnv(_Base):
                     aux_power_w=aux_w, power_w=total_w, current_a=current,
                     voltage_v=voltage, soc=soc, soh=self.battery.soh,
                     temperature_c=self.battery.temperature_c,
+                    motor_temp_c=p.T_amb + self.motor_temp_rise_k,
                     energy_j=energy_j, total_energy_j=self.total_energy_j,
                     stress_proxy=stress, total_stress_proxy=self.total_stress,
-                    throughput=list(self.thr), qos_violation=qos_violation,
+                    throughput=list(self.thr), complexity=c, qos_violation=qos_violation,
                     **terms, R_end=R_end, reward=float(reward),
                     completed=completed, failed=failed, battery_limit=reason,
                     terminated=terminated, truncated=truncated)
@@ -768,8 +951,8 @@ def tight_soc_init(plant: dict, soh: float, c: float, distance_m: float, k: floa
     for key, val in plant.items():
         setattr(robot, key, val)
     v = np.linspace(1.0, robot.v_max, 81)
-    f = np.clip(throughput_freq_required(v, max(robot.qos_ref), 1.2 * c), robot.f_min, robot.f_max)
-    ok = throughput_freq_required(v, max(robot.qos_ref), 1.2 * c) <= robot.f_max
+    f = quantize_freq(throughput_freq_required(v, max(robot.qos_ref), 1.2 * c))
+    ok = throughput_freq_required(v, max(robot.qos_ref), 1.05 * c) <= robot.f_max
     e = (motor_power(v, 0.0, robot) + non_motor_power(v, f, c, robot)) / v
     e_need = loss_factor * k * distance_m * float(np.min(np.where(ok, e, np.inf)))
     floor = robot.soc_reserve if soc_reserve is None else float(soc_reserve)

@@ -62,6 +62,11 @@ POLICIES = {
     'Lag-RLS w/o eta':     (LagRLSEPD, dict(BMS, lag_eta=False), 'ablation'),
     'Lag-RLS w/o probe+eta': (LagRLSEPD, dict(BMS, lag_probe=False, lag_eta=False), 'ablation'),
     'Lag-RLS w/o CD':      (LagRLSEPD, dict(BMS, lag_cd=False), 'ablation'),
+    'Lag-RLS w/o QoS cost': (LagRLSEPD, dict(BMS, lag_qos='allowance'), 'ablation'),
+    # extra-sensor variants (run separately: --policies ... --out logs/paper/benchmark_sensing)
+    'Lag-RLS split power': (LagRLSEPD, dict(BMS, lag_power='split'), 'variant'),
+    'Lag-RLS event count': (LagRLSEPD, dict(BMS, lag_c_source='events'), 'variant'),
+    'Lag-RLS split+events': (LagRLSEPD, dict(BMS, lag_power='split', lag_c_source='events'), 'variant'),
     'BA-EPD (full info)':  (BatteryAwareEPD, FULL, 'reference'),
     'Lag-RLS (full info)': (LagRLSEPD, dict(FULL, lag_soh='obs'), 'reference'),
     'Oracle-obs':          ('oracle', dict(BMS, observe_c=True), 'reference'),
@@ -104,7 +109,10 @@ def _episode(name, sc, k, i, n_seed_base):
         m, dt = best, float('nan')
     else:
         pol = _Timed(cls(make_robot(cfg), cfg))
-        m = run_episode(make_env(cfg, sc), pol, seed=seed, charge_c_rate=cfg['charge_c_rate'],
+        env = make_env(cfg, sc)
+        if getattr(pol.pol, 'needs_sensors', False):
+            pol.pol.attach_sensors(env, seed)
+        m = run_episode(env, pol, seed=seed, charge_c_rate=cfg['charge_c_rate'],
                         options=sc.options())
         dt = 1e6 * pol.t / max(pol.n, 1)
     row = {x: float(m[x]) for x in METRICS}
@@ -257,7 +265,8 @@ def main():
     ap.add_argument('--out', default=os.path.join(EVAL_CONFIG['log_dir'], 'benchmark'))
     ap.add_argument('--workers', type=int, default=max(1, (os.cpu_count() or 2) - 2))
     ap.add_argument('--families', nargs='+', choices=FAMILIES, default=list(FAMILIES))
-    ap.add_argument('--policies', nargs='+', choices=list(POLICIES), default=list(POLICIES))
+    ap.add_argument('--policies', nargs='+', choices=list(POLICIES),
+                    default=[n for n, v in POLICIES.items() if v[2] != 'variant'])
     ap.add_argument('--ref', default='BA-EPD+SOH', help='reference for paired differences')
     ap.add_argument('--seed', type=int, default=None,
                     help=f"base seed (default test seed {EVAL_CONFIG['seed']}; validation: 2024)")

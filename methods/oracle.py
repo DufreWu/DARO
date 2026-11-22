@@ -32,7 +32,7 @@ from typing import Iterable, Optional
 import numpy as np
 
 from envs.robot_env import (RobotEnv, motor_power, non_motor_power, throughput_freq_required,
-                       throughput_complexity)
+                       throughput_complexity, quantize_freq, freq_action)
 
 LAM_GRID = (0.0, 0.05, 0.1, 0.2, 0.35, 0.5, 0.75, 1.0, 1.5, 2.0, 3.0, 5.0, 10.0, 30.0, 1e3)
 
@@ -45,8 +45,8 @@ class LagrangianOracle:
         self.env, self.lam, self.observe_c = env, float(lam), bool(observe_c)
         self.ema = float(config['baseline_c_ema'])
         self.c_hat: Optional[float] = None
-        self.margin = float(config['baseline_qos_margin'])
-        self.jitter = float(config['test_complexity_jitter'])
+        from .baselines import qos_allowance
+        self.margin, self.jitter = qos_allowance(config)
         p = env.robot
         self.v = np.linspace(max(p.v_min, 0.05), p.v_max, n_grid)
         self._cache = {}
@@ -71,7 +71,7 @@ class LagrangianOracle:
             c_safe = c * (1.0 + self.jitter)
             f_req = throughput_freq_required(self.v, q_ref * self.margin, c_safe)
             ok = f_req <= p.f_max + 1e-9
-            f = np.clip(f_req, p.f_min, p.f_max)
+            f = quantize_freq(f_req)
             power = motor_power(self.v, 0.0, p) + non_motor_power(self.v, f, c, p)
             L, T_ref = p.mission_distance_m, p.mission_distance_m / p.v_ref_mps
             cost = ((1.0 + self.lam) * p.w_energy / L * power + p.w_time / T_ref) / self.v
@@ -88,7 +88,7 @@ class LagrangianOracle:
         c = self._estimate_c(obs) if self.observe_c else float(self.env.complexity)
         if self.observe_c:   # continuous estimate: no cache
             self._cache = {}
-        return np.array(self._schedule(c, q_ref), dtype=np.float32)
+        return freq_action(*self._schedule(c, q_ref))
 
 
 def best_in_hindsight(make_env_fn, config: dict, seed: int, options: Optional[dict] = None,

@@ -1,0 +1,14 @@
+# Throughput (batch/s) at high complexity, read from the paper figure pixels (+-0.1 batch/s).
+# Empty cells: points not readable (markers overlap). P1-P4 and P* are the labelled points of the figure.
+freq_mhz,v1,v2,v3,v4,v5
+499.2,24.62,23.3,22.6,19.13,15.8
+652.8,25.70,,,19.96,
+806.4,26.44,,,20.81,
+960.0,26.80,,,21.70,
+1113.6,26.95,,,23.40,
+1267.2,27.66,,,24.65,
+1420.8,28.65,,,25.96,
+1574.4,28.70,,,26.48,
+1728.0,29.26,,,27.55,
+1881.6,29.62,,,28.05,
+2035.2,29.85,29.45,28.95,28.29,26.6

@@ -1,0 +1,55 @@
+{
+ "train_cells": [
+  1,
+  2
+ ],
+ "val_cells": [
+  3
+ ],
+ "n_train_pulses": 202,
+ "n_val_pulses": 91,
+ "units": "cell level; R [ohm] = exp(poly2(SOC)) * (1 + k_soh (1 - SOH)); tau [s]; pack: R x 0.8082, C / 0.8082",
+ "model": {
+  "tau1": 25.0,
+  "tau2": 110.0,
+  "R_i": {
+   "coefficients": [
+    0.7123439388555705,
+    -0.4784340426955795,
+    -1.9921966081631033
+   ],
+   "k_soh": 1.25146542980215,
+   "median_abs_log_err": 0.06780755700586794
+  },
+  "R_1": {
+   "coefficients": [
+    -1.7827697554915434,
+    1.0961308597736101,
+    -3.3752496815860322
+   ],
+   "k_soh": 0.8860707427319425,
+   "median_abs_log_err": 0.2670133142627642
+  },
+  "R_2": {
+   "coefficients": [
+    -8.772806426039939,
+    6.357978714562422,
+    -4.174469250756695
+   ],
+   "k_soh": 4.26727817556619,
+   "median_abs_log_err": 0.4754463636040718
+  }
+ },
+ "validation": {
+  "eis": {
+   "rmse_abs_median_mv": 30.704448252658164,
+   "rmse_shape_median_mv": 76.70415050740448,
+   "end_minus_start_median_mv": 83.45139244812438
+  },
+  "td": {
+   "rmse_abs_median_mv": 12.069314282881935,
+   "rmse_shape_median_mv": 14.282688647649447,
+   "end_minus_start_median_mv": 5.522934036453542
+  }
+ }
+}

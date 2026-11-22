@@ -27,14 +27,14 @@ import numpy as np
 import evaluation  # noqa: F401  (sets sys.path)
 from evaluation import EVAL_CONFIG, make_test_env, TestScenario
 from evaluation.metrics import run_episode
-from envs.robot_env import throughput_freq_required
+from envs.robot_env import throughput_freq_required, freq_action
 
 PAIRS = [(1.0, 1.0), (0.8, 1.0), (1.0, 0.6), (1.0, 0.3), (0.8, 0.3)]
 
 
 class ConstantPolicy:
     def __init__(self, v, f):
-        self.a = np.array([v, f], dtype=np.float32)
+        self.a = freq_action(v, f)              # [speed, DVFS level index]
 
     def select_action(self, obs, deterministic=True):
         return self.a

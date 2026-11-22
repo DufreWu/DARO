@@ -1,0 +1,302 @@
+% =====================================================================
+% Method section (Lag-RLS / DA-Lag-RLS). Requires amsmath, algorithm,
+% algpseudocode and the acronym package (\ac{SOC}, \ac{SOH}, \ac{QoS},
+% \ac{CPU}, \ac{DVFS}, \ac{RLS}, \ac{ECM}, \ac{OCV}).
+% Numbers in comments refer to the implementation in methods/*.py.
+% Structure follows Fig. lag_rls_structure:
+%   A. Problem Formulation  B. Real-Time Loop (estimator, decision-making)
+%   C. Lagrangian Planner (safe energy budget, Lagrangian optimization)
+% =====================================================================
+
+\section{Methodology}
+\label{sec:method}
+
+Fig.~\ref{fig:lag_rls_structure} shows the proposed controller. It jointly selects the
+driving speed and the \ac{CPU} frequency with two timescales.
+The \emph{real-time loop} runs every control step: an estimator adapts the power model and
+estimates the battery loss factor, the complexity level and the battery state (\ac{SOC} and
+\ac{SOH}) from voltage, current and throughput measurements, and the decision-making selects the speed
+and the \ac{DVFS} level that minimize a cost per meter.
+The \emph{Lagrangian planner} runs every 10~steps: it computes the safe energy budget from the
+estimated \ac{SOC} and \ac{SOH} and selects the energy price $\lambda^\ast$ used by the decision-making.
+We first formulate the problem (Section~\ref{sec:method:problem}) and then describe the
+real-time loop (Section~\ref{sec:method:rt}) and the planner (Section~\ref{sec:method:planner}).
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics[width=\textwidth]{figures/lag_rls_structure.pdf}
+  \caption{Structure of the proposed controller. In the real-time loop (every 1~s), the
+  estimator updates the \ac{SOH} and \ac{SOC}, the battery loss factor $\hat\eta$, the power model
+  $\hat P$, and the complexity level $\hat c$ from the rover observations, and the decision-making selects the speed command $v^\ast$ and
+  the \ac{DVFS} level $f^\ast$ that minimize the cost per meter, including the expected \ac{QoS}
+  penalty under the complexity variation; the rover tracks $v^\ast$ subject to its acceleration
+  limit, and $v$ and $f$ denote the measured speed and frequency. The Lagrangian planner (every 10~s) computes the safe
+  energy budget from $\widehat{\mathrm{SOC}}$ and $\widehat{\mathrm{SOH}}$, predicts the remaining
+  energy with $\hat\eta$, $\hat P$, and $\hat c$, and selects the energy
+  price $\lambda^\ast$ that trades the mission time against the battery energy and, for
+  DA-Lag-RLS, its degradation; without the degradation terms ($w_D = 0$) the controller reduces
+  to Lag-RLS.}
+  \label{fig:lag_rls_structure}
+\end{figure*}
+
+% =====================================================================
+\subsection{Problem Formulation}
+\label{sec:method:problem}
+
+At each control step $t$ (period $\Delta t = 1$~s) the controller chooses the action
+$u_t = (v_t, f_t)$, where $v_t \in [v_{\min}, v_{\max}]$ is the speed command and
+$f_t \in \mathcal{F}$ is one of the $|\mathcal{F}| = 11$ \ac{DVFS} levels (0.50--2.04~GHz).
+The rover must cover a mission of length $L$ while the perception pipeline sustains the
+throughput $q \geq q_{\mathrm{ref}}$; $q$ depends on the speed, the \ac{CPU} frequency and the environmental complexity $c$.
+The complexity is determined by the environment the rover traverses, e.g., the number of events
+the perception pipeline must process. It follows the complexity level $\bar c$ of the current
+terrain and fluctuates around it from step to step as the scene changes,
+$c_t = \bar c\,u_t$ with $u_t \sim \mathcal{U}(1-\delta, 1+\delta)$; neither $\bar c$ nor $c_t$ is
+known to the controller. Since $c_t$ is random, the requirement is stated as a chance constraint: the throughput may fall below
+$q_{\mathrm{ref}}$ in at most a fraction $\rho = 5\%$ of the steps.
+
+\paragraph{Power and throughput models}
+The electrical load power $P$ is the sum of the motor power, which depends on the
+speed, and the computing and auxiliary power $P_{\mathrm{c}}$, which depends on the speed, the \ac{CPU}
+frequency and the complexity~\cite{REF}.
+The throughput model
+$q = A - B s^{p} + (G + D s^{r})(f - f_{\mathrm{ref}})$, with the processing load
+$s = v c / c_{\mathrm{ref}}$, decreases with the speed and the complexity and increases linearly with $f$.
+A lower \ac{DVFS} level therefore saves computing power but raises the probability of a \ac{QoS} shortfall
+when the complexity fluctuates. Because the model is linear in $f$, it can also be inverted for the complexity,
+\begin{equation}
+  c = q^{-1}(v, f, q),
+  \label{eq:fq}
+\end{equation}
+which the estimator uses in Section~\ref{sec:method:estimation}.
+
+\paragraph{Objective}
+The mission objective trades travel time, energy, \ac{QoS} shortfalls and the terminal \ac{SOC} reserve:
+\begin{equation}
+\begin{aligned}
+  \min_{\{u_t\}} \;
+  J = {} & w_T \frac{T}{T_{\mathrm{ref}}}
+    + w_E \frac{E}{L}
+    + \frac{w_Q}{T_{\mathrm{ref}}} \int_0^T \psi_t\, dt
+    + w_R \,\phi\big(\mathrm{SOC}_{\mathrm{end}}\big) \\
+  \text{s.t.} \quad &
+  \Pr\big[q_t < q_{\mathrm{ref}}\big] \leq \rho,\;\;
+  \mathrm{SOC}_t \geq \mathrm{SOC}_{\mathrm{cut}},
+\end{aligned}
+  \label{eq:objective}
+\end{equation}
+where $T$ is the mission time, $T_{\mathrm{ref}} = L / v_{\mathrm{ref}}$, $E = \int P\,dt$ is the
+load energy, $\psi_t = \mathbb{1}[q_t < q_{\mathrm{ref}}] + [1 - q_t/q_{\mathrm{ref}}]^+$ penalizes
+each \ac{QoS} shortfall by its occurrence and its depth, $\mathrm{SOC}_{\mathrm{cut}}$ is the cutoff \ac{SOC} at which the battery
+is considered depleted and the mission fails, and
+$\phi(\mathrm{SOC}_{\mathrm{end}}) = \min\!\big(1, \max(0, \mathrm{SOC}_{\mathrm{res}} - \mathrm{SOC}_{\mathrm{end}}) / \mathrm{SOC}_{\mathrm{res}}\big)$
+penalizes ending the mission below the reserve $\mathrm{SOC}_{\mathrm{res}} = 5\%$.
+Writing time and energy as integrals over the travelled distance $s$,
+$T = \int_0^L ds / v$ and $E = \int_0^L e\,ds$ with the energy per meter
+$e = P / v$, makes the problem a distance-domain optimal control problem.
+
+\paragraph{Degradation-aware objective}
+The objective \eqref{eq:objective} only covers the current mission. To account for the
+battery's long-term cost, DA-Lag-RLS adds the predicted capacity loss of the mission,
+\begin{equation}
+  J_{\mathrm{DA}} = J + w_D \,\frac{\Delta\mathrm{SOH}}{1 - \mathrm{SOH}_{\mathrm{EOL}}},
+  \label{eq:da}
+\end{equation}
+where $w_D$ is the cost of one full battery life (from \ac{SOH}~=~1 to the end-of-life
+$\mathrm{SOH}_{\mathrm{EOL}}$). $\Delta\mathrm{SOH}$ is predicted with the Xu degradation model
+from the discharge half-cycle (depth of discharge, mean \ac{SOC}, temperature), the calendar
+aging during the mission, and the subsequent recharge. For $w_D = 0$, DA-Lag-RLS reduces to Lag-RLS.
+
+\paragraph{Decomposition}
+The \ac{SOC} constraint couples all steps of the mission, whereas the \ac{QoS} constraint and the
+remaining terms are local in distance. We relax the \ac{SOC} constraint with a multiplier
+$\lambda \geq 0$, which acts as the price of battery energy. For a constant complexity, the
+Hamiltonian of \eqref{eq:objective} then decouples along the distance, and the optimal action at every
+point minimizes a cost per meter that depends on the mission only through $\lambda$. This
+splits the controller into a real-time loop that minimizes the cost per meter at a given price
+(Section~\ref{sec:method:rt}) and a planner that selects the price from the battery state
+(Section~\ref{sec:method:planner}). This is the structure of the equivalent consumption
+minimization strategy.
+
+% =====================================================================
+\subsection{Real-Time Loop}
+\label{sec:method:rt}
+
+At every control step, the estimator updates the models and the battery state from the
+observations, and the decision-making selects $(v^\ast, f^\ast)$ at the current price $\lambda^\ast$.
+
+% ---------------------------------------------------------------------
+\subsubsection{Estimator}
+\label{sec:method:estimation}
+
+\paragraph{SOH and SOC}
+The coulomb-counted \ac{SOC} is referenced to the rated capacity, so on an aged battery it
+underestimates the charge drawn per unit \ac{SOC}. For each candidate $h$ on a grid
+$\mathcal{H} = \{0.70, 0.71, \dots, 1.00\}$ we compute the corrected
+$\mathrm{SOC}_t(h) = \mathrm{SOC}_0 - (\mathrm{SOC}_0 - \mathrm{SOC}_t^{\mathrm{cc}})/h$ and the
+predicted terminal voltage of the \ac{ECM},
+$\hat V_t(h) = V_{\mathrm{oc}}(\mathrm{SOC}_t(h), h) - I_t\big(R_0(h) + R_1(h) + R_2(h)\big)$,
+with $R_j(h) = R_j\,[1 + \kappa_j(1-h)]$ and the aging coefficients
+$\kappa_{0,1,2} = 1.25, 0.89, 4.27$ identified from the cell data (Table~\ref{tb:battery_parameter}). The estimate
+$\widehat{\mathrm{SOH}} = \arg\min_h \overline{(\hat V_t(h) - V_t)^2}$ minimizes an exponential
+moving average of the squared residuals over near-steady samples
+($|\Delta I| < 0.05$~A), and $\widehat{\mathrm{SOC}} = \mathrm{SOC}_t(\widehat{\mathrm{SOH}})$.
+Both enter the safe energy budget \eqref{eq:eav}.
+
+\paragraph{Loss factor}
+The load energy $\int V I\, dt$ differs from the cell energy drawn by the internal losses.
+The ratio
+$\hat\eta = Q_n \widehat{\mathrm{SOH}} \int_{\mathrm{SOC}_t}^{\mathrm{SOC}_0} V_{\mathrm{oc}}\, d\sigma \,/\, \int_0^t V I\, d\tau$,
+clipped to $[0.9, 1.3]$, converts predicted load energy into cell energy in \eqref{eq:lambda}.
+
+\paragraph{Power model}
+The nominal power models are identified on a reference platform and can deviate on the
+deployed rover (payload, terrain, compute load). We correct them on-line by \ac{RLS} on the
+measured load power $y_t = V_t I_t$:
+\begin{equation}
+  y_t = \boldsymbol\theta^\top \boldsymbol\varphi_t,\qquad
+  \boldsymbol\varphi_t = \big[\, k_{\mathrm{th}}(v)(b_0 + b_1 v),\;
+                          k_{\mathrm{th}}(v)\, b_3 v^3,\;
+                          P_{\mathrm{c}}^{\mathrm{nom}} \,\big]^\top,
+  \label{eq:rls}
+\end{equation}
+where $b_i$ are the nominal motor coefficients and $k_{\mathrm{th}}$ is the steady-state
+motor thermal-loss factor. $\boldsymbol\theta$ is updated with a forgetting factor
+$\rho = 0.9995$, projected onto $[0.3, 3]$, and only at steady speed ($|\Delta v| < 0.02$~m/s),
+since acceleration is not modeled. The corrected model $\hat P = \boldsymbol\theta^\top \boldsymbol\varphi$
+is used by both the decision-making and the planner. To make the $v^3$ term identifiable, the
+scheduled speed is scaled by $\{1, 0.75, 1.15\}$ for 30~s each at the mission start.
+
+\paragraph{Complexity}
+The controller does not observe the complexity directly; it is recovered from the measured
+throughput by \eqref{eq:fq},
+$c_t = q^{-1}(v_t, f_t, q_t)$. To avoid reacting to the step-to-step variation, the estimate $\hat c$ of the
+complexity level $\bar c$ is the mean of $c_t$ over the current segment. A new segment starts at once when $c_t$ exceeds the level by
+25\% (to protect \ac{QoS}) and after three consecutive samples when it falls 25\% below it.
+
+% ---------------------------------------------------------------------
+\subsubsection{Decision-Making}
+\label{sec:method:schedule}
+
+Given the price $\lambda^\ast$ from the planner, the decision-making minimizes the cost per meter
+\begin{equation}
+  \ell_\lambda(v, f) = \frac{1}{v}\left[
+    \Big(\frac{(1+\lambda)\,w_E}{L} + \hat\eta\,\mu_E\Big) \hat P
+    + \frac{w_T}{T_{\mathrm{ref}}} + \mu_t
+    + \frac{w_Q}{T_{\mathrm{ref}}}\, \bar\psi(v, f, \hat c) \right],
+  \label{eq:lagrangian}
+\end{equation}
+where $\mu_E$ (per joule of cell energy) and $\mu_t$ (per second) are the degradation prices
+provided by the planner (Section~\ref{sec:method:planner}); for Lag-RLS, $\mu_E = \mu_t = 0$.
+$\lambda = 0$ gives the unconstrained time--energy trade-off, and a larger $\lambda$ shifts the
+operating point towards the energy-optimal speed.
+
+Instead of a fixed \ac{DVFS} safety margin, the decision-making prices the \ac{QoS} risk
+with the expected penalty
+\begin{equation}
+  \bar\psi(v, f, \hat c) = \mathbb{E}_{c}\Big[\mathbb{1}[q < q_{\mathrm{ref}}]
+    + \big[1 - q/q_{\mathrm{ref}}\big]^+\Big],
+  \quad c = \hat c\, u\, (1+\varepsilon),
+  \label{eq:qos_cost}
+\end{equation}
+where $u \sim \mathcal{U}(1-\delta, 1+\delta)$ is the known step-to-step variation and
+$\varepsilon \sim \mathcal{U}(-0.03, 0.03)$ accounts for the error of the complexity estimate $\hat c$;
+the expectation is evaluated by quadrature (41~$\times$~7 points).
+The decision-making searches the speed grid $\mathcal{V}$ (161 points) and the \ac{DVFS} levels jointly:
+\begin{equation}
+  (v^\ast, f^\ast) = \arg\min_{v \in \mathcal{V},\, f \in \mathcal{F}}
+           \ell_{\lambda^\ast}(v, f)
+  \quad \text{s.t.} \quad \Pr\big[q < q_{\mathrm{ref}}\big] \leq \rho .
+  \label{eq:schedule}
+\end{equation}
+A level that occasionally misses the requirement is therefore chosen only where the energy it
+saves outweighs the expected penalty; without variation ($\delta = \varepsilon = 0$),
+\eqref{eq:schedule} reduces to the lowest \ac{DVFS} level that meets the requirement.
+The rover tracks the speed command $v^\ast$ subject to its acceleration limit, while $f^\ast$ is
+applied immediately.
+
+% =====================================================================
+\subsection{Lagrangian Planner}
+\label{sec:method:planner}
+\label{sec:method:pricing}
+
+Every $T_p = 10$~s the planner updates the price $\lambda^\ast$ from the estimated battery state.
+
+\paragraph{Safe energy budget}
+The energy the battery can deliver above a floor $\mathrm{SOC}_{\mathrm{f}}$ depends on both battery states:
+\begin{equation}
+  E_{\mathrm{av}}(\mathrm{SOC}, \mathrm{SOH}; \mathrm{SOC}_{\mathrm{f}})
+  = Q_n \,\mathrm{SOH} \int_{\mathrm{SOC}_{\mathrm{f}}}^{\mathrm{SOC}}
+    V_{\mathrm{oc}}(\sigma, \mathrm{SOH})\, d\sigma,
+  \label{eq:eav}
+\end{equation}
+where $Q_n$ is the rated capacity and $V_{\mathrm{oc}}$ the \ac{OCV} curve, which also
+changes with aging. The \ac{SOC} thus sets the short-term budget, and the \ac{SOH} scales
+both the capacity and the voltage at which the charge is delivered.
+The planner evaluates \eqref{eq:eav} at $(\widehat{\mathrm{SOC}}, \widehat{\mathrm{SOH}})$ for two floors:
+the safe floor $\mathrm{SOC}_{\mathrm{f}}$, which is the cutoff \ac{SOC} plus a 0.5\% margin, and the reserve
+$\mathrm{SOC}_{\mathrm{res}}$.
+
+\paragraph{Lagrangian optimization}
+The planner selects $\lambda^\ast$ from a grid
+$\Lambda = \{0, 0.05, \dots, 30, 10^3\}$ (15 values). For each $\lambda$ it predicts the
+remaining trajectory at the forecast complexity level $\hat c_{\mathrm{fc}}$ (the mean of $\hat c$ over the mission so far):
+the speed $v^\ast(\lambda)$ and energy per meter $e(\lambda)$ from \eqref{eq:schedule} with the
+corrected power model $\hat P$, and the cell energy needed for the remaining distance $d$,
+$\hat E_{\mathrm{cell}}(\lambda) = \hat\eta\,(1+\epsilon)\, e(\lambda)\, d$, where
+$\epsilon = 5\%$ is a safety margin. The planner minimizes the predicted remaining cost
+\begin{equation}
+\begin{aligned}
+  \lambda^\ast = \arg\min_{\lambda \in \Lambda}\; &
+  w_T \frac{d}{v^\ast(\lambda)\, T_{\mathrm{ref}}}
+  + w_E \frac{\hat\eta\, e(\lambda)\, d}{L}
+  + w_R \min\!\big(1, \hat\phi(\lambda)\big)
+  + w_D \frac{\widehat{\Delta\mathrm{SOH}}(\lambda)}{1 - \mathrm{SOH}_{\mathrm{EOL}}} \\
+  \text{s.t.} \quad &
+  \hat E_{\mathrm{cell}}(\lambda) \leq E_{\mathrm{av}}(\widehat{\mathrm{SOC}}, \widehat{\mathrm{SOH}}; \mathrm{SOC}_{\mathrm{f}}),
+\end{aligned}
+  \label{eq:lambda}
+\end{equation}
+where $\hat\phi(\lambda)$ is the predicted shortfall below the reserve, i.e.,
+$\big[\hat E_{\mathrm{cell}}(\lambda) - E_{\mathrm{av}}(\cdot; \mathrm{SOC}_{\mathrm{res}})\big]^+$
+converted to \ac{SOC} and normalized by $\mathrm{SOC}_{\mathrm{res}}$, and
+$\widehat{\Delta\mathrm{SOH}}(\lambda)$ is the capacity loss \eqref{eq:da} predicted for the trajectory.
+The constraint discards prices whose trajectory is predicted to deplete the battery,
+while the reserve term lets the planner use the reserve only where the time saved outweighs its penalty.
+Because $E_{\mathrm{av}}$ in \eqref{eq:eav} depends on the estimated \ac{SOH}, the same
+\ac{SOC} yields a higher energy price for an aged battery, which lowers the speed
+and, through \eqref{eq:schedule}, the \ac{CPU} frequency.
+For DA-Lag-RLS, the planner also linearizes the degradation term at the selected operating point
+into the price per joule $\mu_E$ and per second $\mu_t$ used in \eqref{eq:lagrangian}, so that the
+decision-making accounts for the degradation without evaluating the degradation model at every step.
+If no $\lambda \in \Lambda$ is feasible, the requirement cannot be met with the remaining
+charge, and the controller switches to a budget mode that keeps the energy within
+$E_{\mathrm{av}}(\cdot; \mathrm{SOC}_{\mathrm{f}})$ and maximizes the achievable throughput
+ratio $\min(1, q / q_{\mathrm{ref}})$, i.e., completion takes priority over \ac{QoS}.
+
+\paragraph{Algorithm and complexity}
+\begin{algorithm}[t]
+\caption{DA-Lag-RLS (Lag-RLS for $w_D = 0$)}
+\label{alg:lag_rls}
+\begin{algorithmic}[1]
+\State Initialize $\boldsymbol\theta \gets \mathbf 1$, $\hat\eta \gets 1$, $\widehat{\mathrm{SOH}} \gets 1$, $\lambda^\ast \gets 0$, $\mu_E, \mu_t \gets 0$
+\For{each control step $t$}
+  \State Measure $v_t, f_t, q_t, V_t, I_t, \mathrm{SOC}^{\mathrm{cc}}_t, d$
+  \State \emph{Estimator:} update $\widehat{\mathrm{SOH}}$, $\widehat{\mathrm{SOC}}$, $\hat\eta$, $\boldsymbol\theta$ (\ac{RLS}) and $\hat c$
+  \If{$t \bmod T_p = 0$} \Comment{Lagrangian planner}
+    \State Compute $E_{\mathrm{av}}$ at $\mathrm{SOC}_{\mathrm{f}}$ and $\mathrm{SOC}_{\mathrm{res}}$ by \eqref{eq:eav}
+    \State Select $\lambda^\ast$ by \eqref{eq:lambda}; update $\mu_E, \mu_t$
+    \State \textbf{if} no $\lambda$ is feasible \textbf{then} switch to budget mode
+  \EndIf
+  \State \emph{Decision-making:} $(v^\ast, f^\ast)$ by \eqref{eq:schedule}
+  \State Apply speed probing during the first 90~s; send $(v^\ast, f^\ast)$
+\EndFor
+\end{algorithmic}
+\end{algorithm}
+Algorithm~\ref{alg:lag_rls} summarizes the controller. The decision-making evaluates
+\eqref{eq:lagrangian} on the $|\mathcal{V}||\mathcal{F}|$ speed--frequency pairs; the expected
+penalty \eqref{eq:qos_cost} depends only on $\hat c$ and is recomputed only when $\hat c$ changes.
+The planner repeats the search for $|\Lambda|$ prices every $T_p$ steps, and the \ac{SOH} estimator
+evaluates $|\mathcal{H}|$ voltage predictions per step. The cost per step is therefore
+$\mathcal{O}(|\mathcal{V}||\mathcal{F}| + |\mathcal{H}| + |\Lambda||\mathcal{V}||\mathcal{F}|/T_p)$, and the mean
+decision time in our Python implementation is about 19~ms, well below the 1~s control period.

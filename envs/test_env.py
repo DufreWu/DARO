@@ -25,11 +25,12 @@ EVAL_CONFIG = {
     "test_soh_levels":        [1.00, 0.95, 0.90, 0.85, 0.80],
     "test_soc_levels":        [1.00, 0.60, 0.30],
     "test_complexity_levels": [1.0, 2.0, 3.0],
-    "test_complexity_jitter": 0.2,
+    "test_complexity_jitter": 0.1,
     "test_episodes":          10,     # seeds per scenario
     # Baselines
     "baseline_v_nom":         2.5,    # AS-MF speed [m/s]
-    "baseline_qos_margin":    1.05,
+    "baseline_qos_margin":    1.05,   # used only if qos_viol_target = 0 (worst-case design)
+    "qos_viol_target":        0.05,   # acceptable share of steps below the QoS requirement
     "baseline_c_ema":         0.3,
     # BA-EPD (battery-aware QoS-EPD); v_fast ~ reward-optimal speed with enough charge
     "baseline_v_fast":        3.9,

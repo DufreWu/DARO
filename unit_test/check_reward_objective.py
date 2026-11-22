@@ -24,7 +24,7 @@ import numpy as np
 
 from scenario_utils import (EPD, FixedSpeed, BatteryAware, make_env, make_config, run,
                             mean_runs, nominal_robot)
-from envs.robot_env import throughput_freq_required
+from envs.robot_env import throughput_freq_required, freq_action
 
 MARGINS = (1.0, 1.1, 1.2, 1.25)
 # Initial SOC grid for the 10 km tight-charge cases (QoS-EPD just finishes at the lowest).
@@ -38,7 +38,7 @@ def constant_episode(distance, v, c, m, soh=1.0, soc0=1.0, seed=1):
     f = float(np.clip(throughput_freq_required(v, max(p.qos_ref), c * m), p.f_min, p.f_max))
     ret, viol, n, done, info = 0.0, 0, 0, False, {}
     while not done:
-        _, r, te, tr, info = env.step([v, f])
+        _, r, te, tr, info = env.step(freq_action(v, f))
         ret += r
         viol += int(info['qos_violation'] > 0.0)
         n += 1

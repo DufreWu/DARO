@@ -26,7 +26,7 @@ import argparse
 import numpy as np
 
 from . import EVAL_CONFIG, make_robot
-from envs.robot_env import RobotEnv, throughput_freq_required
+from envs.robot_env import RobotEnv, throughput_freq_required, freq_action
 
 V_GRID = np.round(np.arange(1.0, 5.01, 0.25), 2)
 F_GRID = np.round(np.arange(0.5, 2.001, 0.05), 3)
@@ -53,7 +53,7 @@ def rollout(distance, complexity, policy, seed=42, jitter=None):
     obs, _ = env.reset(seed=seed)
     ret, viol, done, info = 0.0, 0, False, {}
     while not done:
-        obs, r, te, tr, info = env.step(policy(obs))
+        obs, r, te, tr, info = env.step(freq_action(*policy(obs)))   # policy gives (v, f GHz)
         ret += r
         viol += int(info['qos_violation'] > 0)
         done = te or tr

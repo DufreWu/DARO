@@ -33,14 +33,14 @@ import evaluation  # noqa: F401  (sets sys.path)
 from evaluation import EVAL_CONFIG, make_test_env, TestScenario
 from evaluation.lifetime import missions_to_eol
 from evaluation.metrics import run_episode
-from envs.robot_env import throughput_freq_required
+from envs.robot_env import throughput_freq_required, freq_action
 
 SOH_GRID = [1.0, 0.95, 0.9, 0.85, 0.8]
 
 
 class ConstantPolicy:
     def __init__(self, v, f):
-        self.a = np.array([v, f], dtype=np.float32)
+        self.a = freq_action(v, f)              # [speed, DVFS level index]
 
     def select_action(self, obs, deterministic=True):
         return self.a

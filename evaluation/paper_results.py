@@ -30,7 +30,7 @@ from methods import BatteryAwareEPD, BAEPDSohEstimate, LagRLSEPD
 from .metrics import run_episode
 from .scenarios import Scenario, build_suite, make_env, PLANTS
 from envs.test_env import make_robot
-from envs.robot_env import RobotParams, tight_soc_init
+from envs.robot_env import RobotParams, tight_soc_init, CPU_FREQ_GHZ
 
 BMS = dict(EVAL_CONFIG, battery_obs='bms', battery_realism=True)
 FULL = dict(EVAL_CONFIG, battery_obs='true', battery_realism=True)
@@ -232,7 +232,7 @@ def trajectory(out, soh=0.8, c=2.0, seed=3):
             obs, r, te, tr, info = env.step(a)
             ret += r
             done = te or tr
-            rows.append(dict(t=info['t_s'], v=float(a[0]), f=float(a[1]), soc_true=info['soc'],
+            rows.append(dict(t=info['t_s'], v=float(a[0]), f=float(CPU_FREQ_GHZ[int(a[1])]), soc_true=info['soc'],
                              soc_bms=soc_bms, soh_hat=float(getattr(pol, 'soh_hat', np.nan)),
                              lam=float(getattr(pol, '_lam', np.nan)), d=info['distance_m']))
         data[name] = dict(rows=rows, ret=ret, soc_end=rows[-1]['soc_true'], t_end=rows[-1]['t'])

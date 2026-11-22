@@ -34,7 +34,7 @@ import math
 import numpy as np
 
 from battery_model import _DEFAULT_AGING_PARAMS, _xu_fd_halfcycle, _xu_calendar_fd
-from envs.robot_env import RobotParams, _voc
+from envs.robot_env import RobotParams, _voc, quantize_freq
 
 from .baselines import BatteryAwareEPD
 from .lag_rls import LagRLSEPD
@@ -116,21 +116,10 @@ class DegAwareLagRLS(LagRLSEPD):
         self._mu_t = max(0.0, (self._deg_cost(e_cell_rem, t_rem + dT) - c0) / dT)
 
     # --- Lagrangian schedule with degradation prices -------------------------------
-    def _schedule(self, c: float, q_ref: float, lam: float):
-        p = self.p
-        f_req = self._f_req(c, q_ref)
-        ok = f_req <= p.f_max + 1e-9
-        f = np.clip(f_req, p.f_min, p.f_max)
-        e = (self._p_motor + self._p_nonmotor(f, c)) / self.v_grid
-        L = max(self._L, 1.0)
-        coef_e = (1.0 + lam) * p.w_energy / L + self._eta * self._mu_E
-        coef_t = p.w_time / (L / p.v_ref_mps) + self._mu_t
-        cost = coef_e * e + coef_t / self.v_grid
-        if not ok.any():
-            k = int(np.argmin(cost))
-            return float(self.v_grid[k]), float(p.f_max), float(e[k])
-        k = int(np.argmin(np.where(ok, cost, np.inf)))
-        return float(self.v_grid[k]), float(f[k]), float(e[k])
+    def _coefs(self, lam: float):
+        """Energy / time prices of the schedule plus the linearised degradation prices."""
+        coef_e, coef_t = super()._coefs(lam)
+        return coef_e + self._eta * self._mu_E, coef_t + self._mu_t
 
     def _f_req(self, c, q_ref):
         from envs.robot_env import throughput_freq_required

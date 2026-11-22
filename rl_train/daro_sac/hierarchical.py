@@ -52,7 +52,7 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 from envs.robot_env import (motor_power, non_motor_power, throughput_freq_required,
-                            throughput_max_speed, _voc)
+                            throughput_max_speed, _voc, freq_action)
 
 HIER_FILE = 'hierarchical.json'
 _SUM_KEYS = ('energy_j', 'stress_proxy', 'E_d', 'D_d', 'U_t', 'T_d', 'Q_d', 'R_end')
@@ -98,9 +98,8 @@ class FastQoSLayer:
     def act(self, v_ref: float) -> np.ndarray:
         p = self.p
         v = float(np.clip(min(float(v_ref), self.v_cap()), p.v_min, p.v_max))
-        f = float(np.clip(throughput_freq_required(v, self.q_ref * self.margin, self.est._c_safe()),
-                          p.f_min, p.f_max))
-        return np.array([v, f], dtype=np.float32)
+        f = throughput_freq_required(v, self.q_ref * self.margin, self.est._c_safe())
+        return freq_action(v, f)                 # [speed, DVFS level index]
 
     def margin_at(self, soc: float, soh: float, d_rem: float, c: float) -> float:
         """Charge margin (nominal model) for SOC, SOH, remaining distance, workload c."""

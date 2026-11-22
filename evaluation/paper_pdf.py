@@ -209,19 +209,19 @@ class _Plant:
 
     def __init__(self):
         from envs.robot_env import (RobotParams, ECMParams, motor_power, non_motor_power,
-                               throughput_freq_required, _voc)
+                               throughput_freq_required, _voc, quantize_freq)
         self.rp = rp = RobotParams()
         self.ecm, self.voc = ECMParams.default(rp), _voc
         self.v = np.linspace(1.0, rp.v_max, 321)
         fr = throughput_freq_required(self.v, max(rp.qos_ref), 1.2 * MOT_C)
         self.ok = fr <= rp.f_max
-        f = np.clip(fr, rp.f_min, rp.f_max)
+        f = quantize_freq(fr)
         self.p_load = motor_power(self.v, 0.0, rp) + non_motor_power(self.v, f, MOT_C, rp)
 
     def demand(self, soh):
         """Cell-side mission energy [J] vs cruise speed (OCV(SOH), R0(SOH))."""
         soc = 0.12
-        r0 = self.ecm.values(soc)[0] * (1 + self.ecm.resistance_aging_factor * (1 - soh))
+        r0 = self.ecm.aged(soc, soh)[0]
         u = self.voc(soc, soh)
         i = 2 * self.p_load / (u + np.sqrt(u * u - 4 * r0 * self.p_load))
         return MOT_LOSS * u * i * MOT_L / self.v

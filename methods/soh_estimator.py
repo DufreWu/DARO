@@ -1,7 +1,7 @@
 """On-line SOH estimation from BMS observations (shared by BA-EPD+SOH and Lag-RLS).
 
 For each candidate SOH h (grid), SOC_true(h) = SOC0 - (SOC0 - SOC_bms) / h and the predicted
-terminal voltage OCV(SOC_true(h), h) - I (R0(h) + R1 + R2) (nominal ECM, steady RC branches);
+terminal voltage OCV(SOC_true(h), h) - I (R0(h) + R1(h) + R2(h)) (nominal ECM, steady RC branches);
 h = argmin of the EMA of squared voltage residuals over near-steady steps.
 """
 
@@ -17,7 +17,7 @@ class SohEstimator:
 
     For each candidate SOH h (grid), SOC_true(h) = SOC0 - (SOC0 - SOC_bms) / h (the BMS
     counts charge against the rated capacity) and the predicted terminal voltage is
-    OCV(SOC_true(h), h) - I (R0(h) + R1 + R2) (nominal ECM, steady RC branches);
+    OCV(SOC_true(h), h) - I (R0(h) + R1(h) + R2(h)) (nominal ECM, steady RC branches);
     h = argmin of the EMA of squared voltage residuals over near-steady steps."""
 
     H_GRID = np.linspace(0.70, 1.00, 31)
@@ -48,8 +48,7 @@ class SohEstimator:
         soc_h = np.clip(self.soc0 - used / self.H_GRID, 0.0, 1.0)
         pred = np.empty(len(self.H_GRID))
         for k, (h, s) in enumerate(zip(self.H_GRID, soc_h)):
-            r0, r1, _, r2, _ = self.ecm.values(s)
-            r0 *= 1.0 + self.ecm.resistance_aging_factor * (1.0 - h)
+            r0, r1, _, r2, _ = self.ecm.aged(s, h)
             pred[k] = _voc(s, h, self.p.V_nom) - i * (r0 + r1 + r2)
         err2 = (pred - v_term) ** 2
         self._score = err2 if self._n == 0 else (1 - self.res_ema) * self._score + self.res_ema * err2

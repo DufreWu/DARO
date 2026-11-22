@@ -48,7 +48,8 @@ from typing import Optional
 import numpy as np
 
 from envs.robot_env import (RobotParams, motor_power, non_motor_power, compute_throughput,
-                            throughput_freq_required, throughput_complexity, throughput_max_speed, _voc)
+                            throughput_freq_required, throughput_complexity, throughput_max_speed, _voc,
+                            CPU_FREQ_GHZ, N_FREQ_LEVELS, quantize_freq, freq_action)
 
 from .soh_estimator import SohEstimator
 
@@ -57,13 +58,29 @@ class ASMFBaseline:
     name = 'AS-MF'
 
     def __init__(self, robot: RobotParams, config: dict):
-        self.action = np.array([config['baseline_v_nom'], robot.f_max], dtype=np.float32)
+        self.action = np.array([config['baseline_v_nom'], N_FREQ_LEVELS - 1], dtype=np.float32)
 
     def reset(self):
         pass
 
     def select_action(self, obs, deterministic=True):
         return self.action.copy()
+
+
+def qos_allowance(config: dict) -> tuple:
+    """(QoS margin, complexity allowance) used to pick the QoS frequency.
+
+    qos_viol_target = 0 (legacy): worst case, q >= margin * q_ref at c (1 + jitter).
+    qos_viol_target = rho > 0 (chance constraint): violations are acceptable in up to a
+    fraction rho of the steps, so the frequency covers the (1 - rho) quantile of the
+    per-step complexity c U(1 - jitter, 1 + jitter), i.e. c (1 + jitter (1 - 2 rho)), with
+    no extra margin (margin = 1).
+    """
+    jitter = float(config['test_complexity_jitter'])
+    rho = float(config.get('qos_viol_target', 0.0))
+    if rho <= 0.0:
+        return float(config['baseline_qos_margin']), jitter
+    return 1.0, jitter * max(0.0, 1.0 - 2.0 * rho)
 
 
 class QoSAwareEPD:
@@ -73,9 +90,8 @@ class QoSAwareEPD:
 
     def __init__(self, robot: RobotParams, config: dict, n_grid: int = 161):
         p = self.p = robot
-        self.margin = float(config['baseline_qos_margin'])
+        self.margin, self.jitter = qos_allowance(config)
         self.ema = float(config['baseline_c_ema'])
-        self.jitter = float(config['test_complexity_jitter'])
         self.n = robot.n_apps
         self.v_grid = np.linspace(max(p.v_min, 0.05), p.v_max, n_grid)
         # Steady-speed motor + aux power on the grid; compute depends on c.
@@ -102,7 +118,7 @@ class QoSAwareEPD:
         p, q = self.p, q_ref * self.margin
         f_req = throughput_freq_required(self.v_grid, q, c)
         feasible = f_req <= p.f_max + 1e-9
-        f = np.clip(f_req, p.f_min, p.f_max)
+        f = quantize_freq(f_req)                 # DVFS level actually run (rounded up)
         e_per_m = (self._p_motor + non_motor_power(self.v_grid, f, c, p)) / self.v_grid
         if feasible.any():
             k = int(np.argmin(np.where(feasible, e_per_m, np.inf)))
@@ -117,14 +133,14 @@ class QoSAwareEPD:
         q_ref = float(np.max(obs[8 + self.n:8 + 2 * self.n]))
         self._update_complexity(v, f, float(np.min(thr)))
         v_cmd, f_cmd = self.optimise(q_ref, self._c_safe())
-        return np.array([v_cmd, f_cmd], dtype=np.float32)
+        return freq_action(v_cmd, f_cmd)        # [speed, DVFS level index]
 
 
 class BatteryAwareEPD(QoSAwareEPD):
     """QoS-EPD + charge-budget check (see module docstring)."""
 
     name = 'BA-EPD'
-    F_GRID = np.linspace(0.5, 2.0, 31)
+    F_GRID = CPU_FREQ_GHZ                  # DVFS levels
     SOC_CUTOFF = 0.02          # robot_env terminates at SOC <= 0.02
 
     def __init__(self, robot: RobotParams, config: dict, n_grid: int = 161):
@@ -157,7 +173,7 @@ class BatteryAwareEPD(QoSAwareEPD):
     def _fast_action(self, q_ref, c):
         p, q = self.p, q_ref * self.margin
         v = float(np.clip(min(self.v_fast, throughput_max_speed(p.f_max, q, c)), p.v_min, p.v_max))
-        return v, float(np.clip(throughput_freq_required(v, q, c), p.f_min, p.f_max))
+        return v, quantize_freq(throughput_freq_required(v, q, c))
 
     def _plan(self, q_ref, c):
         p, d = self.p, self._d_rem
