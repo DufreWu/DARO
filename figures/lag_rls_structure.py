@@ -1,4 +1,4 @@
-"""Block diagram of DA-Lag-RLS (methods/lag_rls.py, methods/degradation_aware.py)
+"""Block diagram of DARO (methods/lag_rls.py, methods/degradation_aware.py)
 -> figures/pdf/lag_rls_structure.pdf.
 
 Layout: rover (left); real-time loop every 1 s (estimator + decision-making, top right);

@@ -1,7 +1,7 @@
 % =====================================================================
-% Method section (Lag-RLS / DA-Lag-RLS). Requires amsmath, algorithm,
+% Method section (Lag-RLS / DARO). Requires amsmath, algorithm,
 % algpseudocode and the acronym package (\ac{SOC}, \ac{SOH}, \ac{QoS},
-% \ac{CPU}, \ac{DVFS}, \ac{RLS}, \ac{ECM}, \ac{OCV}).
+% \ac{CPU}, \ac{DVFS}, \ac{RLS}, \ac{ECM}, \ac{OCV}, \ac{DOD}).
 % Numbers in comments refer to the implementation in methods/*.py.
 % Structure follows Fig. lag_rls_structure:
 %   A. Problem Formulation  B. Real-Time Loop (estimator, decision-making)
@@ -34,7 +34,7 @@ real-time loop (Section~\ref{sec:method:rt}) and the planner (Section~\ref{sec:m
   energy budget from $\widehat{\mathrm{SOC}}$ and $\widehat{\mathrm{SOH}}$, predicts the remaining
   energy with $\hat\eta$, $\hat P$, and $\hat c$, and selects the energy
   price $\lambda^\ast$ that trades the mission time against the battery energy and, for
-  DA-Lag-RLS, its degradation; without the degradation terms ($w_D = 0$) the controller reduces
+  DARO, its degradation; without the degradation terms ($w_D = 0$) the controller reduces
   to Lag-RLS.}
   \label{fig:lag_rls_structure}
 \end{figure*}
@@ -70,14 +70,147 @@ when the complexity fluctuates. Because the model is linear in $f$, it can also 
 \end{equation}
 which the estimator uses in Section~\ref{sec:method:estimation}.
 
+\paragraph{Battery model}
+The load is supplied by a lithium-polymer pack, modeled by a second-order \ac{ECM}
+with an ohmic resistance $R_0$ and two RC branches $(R_1, C_1)$ and $(R_2, C_2)$. For a
+constant load power $P_t$ over the step, the terminal voltage and the current are
+\begin{equation}
+  V_t = V_{\mathrm{oc}}(\mathrm{SOC}_t, \mathrm{SOH}) - v_{1,t} - v_{2,t} - R_0 I_t,
+  \qquad P_t = V_t I_t,
+  \label{eq:ecm}
+\end{equation}
+so that $I_t = 2P_t / \big(u_t + \sqrt{u_t^2 - 4 R_0 P_t}\big)$ with
+$u_t = V_{\mathrm{oc}} - v_{1,t} - v_{2,t}$; a power demand with $u_t^2 < 4R_0P_t$ cannot be
+delivered by the battery. The polarization voltages and the \ac{SOC} evolve as
+\begin{equation}
+  v_{j,t+1} = a_j\, v_{j,t} + (1 - a_j)\, R_j I_t,\;\; a_j = e^{-\Delta t/\tau_j},
+  \qquad
+  \mathrm{SOC}_{t+1} = \mathrm{SOC}_t - \frac{I_t\,\Delta t}{Q_n\,\mathrm{SOH}},
+  \label{eq:soc}
+\end{equation}
+for $j \in \{1, 2\}$, where $Q_n$ is the rated capacity and $\tau_j = R_j C_j$ are fixed time
+constants. Aging enters the model in three places: the usable capacity is $Q_n\,\mathrm{SOH}$, the
+resistances increase as
+\begin{equation}
+  R_j(\mathrm{SOC}, \mathrm{SOH}) = \exp\!\big(p_j(\mathrm{SOC})\big)\,\big[1 + \kappa_j (1 - \mathrm{SOH})\big],
+  \quad j \in \{0, 1, 2\},
+  \label{eq:ecm_param}
+\end{equation}
+with $p_j$ a second-order polynomial and $\kappa_j$ an aging coefficient, and the \ac{OCV} curve
+changes shape. The latter is interpolated between a fresh and an aged curve,
+$V_{\mathrm{oc}}(\mathrm{SOC}, \mathrm{SOH}) = (1 - w)\,V^{\mathrm{fr}}_{\mathrm{oc}}(\mathrm{SOC}) + w\,V^{\mathrm{ag}}_{\mathrm{oc}}(\mathrm{SOC})$
+with $w = \min\!\big(1, (1 - \mathrm{SOH}) / (1 - \mathrm{SOH}_{\mathrm{ag}})\big)$, each fitted
+to measured pack discharge curves at $\mathrm{SOH} = 1$ and $\mathrm{SOH}_{\mathrm{ag}} = 0.85$.
+Because the aged curve is lower at medium and low \ac{SOC}, an aged battery delivers less energy
+per unit of charge, in addition to its smaller capacity. The pack temperature $T$ follows a lumped
+thermal model,
+$C_{\mathrm{th}}\,\dot T = R_0 I^2 + v_1^2/R_1 + v_2^2/R_2 - G_{\mathrm{th}}\,(T - T_{\mathrm{amb}})$.
+The parameters are identified in Section~\ref{sec:exp:setup} (Table~\ref{tb:battery_parameter}).
+
+\paragraph{Degradation model}
+We describe the capacity fade by the semi-empirical cycle- and calendar-aging model of
+Xu et al.~\cite{xu2016modeling}. Accordingly, the battery \ac{SOH} is expressed as
+\begin{equation}
+  \mathrm{SOH}(t) = \frac{Q^{\mathrm{ag}}_{\mathrm{act}}(t)}{Q_n}
+  = \mathrm{SOH}_0 \exp\!\big(-f_d(t)\big),
+  \label{eq:battery_soh_define}
+\end{equation}
+where $Q^{\mathrm{ag}}_{\mathrm{act}}$ is the actual capacity of the aged battery, $\mathrm{SOH}_0$
+denotes the initial battery health, and $f_d(t)$ represents the accumulated degradation, the sum of
+the cycle and the calendar aging:
+\begin{equation}
+  f_d(t) = k_{\mathrm{cyc}} \sum_{i=1}^{N(t)} n_i\, \widetilde{S}_{\delta_i} S_{\sigma_i} S_{T_i}
+         + f_{\mathrm{cal}}(t),
+  \label{eq:battery_fd}
+\end{equation}
+where $N(t)$ is the number of cycles identified up to time $t$, $k_{\mathrm{cyc}}$ is the reference
+cycle-aging coefficient, and $n_i$ is the cycle-counting weight, equal to 1 for a full cycle and
+0.5 for a half cycle. The terms $\delta_i$, $\sigma_i$, and $T_i$ represent the \ac{DOD}, average
+\ac{SOC}, and average temperature of cycle $i$, respectively. The corresponding stress factors are
+defined as
+\begin{subequations}\label{eq:battery_soh_factor}
+\begin{align}
+  \widetilde{S}_{\delta_i} &= \frac{k_{\delta_1} + k_{\delta_3}}{k_{\delta_1}\delta_i^{k_{\delta_2}} + k_{\delta_3}}, \\
+  S_{\sigma_i} &= e^{k_\sigma(\sigma_i - \sigma_{\mathrm{ref}})}, \\
+  S_{T_i} &= e^{k_T (T_i - T_{\mathrm{ref}}) \frac{T_{\mathrm{ref}}}{T_i}},
+\end{align}
+\end{subequations}
+where $k_\sigma$, $k_T$, $k_{\delta_1}$, $k_{\delta_2}$, and $k_{\delta_3}$ are empirical stress-factor
+coefficients, while $\sigma_{\mathrm{ref}}$ and $T_{\mathrm{ref}}$ denote the reference \ac{SOC} and
+absolute temperature, respectively. The \ac{DOD} stress factor is normalized to unity at a full
+cycle, so that $k_{\mathrm{cyc}}$ is the capacity-fade rate of one full cycle at
+$\sigma_{\mathrm{ref}}$ and $T_{\mathrm{ref}}$.
+The calendar aging accrues with time,
+\begin{equation}
+  f_{\mathrm{cal}}(t) = k_t \int_0^{t} S_\sigma\big(\mathrm{SOC}(\tau)\big)\, S_T\big(T(\tau)\big)\, d\tau,
+  \label{eq:xu_cal}
+\end{equation}
+with $S_\sigma$ and $S_T$ as in \eqref{eq:battery_soh_factor} and the calendar-aging coefficient $k_t$.
+For a linear \ac{SOC} change from $\sigma_a$ to $\sigma_b$ over a period $t_p$ at a constant
+temperature $T$, \eqref{eq:xu_cal} has the closed form
+\begin{equation}
+  \Delta f_{\mathrm{cal}}(\sigma_a, \sigma_b, t_p, T)
+  = k_t\, t_p\, S_T\, \frac{S_\sigma(\sigma_b) - S_\sigma(\sigma_a)}{k_\sigma(\sigma_b - \sigma_a)},
+  \label{eq:xu_cal_lin}
+\end{equation}
+which tends to $k_t\, t_p\, S_T\, S_\sigma(\sigma_a)$ for $\sigma_b \to \sigma_a$.
+
+\paragraph{Degradation per mission}
+Each mission consists of two half cycles ($n_i = 0.5$): the discharge from $\mathrm{SOC}_0$ to
+$\mathrm{SOC}_{\mathrm{end}}$ during the mission time $T_m$, and the subsequent constant-current
+recharge to $\mathrm{SOC}_0$ at the rate $C_{\mathrm{ch}} = 1$~C and the ambient temperature
+$T_{\mathrm{amb}}$. Both half cycles have the \ac{DOD} and average \ac{SOC}
+\begin{equation}
+  \delta = \mathrm{SOC}_0 - \mathrm{SOC}_{\mathrm{end}},\qquad
+  \bar\sigma = \tfrac{1}{2}(\mathrm{SOC}_0 + \mathrm{SOC}_{\mathrm{end}}),
+  \label{eq:cycle_stats}
+\end{equation}
+and the discharge half cycle has the average temperature
+$\bar T = \frac{1}{T_m}\int_0^{T_m} T(\tau)\, d\tau$. By \eqref{eq:battery_fd}, the degradation of
+the mission is
+\begin{equation}
+\begin{aligned}
+  \Delta f_d = {} & \tfrac{1}{2} k_{\mathrm{cyc}}\, \widetilde{S}_{\delta} S_{\bar\sigma}
+      \big(S_{\bar T} + S_{T_{\mathrm{amb}}}\big) \\
+    & + \sum_{t=0}^{T_m/\Delta t - 1} \Delta f_{\mathrm{cal}}(\mathrm{SOC}_t, \mathrm{SOC}_{t+1}, \Delta t, T_t) \\
+    & + \Delta f_{\mathrm{cal}}\big(\mathrm{SOC}_{\mathrm{end}}, \mathrm{SOC}_0, t_{\mathrm{ch}}, T_{\mathrm{amb}}\big),
+\end{aligned}
+  \label{eq:fd_mission}
+\end{equation}
+where the first line is the cycle aging of the two half cycles, the second line is the calendar
+aging along the mission trajectory, and the third line is the calendar aging during the charging
+time $t_{\mathrm{ch}} = \delta / C_{\mathrm{ch}}$. By \eqref{eq:battery_soh_define}, the \ac{SOH}
+after the mission is $\mathrm{SOH}\,e^{-\Delta f_d}$, and the capacity loss of the mission is
+\begin{equation}
+  \Delta\mathrm{SOH} = \mathrm{SOH}\,\big(1 - e^{-\Delta f_d}\big).
+  \label{eq:dsoh}
+\end{equation}
+Since $\Delta\mathrm{SOH}$ is of the order of $10^{-5}$ per mission, the \ac{SOH} is treated as
+constant within a mission. The controller influences $\Delta\mathrm{SOH}$ through the \ac{DOD},
+which grows with the cell energy drawn, through the average \ac{SOC}, through the mission time in the
+calendar term, and, via the Joule losses of the \ac{ECM}, through the temperature.
+
+\paragraph{Lifetime}
+Repeating a mission from $\mathrm{SOH}_0 = 1$ until the end of life $\mathrm{SOH}_{\mathrm{EOL}}$
+accumulates the degradation $f_d$ from 0 to $f_{d,\mathrm{EOL}} = -\ln \mathrm{SOH}_{\mathrm{EOL}}$.
+Because the degradation per mission $\Delta f_d$ changes as the battery ages (the controller adapts
+to the \ac{SOH}, and the aged \ac{ECM} draws more charge for the same load energy), the number of
+missions to the end of life is
+\begin{equation}
+  N_{\mathrm{EOL}} = \int_0^{f_{d,\mathrm{EOL}}} \frac{df_d}{\Delta f_d\big(\mathrm{SOH} = e^{-f_d}\big)},
+  \label{eq:n_eol}
+\end{equation}
+and the distance to the end of life is $N_{\mathrm{EOL}} L$. We evaluate \eqref{eq:n_eol} by the
+trapezoidal rule, with $\Delta f_d$ interpolated between missions simulated at several \ac{SOH} levels.
+
 \paragraph{Objective}
 The mission objective trades travel time, energy, \ac{QoS} shortfalls and the terminal \ac{SOC} reserve:
 \begin{equation}
 \begin{aligned}
   \min_{\{u_t\}} \;
-  J = {} & w_T \frac{T}{T_{\mathrm{ref}}}
+  J = {} & w_T \frac{T_m}{T_{\mathrm{ref}}}
     + w_E \frac{E}{L}
-    + \frac{w_Q}{T_{\mathrm{ref}}} \int_0^T \psi_t\, dt
+    + \frac{w_Q}{T_{\mathrm{ref}}} \int_0^{T_m} \psi_t\, dt
     + w_R \,\phi\big(\mathrm{SOC}_{\mathrm{end}}\big) \\
   \text{s.t.} \quad &
   \Pr\big[q_t < q_{\mathrm{ref}}\big] \leq \rho,\;\;
@@ -85,27 +218,26 @@ The mission objective trades travel time, energy, \ac{QoS} shortfalls and the te
 \end{aligned}
   \label{eq:objective}
 \end{equation}
-where $T$ is the mission time, $T_{\mathrm{ref}} = L / v_{\mathrm{ref}}$, $E = \int P\,dt$ is the
+where $T_m$ is the mission time, $T_{\mathrm{ref}} = L / v_{\mathrm{ref}}$, $E = \int P\,dt$ is the
 load energy, $\psi_t = \mathbb{1}[q_t < q_{\mathrm{ref}}] + [1 - q_t/q_{\mathrm{ref}}]^+$ penalizes
 each \ac{QoS} shortfall by its occurrence and its depth, $\mathrm{SOC}_{\mathrm{cut}}$ is the cutoff \ac{SOC} at which the battery
 is considered depleted and the mission fails, and
 $\phi(\mathrm{SOC}_{\mathrm{end}}) = \min\!\big(1, \max(0, \mathrm{SOC}_{\mathrm{res}} - \mathrm{SOC}_{\mathrm{end}}) / \mathrm{SOC}_{\mathrm{res}}\big)$
 penalizes ending the mission below the reserve $\mathrm{SOC}_{\mathrm{res}} = 5\%$.
 Writing time and energy as integrals over the travelled distance $s$,
-$T = \int_0^L ds / v$ and $E = \int_0^L e\,ds$ with the energy per meter
+$T_m = \int_0^L ds / v$ and $E = \int_0^L e\,ds$ with the energy per meter
 $e = P / v$, makes the problem a distance-domain optimal control problem.
 
 \paragraph{Degradation-aware objective}
 The objective \eqref{eq:objective} only covers the current mission. To account for the
-battery's long-term cost, DA-Lag-RLS adds the predicted capacity loss of the mission,
+battery's long-term cost, DARO adds the predicted capacity loss of the mission,
 \begin{equation}
   J_{\mathrm{DA}} = J + w_D \,\frac{\Delta\mathrm{SOH}}{1 - \mathrm{SOH}_{\mathrm{EOL}}},
   \label{eq:da}
 \end{equation}
 where $w_D$ is the cost of one full battery life (from \ac{SOH}~=~1 to the end-of-life
-$\mathrm{SOH}_{\mathrm{EOL}}$). $\Delta\mathrm{SOH}$ is predicted with the Xu degradation model
-from the discharge half-cycle (depth of discharge, mean \ac{SOC}, temperature), the calendar
-aging during the mission, and the subsequent recharge. For $w_D = 0$, DA-Lag-RLS reduces to Lag-RLS.
+$\mathrm{SOH}_{\mathrm{EOL}}$) and $\Delta\mathrm{SOH}$ is the capacity loss \eqref{eq:dsoh} of the
+mission and the subsequent recharge. For $w_D = 0$, DARO reduces to Lag-RLS.
 
 \paragraph{Decomposition}
 The \ac{SOC} constraint couples all steps of the mission, whereas the \ac{QoS} constraint and the
@@ -134,10 +266,10 @@ The coulomb-counted \ac{SOC} is referenced to the rated capacity, so on an aged 
 underestimates the charge drawn per unit \ac{SOC}. For each candidate $h$ on a grid
 $\mathcal{H} = \{0.70, 0.71, \dots, 1.00\}$ we compute the corrected
 $\mathrm{SOC}_t(h) = \mathrm{SOC}_0 - (\mathrm{SOC}_0 - \mathrm{SOC}_t^{\mathrm{cc}})/h$ and the
-predicted terminal voltage of the \ac{ECM},
-$\hat V_t(h) = V_{\mathrm{oc}}(\mathrm{SOC}_t(h), h) - I_t\big(R_0(h) + R_1(h) + R_2(h)\big)$,
-with $R_j(h) = R_j\,[1 + \kappa_j(1-h)]$ and the aging coefficients
-$\kappa_{0,1,2} = 1.25, 0.89, 4.27$ identified from the cell data (Table~\ref{tb:battery_parameter}). The estimate
+predicted steady-state terminal voltage of the \ac{ECM} \eqref{eq:ecm},
+$\hat V_t(h) = V_{\mathrm{oc}}(\mathrm{SOC}_t(h), h) - I_t\big(R_0 + R_1 + R_2\big)$,
+with the resistances $R_j(\mathrm{SOC}_t(h), h)$ of \eqref{eq:ecm_param} and the nominal aging coefficients
+$\kappa_{0,1,2} = 1.25, 0.89, 4.27$ (Table~\ref{tb:battery_parameter}). The estimate
 $\widehat{\mathrm{SOH}} = \arg\min_h \overline{(\hat V_t(h) - V_t)^2}$ minimizes an exponential
 moving average of the squared residuals over near-steady samples
 ($|\Delta I| < 0.05$~A), and $\widehat{\mathrm{SOC}} = \mathrm{SOC}_t(\widehat{\mathrm{SOH}})$.
@@ -260,23 +392,72 @@ $\epsilon = 5\%$ is a safety margin. The planner minimizes the predicted remaini
 where $\hat\phi(\lambda)$ is the predicted shortfall below the reserve, i.e.,
 $\big[\hat E_{\mathrm{cell}}(\lambda) - E_{\mathrm{av}}(\cdot; \mathrm{SOC}_{\mathrm{res}})\big]^+$
 converted to \ac{SOC} and normalized by $\mathrm{SOC}_{\mathrm{res}}$, and
-$\widehat{\Delta\mathrm{SOH}}(\lambda)$ is the capacity loss \eqref{eq:da} predicted for the trajectory.
+$\widehat{\Delta\mathrm{SOH}}(\lambda)$ is the capacity loss \eqref{eq:dsoh} predicted for the
+trajectory (see below).
 The constraint discards prices whose trajectory is predicted to deplete the battery,
 while the reserve term lets the planner use the reserve only where the time saved outweighs its penalty.
 Because $E_{\mathrm{av}}$ in \eqref{eq:eav} depends on the estimated \ac{SOH}, the same
 \ac{SOC} yields a higher energy price for an aged battery, which lowers the speed
 and, through \eqref{eq:schedule}, the \ac{CPU} frequency.
-For DA-Lag-RLS, the planner also linearizes the degradation term at the selected operating point
-into the price per joule $\mu_E$ and per second $\mu_t$ used in \eqref{eq:lagrangian}, so that the
-decision-making accounts for the degradation without evaluating the degradation model at every step.
 If no $\lambda \in \Lambda$ is feasible, the requirement cannot be met with the remaining
 charge, and the controller switches to a budget mode that keeps the energy within
 $E_{\mathrm{av}}(\cdot; \mathrm{SOC}_{\mathrm{f}})$ and maximizes the achievable throughput
 ratio $\min(1, q / q_{\mathrm{ref}})$, i.e., completion takes priority over \ac{QoS}.
 
+\paragraph{Degradation prediction (DARO)}
+DARO predicts the mission damage \eqref{eq:fd_mission} from the estimated battery state. At time $t$,
+let $\hat E_{\mathrm{cell}}$ be the predicted cell energy for the remaining distance and
+$\hat t_{\mathrm{r}} = d / v^\ast(\lambda)$ the remaining time. The predicted end \ac{SOC} is
+\begin{equation}
+  \widehat{\mathrm{SOC}}_{\mathrm{end}} = \widehat{\mathrm{SOC}}
+    - \frac{\hat E_{\mathrm{cell}}}{Q_n\,\widehat{\mathrm{SOH}}\; V_{\mathrm{oc}}(\tilde\sigma, \widehat{\mathrm{SOH}})},
+  \quad
+  \tilde\sigma = \widehat{\mathrm{SOC}}
+    - \frac{\hat E_{\mathrm{cell}}}{2\,Q_n\,\widehat{\mathrm{SOH}}\; V_{\mathrm{oc}}(\widehat{\mathrm{SOC}}, \widehat{\mathrm{SOH}})},
+  \label{eq:soc_end_pred}
+\end{equation}
+i.e., the \ac{OCV} is evaluated at the midpoint $\tilde\sigma$ of the remaining discharge. With
+$\hat\delta = \mathrm{SOC}_0 - \widehat{\mathrm{SOC}}_{\mathrm{end}}$,
+$\hat{\bar\sigma} = \tfrac{1}{2}(\mathrm{SOC}_0 + \widehat{\mathrm{SOC}}_{\mathrm{end}})$, the mean measured
+temperature $\bar T_{\mathrm{p}}$ over the elapsed time $t$, the current temperature $T_t$, and
+$\hat{\bar T} = (t\,\bar T_{\mathrm{p}} + \hat t_{\mathrm{r}}\, T_t)/(t + \hat t_{\mathrm{r}})$, the
+predicted damage is
+\begin{equation}
+\begin{aligned}
+  \Delta\hat f_d = {} & \tfrac{1}{2} k_{\mathrm{cyc}}\, \widetilde{S}_{\hat\delta} S_{\hat{\bar\sigma}}
+      \big(S_{\hat{\bar T}} + S_{T_{\mathrm{amb}}}\big) \\
+  & + \Delta f_{\mathrm{cal}}\big(\mathrm{SOC}_0, \widehat{\mathrm{SOC}}, t, \bar T_{\mathrm{p}}\big)
+    + \Delta f_{\mathrm{cal}}\big(\widehat{\mathrm{SOC}}, \widehat{\mathrm{SOC}}_{\mathrm{end}}, \hat t_{\mathrm{r}}, T_t\big) \\
+  & + \Delta f_{\mathrm{cal}}\big(\widehat{\mathrm{SOC}}_{\mathrm{end}}, \mathrm{SOC}_0, \hat\delta / C_{\mathrm{ch}}, T_{\mathrm{amb}}\big),
+\end{aligned}
+  \label{eq:fd_pred}
+\end{equation}
+which replaces the measured trajectory in \eqref{eq:fd_mission} by its elapsed and predicted remaining
+parts. The degradation cost used in \eqref{eq:lambda} is
+\begin{equation}
+  D(\hat E_{\mathrm{cell}}, \hat t_{\mathrm{r}})
+  = w_D\, \frac{\widehat{\mathrm{SOH}}\,\big(1 - e^{-\Delta\hat f_d}\big)}{1 - \mathrm{SOH}_{\mathrm{EOL}}}.
+  \label{eq:deg_cost}
+\end{equation}
+Evaluating $D$ for every speed and \ac{DVFS} level at every step is unnecessary, because one
+step changes the remaining energy and time only marginally. The planner therefore linearizes $D$
+at the trajectory of the selected price $\lambda^\ast$ by forward differences,
+\begin{equation}
+\begin{aligned}
+  \mu_E &= \Big[\tfrac{D(\hat E_{\mathrm{cell}} + \Delta E,\, \hat t_{\mathrm{r}}) - D(\hat E_{\mathrm{cell}},\, \hat t_{\mathrm{r}})}{\Delta E}\Big]^+, \\
+  \mu_t &= \Big[\tfrac{D(\hat E_{\mathrm{cell}},\, \hat t_{\mathrm{r}} + \Delta t_{\mathrm{r}}) - D(\hat E_{\mathrm{cell}},\, \hat t_{\mathrm{r}})}{\Delta t_{\mathrm{r}}}\Big]^+,
+\end{aligned}
+  \label{eq:deg_prices}
+\end{equation}
+with $\Delta E = \max(0.01\,\hat E_{\mathrm{cell}}, 1~\mathrm{J})$ and
+$\Delta t_{\mathrm{r}} = \max(0.01\,\hat t_{\mathrm{r}}, 1~\mathrm{s})$. $\mu_E$ is the
+marginal cycle aging per joule of cell energy (through the depth of discharge) and $\mu_t$ the
+marginal calendar aging per second; both enter the cost per meter \eqref{eq:lagrangian}, so the
+decision-making accounts for the degradation without evaluating the degradation model at every step.
+
 \paragraph{Algorithm and complexity}
 \begin{algorithm}[t]
-\caption{DA-Lag-RLS (Lag-RLS for $w_D = 0$)}
+\caption{DARO (Lag-RLS for $w_D = 0$)}
 \label{alg:lag_rls}
 \begin{algorithmic}[1]
 \State Initialize $\boldsymbol\theta \gets \mathbf 1$, $\hat\eta \gets 1$, $\widehat{\mathrm{SOH}} \gets 1$, $\lambda^\ast \gets 0$, $\mu_E, \mu_t \gets 0$

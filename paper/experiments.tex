@@ -1,8 +1,8 @@
 % =====================================================================
 % Experiments section. All numbers are from logs/paper/benchmark_td3/report.md
 % (python -m evaluation.benchmark --episodes 10 --out logs/paper/benchmark_td3),
-% figures from python figures/exp_results.py.
-% Requires booktabs and graphicx.
+% figures from figures/exp_results.ipynb.
+% Requires booktabs and graphicx. Cite key xu2016modeling must exist in the .bib.
 % =====================================================================
 
 \section{Experimental Evaluation}
@@ -13,21 +13,66 @@
 \label{sec:exp:setup}
 
 \paragraph{Simulator}
-The rover carries a 4S 5~Ah LiPo pack (14.8~V nominal), modeled by the second-order
-\ac{ECM} of Table~\ref{tb:battery_parameter}. Its \ac{SOC}-dependent resistances and the two
-time constants ($\tau_1 = 25$~s, $\tau_2 = 110$~s) are identified in the time domain from
-360~s, 1~C current pulses of aged cells, and validated on a held-out cell (12~mV median
-voltage error). Aging scales the capacity by the \ac{SOH}, increases each resistance as
-$R_j [1 + \kappa_j (1 - \mathrm{SOH})]$, and changes the \ac{OCV} curve; the capacity loss per
-mission is computed with the Xu degradation model, including the recharge at 1~C after
-each mission. The motor power is a steady-speed fit to robot measurements with a
-temperature-dependent copper loss, and the computing power and the perception throughput
-are fitted to measurements of the on-board computer at the 11 \ac{DVFS} levels
-(0.50--2.04~GHz) and three environmental complexity levels $c \in \{1, 2, 3\}$.
-To consider different working conditions, the three levels---low, medium, and high---are
-characterized by a different average number of events per batch, as in~\cite{shahsavari2024coordinated}.
-The \ac{QoS} requirement is $q_{\mathrm{ref}} = 25$~batch/s, the speed
-range is 0.5--5~m/s, and the control period is 1~s. Within a mission the complexity
+All controllers are evaluated in a Python simulator of the rover whose power, throughput and
+battery models are fitted to measurements. Every method drives the same missions under the
+same workload, so the methods are compared on identical conditions.
+The motor power is a steady-speed fit to robot measurements~\cite{naseri2025co} with a
+temperature-dependent copper loss. The rover runs two perception applications,
+\texttt{APP-DT} and \texttt{APP-OP}, each with a throughput requirement of
+$q_{\mathrm{ref}} = 25$~event batches per second. Their throughput and the power of the
+computing board are fitted to measurements of the on-board NVIDIA Jetson TX2 at its 11 \ac{CPU}
+\ac{DVFS} levels (0.50--2.04~GHz) and at three environmental complexity levels
+$c \in \{1, 2, 3\}$ (low, medium, high), which differ in the average number of events per
+batch~\cite{shahsavari2024coordinated}. The throughput model fits the measured curves with
+a root-mean-square error of 0.43~batch/s. The speed range is 0.5--5~m/s, and the control
+period is 1~s.
+
+\paragraph{Battery model}
+The rover carries a 4S1P 5~Ah LiPo pack (14.8~V nominal). The cell models are identified on
+the LiPo aging dataset~\cite{galeotti2023lipo}, using cells 1 and 2 for fitting and cell 3 for
+validation, and are scaled to the pack (resistances by $N_s/N_p = 0.81$).
+The polynomials $p_j$, the aging coefficients $\kappa_j$ of \eqref{eq:ecm_param} and the two time
+constants of the \ac{ECM} (Table~\ref{tb:battery_parameter}) are identified in the time domain from
+202 current pulses of 360~s at 1~C, recorded at different aging stages. On the 91 pulses of
+the validation cell, the median voltage error is 12~mV.
+For the degradation model \eqref{eq:battery_soh_define}--\eqref{eq:xu_cal},
+because all cells of the dataset were cycled under a single protocol, the
+stress-factor shape ($k_\sigma$, $k_T$, $k_{\delta_1}$--$k_{\delta_3}$, $k_t$) cannot be
+identified from it and is taken from~\cite{xu2016modeling}; only the cycle-rate scale
+$k_{\mathrm{cyc}}$ is fitted, so that one cycle at the dataset protocol (median depth of
+discharge 87\%) reproduces the measured capacity fade of $4.8 \times 10^{-4}$ per cycle.
+
+\begin{table}[t]
+\centering
+\caption{Battery model parameters (4S1P pack, 5~Ah, 14.8~V). Fitted: identified on the
+LiPo dataset~\cite{galeotti2023lipo}; literature: from~\cite{xu2016modeling}.}
+\label{tb:battery_parameter}
+\small
+\begin{tabular}{@{}lr@{}}
+\toprule
+Parameter & Value \\
+\midrule
+\multicolumn{2}{@{}l}{\emph{\ac{ECM} (fitted)}} \\
+$R_0, R_1, R_2$ at \ac{SOC}~=~0.5 & 104, 31, 33~m$\Omega$ \\
+$\tau_1$, $\tau_2$ & 25, 110~s \\
+$\kappa_0$, $\kappa_1$, $\kappa_2$ & 1.25, 0.89, 4.27 \\
+Median validation voltage error & 12~mV \\
+\midrule
+\multicolumn{2}{@{}l}{\emph{Aging (fitted)}} \\
+$k_{\mathrm{cyc}}$ & $7.08 \times 10^{-4}$ \\
+Fade at dataset protocol & $4.8 \times 10^{-4}$/cycle \\
+\midrule
+\multicolumn{2}{@{}l}{\emph{Aging (literature)}} \\
+$k_\sigma$, $\sigma_{\mathrm{ref}}$ & 1.04, 0.5 \\
+$k_T$, $T_{\mathrm{ref}}$ & $6.93 \times 10^{-2}$, 298.15~K \\
+$k_{\delta_1}$, $k_{\delta_3}$ & $1.40 \times 10^{5}$, $-1.23 \times 10^{5}$ \\
+$k_{\delta_2}$ & $-0.501$ \\
+$k_t$ & $4.14 \times 10^{-10}$~s$^{-1}$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Mission and cost} Within a mission the complexity
 varies by $\pm 10\%$ (uniform, $\delta = 0.1$) from step to step around its level.
 The complexity level is not known to the controllers and may change during a mission
 (\emph{switch} family); the controllers estimate it on-line from the measured throughput as the
@@ -95,10 +140,10 @@ per-step complexity, $\hat c\,[1 + \delta(1 - 2\rho)]$.
         the observed \ac{SOC} and the nominal power model, and assumes \ac{SOH}~=~1.
   \item \textbf{BA-EPD+SOH}: BA-EPD with the same on-line \ac{SOH} estimator as ours, i.e., with the
         same battery information as the proposed methods.
-  \item \textbf{DA-Lag-RLS} (proposed, Section~\ref{sec:method}) with $w_D = 16000$ unless stated
+  \item \textbf{DARO} (proposed, Section~\ref{sec:method}) with $w_D = 16000$ unless stated
         otherwise; Section~\ref{sec:exp:longterm} varies $w_D \in \{0, 1000, 4000, 16000\}$.
 \end{itemize}
-DA-Lag-RLS without the degradation cost ($w_D = 0$), i.e., Lag-RLS, and variants of it,
+DARO without the degradation cost ($w_D = 0$), i.e., Lag-RLS, and variants of it,
 including one that reads the true \ac{SOC} and \ac{SOH}, are evaluated in the ablation study
 (Section~\ref{sec:exp:ablation}).
 
@@ -135,7 +180,7 @@ AS-MF                    & $-1.077$ & $-3.744$ & $-1.071$ & $-1.318$ & $-1.939$ 
 QoS-EPD                  & $-0.304$ & $-0.573$ & $-0.491$ & $-0.612$ & $-0.676$ & $-0.339$ & $-0.578$ \\
 BA-EPD                   & $\mathbf{-0.207}$ & $-0.636$ & $-0.388$ & $-0.604$ & $-1.383$ & $-0.312$ & $-0.954$ \\
 BA-EPD+SOH               & $\mathbf{-0.207}$ & $-0.538$ & $-0.388$ & $-0.604$ & $-0.811$ & $-0.280$ & $-0.628$ \\
-DA-Lag-RLS ($w_D$=16000) & $-0.250$ & $\mathbf{-0.518}$ & $\mathbf{-0.326}$ & $\mathbf{-0.536}$ & $\mathbf{-0.578}$ & $\mathbf{-0.263}$ & $\mathbf{-0.493}$ \\
+DARO ($w_D$=16000) & $-0.250$ & $\mathbf{-0.518}$ & $\mathbf{-0.326}$ & $\mathbf{-0.536}$ & $\mathbf{-0.578}$ & $\mathbf{-0.263}$ & $\mathbf{-0.493}$ \\
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -147,14 +192,14 @@ DA-Lag-RLS ($w_D$=16000) & $-0.250$ & $\mathbf{-0.518}$ & $\mathbf{-0.326}$ & $\
 \small
 \begin{tabular}{@{}lccccccc@{}}
 \toprule
-       & Done & Time & Energy & \ac{QoS} viol. & Reserve viol. & $\Delta$\ac{SOH} & Decision \\
+       & Completion & Time & Energy & \ac{QoS} viol. & Reserve viol. & $\Delta$\ac{SOH} & Decision \\
 Method & [\%] & [min] & [kJ] & [\%] & [\%] & [ppm] & [ms] \\
 \midrule
 AS-MF                    & 98.2 & 29.90 & 30.39 & 0.00 & 43.8 & 32.70 & 0.00 \\
 QoS-EPD                  & 100.0 & 23.27 & 26.92 & 0.97 & 5.4 & 30.05 & 0.38 \\
 BA-EPD                   & 97.9 & 19.59 & 28.24 & 0.43 & 20.2 & 31.11 & 0.66 \\
 BA-EPD+SOH               & 100.0 & 20.17 & 28.05 & 0.55 & 15.1 & 30.97 & 1.49 \\
-DA-Lag-RLS ($w_D$=16000) & 100.0 & 21.47 & 27.14 & 0.06 & 3.8 & 30.23 & 20.05 \\
+DARO ($w_D$=16000) & 100.0 & 21.47 & 27.14 & 0.06 & 3.8 & 30.23 & 20.05 \\
 \bottomrule
 \end{tabular}
 \end{table*}
@@ -169,9 +214,9 @@ DA-Lag-RLS ($w_D$=16000) & 100.0 & 21.47 & 27.14 & 0.06 & 3.8 & 30.23 & 20.05 \\
 \end{figure*}
 
 Fig.~\ref{fig:exp_overall} and Table~\ref{tab:return} report the return per family, and
-Table~\ref{tab:metrics} the underlying metrics. DA-Lag-RLS achieves the highest return over all
+Table~\ref{tab:metrics} the underlying metrics. DARO achieves the highest return over all
 scenarios ($-0.493$) and in five of the six families. The strongest baselines are QoS-EPD ($-0.578$) and BA-EPD+SOH ($-0.628$). The paired
-improvement of DA-Lag-RLS is $+0.085$ (95\% CI $[+0.080, +0.091]$) over QoS-EPD and $+0.135$
+improvement of DARO is $+0.085$ (95\% CI $[+0.080, +0.091]$) over QoS-EPD and $+0.135$
 ($[+0.122, +0.149]$) over BA-EPD+SOH, i.e., a 15\% and 22\% lower cost; the cost is 48\% lower than
 that of BA-EPD and 76\% lower than that of AS-MF. The improvement over QoS-EPD and AS-MF is
 significant in all six families, and that over BA-EPD and BA-EPD+SOH in all families except
@@ -182,14 +227,14 @@ uses the most energy, since it runs the \ac{CPU} at the maximum frequency throug
 baselines occupy the two ends of the time--energy trade-off: BA-EPD and BA-EPD+SOH drive fast
 (19.6 and 20.2~min) but use 4.2--4.9\% more energy than QoS-EPD and end below the reserve in
 15--20\% of the missions (BA-EPD fails 2.1\%), whereas QoS-EPD saves energy but is slow
-(23.3~min). DA-Lag-RLS is 7.7\% faster than QoS-EPD at 0.8\% more energy (27.14 vs.\ 26.92~kJ),
+(23.3~min). DARO is 7.7\% faster than QoS-EPD at 0.8\% more energy (27.14 vs.\ 26.92~kJ),
 and has the fewest reserve violations (3.8\%). It also violates the \ac{QoS} in only 0.06\% of the
 steps, compared with 0.4--1.0\% for the rule-based methods, whose fixed complexity allowance does
 not account for the cost of a violation.
 
 Relative to BA-EPD+SOH, the gain is largest in the charge-limited families with model mismatch.
 In \emph{tight-mismatch} ($+0.233$; $+0.805$ over BA-EPD), the baselines budget the charge with the
-nominal power model, whereas DA-Lag-RLS budgets it with the \ac{RLS}-corrected model and the measured
+nominal power model, whereas DARO budgets it with the \ac{RLS}-corrected model and the measured
 loss factor. In \emph{tight} ($+0.020$; $+0.118$ over BA-EPD), the rule-based switching between
 fast and energy-optimal driving either overspends the charge and ends below the reserve, or it
 switches to energy-optimal driving earlier than necessary; the energy price $\lambda$ instead moves
@@ -197,7 +242,7 @@ continuously between both regimes. In \emph{switch} and \emph{mismatch} ($+0.062
 gain comes from the joint speed--frequency selection with the expected \ac{QoS} cost and the
 complexity change detection. In \emph{nominal}, BA-EPD and BA-EPD+SOH are better by $0.043$: these
 missions are only 1~km long (about 4.5~min), so the 90~s of speed probing at the start of
-DA-Lag-RLS take up a third of the mission, while the charge is ample and the fast mode of BA-EPD is
+DARO take up a third of the mission, while the charge is ample and the fast mode of BA-EPD is
 nearly optimal. Without probing, the cost in this family is $0.050$ lower and below that of BA-EPD
 (Section~\ref{sec:exp:ablation}).
 
@@ -224,7 +269,7 @@ $0.26$ to $0.57$. QoS-EPD always drives energy-optimally and never violates the 
 the slowest method (26~min) and has the highest cost down to \ac{SOH}~=~82.5\%. BA-EPD+SOH uses the
 \ac{SOH} estimate, but can only switch to the energy-optimal speed for the rest of the mission; at
 \ac{SOH}~=~80\% it is slow (24.1~min) and still violates the reserve in 23\% of the missions. With
-the same estimate, DA-Lag-RLS raises the energy price continuously and, through the degradation
+the same estimate, DARO raises the energy price continuously and, through the degradation
 cost, drives slightly slower from the start; its mission time grows only from 23.0 to 23.6~min, it
 ends below the reserve in only 3\% of the missions at \ac{SOH}~=~80\%, and it has the lowest cost
 over the whole \ac{SOH} range ($0.28$ vs.\ $0.33$ for BA-EPD+SOH at \ac{SOH}~=~80\%).
@@ -247,11 +292,11 @@ Fig.~\ref{fig:exp_longterm}(a) shows that the degradation weight trades mission 
 life. Raising $w_D$ from 0 to 16000 reduces the capacity loss from 30.44 to 30.23~ppm per mission
 at a 3.4\% longer mission time, and the return still improves ($-0.493$ vs.\ $-0.498$), because
 the slower driving also avoids reserve violations (3.8\% vs.\ 5.4\%). Compared with BA-EPD,
-DA-Lag-RLS extends the distance to end of life by 1.1\% and 4.1\% at low and medium complexity
+DARO extends the distance to end of life by 1.1\% and 4.1\% at low and medium complexity
 and is on par ($-0.3\%$) at high complexity (Fig.~\ref{fig:exp_longterm}(b)); BA-EPD+SOH extends
 it by at most 0.8\%, and AS-MF shortens it by 4.5--8.1\% because of its higher energy use.
 QoS-EPD reaches the longest life ($+1.1$ to $+5.2\%$) because it always drives at the
-energy-optimal speed, but it is 8\% slower than DA-Lag-RLS and violates the \ac{QoS} in 1\% of the
+energy-optimal speed, but it is 8\% slower than DARO and violates the \ac{QoS} in 1\% of the
 steps. The long-term gain is small in absolute terms: the depth of discharge is set by the mission
 length, which the controller cannot change, and only the speed-dependent part of the energy and
 the mission duration are controllable. A larger $w_D$ shifts the operating point further towards
@@ -261,18 +306,38 @@ battery life, which the operator can set according to the battery replacement co
 \subsection{Ablation Study}
 \label{sec:exp:ablation}
 
+We remove or replace one component at a time and evaluate each variant on all 1680 missions with
+the same scenarios and seeds, so the change in cost is paired per mission. The degradation cost is
+ablated on DARO; all other components are ablated on Lag-RLS. The variants are:
+\begin{itemize}
+  \item \emph{w/o degradation cost}: $w_D = 0$, i.e., Lag-RLS.
+  \item \emph{w/o \ac{RLS}}: the nominal power model without on-line identification.
+  \item \emph{w/o change detection}: $\hat c$ is an exponential average of the inverted complexity.
+  \item \emph{w/o $\lambda$ (mode switching)}: the Lagrangian price is replaced by switching between
+  the fixed driving modes of BA-EPD (fast, energy-optimal, budget), on the same models and
+  estimators.
+  \item \emph{tier selection}: $\lambda$ is the smallest value whose plan ends above the reserve,
+  instead of the value with the lowest expected cost.
+  \item \emph{w/o \ac{QoS} cost}: the expected \ac{QoS} cost \eqref{eq:qos_cost} is replaced by
+  the fixed complexity allowance of the baselines.
+  \item \emph{w/o \ac{SOH} estimation}, \emph{w/o speed probing}, and \emph{w/o loss factor}:
+  minor components, reported in the text only.
+\end{itemize}
+In addition, we give Lag-RLS more information than it needs: separate motor and computing power
+measurements, the measured number of events, and the true \ac{SOC} and \ac{SOH}. We report the
+results over all scenarios (Fig.~\ref{fig:exp_ablation}) and under battery aging
+(Fig.~\ref{fig:exp_ablation_soh}).
+
 \begin{figure}[t]
   \centering
   \includegraphics[width=\columnwidth]{figures/exp_ablation.pdf}
-  \caption{Ablation: increase in cost (paired over all 1680 missions, 95\% confidence interval;
-  positive = worse). Top: DA-Lag-RLS without the degradation cost ($w_D = 0$, Lag-RLS), relative to
-  DA-Lag-RLS. Middle: one component of Lag-RLS removed or replaced, relative to Lag-RLS. Bottom:
-  additional sensors and the true battery state, relative to Lag-RLS.}
+  \caption{Ablation: increase in cost when one main component of Lag-RLS is removed or replaced,
+  relative to Lag-RLS (paired over all 1680 missions, 95\% confidence interval; positive = worse).}
   \label{fig:exp_ablation}
 \end{figure}
 
 \paragraph{Degradation cost}
-Removing the degradation cost from DA-Lag-RLS ($w_D = 0$, denoted Lag-RLS) increases the cost by
+Removing the degradation cost from DARO ($w_D = 0$, denoted Lag-RLS) increases the cost by
 $0.005$ ($[+0.004, +0.006]$) over all scenarios, although the return does not contain the
 degradation itself: Lag-RLS drives 3.3\% faster (20.8 vs.\ 21.5~min) but ends below the reserve
 more often (5.4\% vs.\ 3.8\%), in particular with an aged battery (30\% vs.\ 3\% at
@@ -282,25 +347,27 @@ are shared by both methods, we ablate them on Lag-RLS, which isolates them from 
 cost.
 
 \paragraph{Components}
-The middle part of Fig.~\ref{fig:exp_ablation} removes one component at a time. The \ac{RLS} power
+Fig.~\ref{fig:exp_ablation} removes one main component at a time. The \ac{RLS} power
 model and the complexity change detection contribute most ($+0.081$ and $+0.071$). Without \ac{RLS},
 the charge budget relies on the nominal model and fails under mismatch ($+0.163$ in
 \emph{tight-mismatch}). Without change detection, the complexity estimate $\hat c$ is an exponential
 average that follows the step-to-step variation, so both the \ac{DVFS} selection and the energy
 forecast of the planner become noisier; the loss is largest in \emph{switch} ($+0.157$), and the
-\ac{QoS} violations rise from 0.06\% to 0.50\%. Replacing the Lagrangian price by the BA-EPD modes
-costs $+0.053$. Replacing the cost-based selection of $\lambda$ by the smallest $\lambda$ that fits
+\ac{QoS} violations rise from 0.06\% to 0.50\%. Replacing the Lagrangian price by switching between fixed driving modes
+(fast, energy-optimal, and budget, as in BA-EPD, but on the same models and estimators) costs
+$+0.053$. Replacing the cost-based selection of $\lambda$ by the smallest $\lambda$ that fits
 above the reserve (tier selection) costs $+0.038$ and more than doubles the reserve violations
 (13.2\% vs.\ 5.4\%), since it cannot trade a small reserve shortfall against mission time.
 Replacing the expected \ac{QoS} cost \eqref{eq:qos_cost} by the fixed complexity allowance of the
 baselines costs $+0.023$ and raises the \ac{QoS} violations from 0.06\% to 0.91\%, since a fixed
-allowance is either too small at high load or wastes power at low load. Speed probing and the loss
-factor have a small effect on average ($+0.008$ and $+0.002$); probing pays off in the long
-\emph{tight-mismatch} missions but costs $0.050$ in the short \emph{nominal} missions.
+allowance is either too small at high load or wastes power at low load. The remaining components
+are not shown in the figure. Removing the \ac{SOH} estimation costs $+0.023$ (see the
+battery-state information below). Speed probing and the loss factor have a small effect on average
+($+0.008$ and $+0.002$); probing pays off in the long \emph{tight-mismatch} missions but costs
+$0.050$ in the short \emph{nominal} missions.
 
 \paragraph{Additional sensors}
-The lower part of Fig.~\ref{fig:exp_ablation} gives Lag-RLS sensors that a rover may have but our
-design does not require. With separate measurements of the motor and the computing power (1\%
+We also give Lag-RLS sensors that a rover may have but our design does not require. With separate measurements of the motor and the computing power (1\%
 noise each), the \ac{RLS} fits the motor and the \ac{CPU} terms independently; the return is
 $0.004$ lower ($[-0.005, -0.003]$). The total power $VI$ already identifies all three coefficients
 because the speed and the \ac{DVFS} level vary independently, and the remaining error of the motor
@@ -314,18 +381,34 @@ proposed methods need only the battery voltage and current and the throughput.
 \begin{figure*}[t]
   \centering
   \includegraphics[width=\textwidth]{figures/exp_ablation_soh.pdf}
-  \caption{Battery-state information under aging (degradation family). (a) Cost $-R$ and
-  (b) reserve violation vs.\ \ac{SOH} for Lag-RLS without \ac{SOH} estimation (assumes a fresh
-  battery), Lag-RLS and DA-Lag-RLS (estimated \ac{SOH}), and Lag-RLS with the true battery state.}
+  \caption{Ablation under aging (degradation family). (a) Cost $-R$ and (b) reserve violation
+  vs.\ \ac{SOH} for DARO, Lag-RLS (without the degradation cost), and Lag-RLS with one main
+  component removed or replaced, i.e., the variants of Fig.~\ref{fig:exp_ablation}.}
   \label{fig:exp_ablation_soh}
 \end{figure*}
 
+\paragraph{Ablation under aging}
+Fig.~\ref{fig:exp_ablation_soh} shows how the variants of Fig.~\ref{fig:exp_ablation} behave as the
+battery ages. Down to \ac{SOH}~=~85\%, none of them ends below the reserve, and the cost of each
+variant rises in parallel with that of Lag-RLS. The differences appear at \ac{SOH}~=~80\%, where the
+energy-optimal mission ends exactly at the reserve. Tier selection of $\lambda$ ends below the
+reserve in 67\% of the missions (cost 0.454 vs.\ 0.304 for Lag-RLS): it keeps the fastest tier that
+fits the estimated budget and cannot trade a small shortfall against mission time. Without change
+detection, the noisier energy forecast already causes reserve violations at \ac{SOH}~=~82.5\%
+(17\%) and 47\% at \ac{SOH}~=~80\%. Without the Lagrangian price or the expected \ac{QoS} cost,
+Lag-RLS violates the reserve as often as with them (30\%) but at a higher cost. The degradation cost
+is the component that matters most for an aged battery: DARO drives slower from the start and
+ends below the reserve in only 3\% of the missions at \ac{SOH}~=~80\%. Without \ac{RLS}, Lag-RLS has
+the lowest cost in this family (0.251 vs.\ 0.267), since the plant is nominal and the on-line
+correction only adds estimation noise; its benefit lies in the \emph{mismatch} families.
+
 \paragraph{Battery-state information}
-Fig.~\ref{fig:exp_ablation_soh} separates the value of the \ac{SOH} estimate. Without it, Lag-RLS
+The value of the \ac{SOH} estimate is separated by Lag-RLS without it and with the true battery
+state (not shown in the figures). Without the estimate, Lag-RLS
 keeps its speed as the battery ages and ends below the reserve in 67\% of the missions at
 \ac{SOH}~=~80\%, as often as BA-EPD; over all scenarios, its return drops by $0.023$, mostly in the
 charge-limited families with an aged battery. With the estimate, the reserve violations at
-\ac{SOH}~=~80\% fall to 30\% (3\% for DA-Lag-RLS). Lag-RLS with the true \ac{SOC} and \ac{SOH}
+\ac{SOH}~=~80\% fall to 30\% (3\% for DARO). Lag-RLS with the true \ac{SOC} and \ac{SOH}
 avoids them completely, but its return over all scenarios is only $0.002$ higher (reserve
 violations 3.6\% vs.\ 5.4\%), which quantifies the cost of estimating the battery state from noisy
 measurements of a mismatched cell.
@@ -334,7 +417,7 @@ measurements of a mismatched cell.
 \subsection{Computational Cost}
 \label{sec:exp:cost}
 
-The mean decision time of DA-Lag-RLS is 20.1~ms per step in our Python implementation
+The mean decision time of DARO is 20.1~ms per step in our Python implementation
 (19.4~ms without the degradation cost). Most of it is the joint speed--frequency search with the expected
 \ac{QoS} cost (1.9~ms with the fixed allowance); the \ac{SOH} estimator accounts for about 1.4~ms
 (18.1~ms with the true battery state). The decision time is two orders of magnitude below the

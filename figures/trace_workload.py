@@ -51,7 +51,7 @@ LEVELS = _schedule(n=8)
 C_NAME = {1.0: 'Low', 2.0: 'Medium', 3.0: 'High'}
 SOH, K, DIST, SEED = tc.SOH, tc.K, tc.DIST, tc.SEED
 BMS = tc.BMS
-METHODS = {k: v for k, v in tc.METHODS.items() if k != 'Lag-RLS'}   # DA-Lag-RLS only
+METHODS = {k: v for k, v in tc.METHODS.items() if k != 'Lag-RLS'}   # DARO only
 CACHE = ROOT / 'figures' / 'data' / 'trace_workload.pkl'
 QOS_OK = 5.0                          # acceptable QoS violation rate [% of steps]
 BAND_ALPHA = 0.3                      # complexity background opacity
@@ -98,7 +98,7 @@ def plot(res):
         'BA-EPD':     dict(color='#e08a2c', ls='--'),
         'BA-EPD+SOH': dict(color='#c8413b', ls='--'),
         'Lag-RLS':    dict(color='#2a5ea8', ls='-'),
-        'DA-Lag-RLS': dict(color='#1a8a4a', ls='-'),
+        'DARO': dict(color='#1a8a4a', ls='-'),
     }
     band = {1.0: '#b8e6b0', 2.0: '#fff1a8', 3.0: '#f5aaa0'}     # Low / Medium / High, alpha 0.5
     rows = [('speed_mps', 'Speed (m/s)'), ('cpu_ghz', 'CPU freq. (GHz)'),

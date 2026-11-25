@@ -44,7 +44,7 @@ METHODS = {   # name -> (class, config overrides)
     'BA-EPD': (BatteryAwareEPD, BMS),
     'BA-EPD+SOH': (BAEPDSohEstimate, BMS),
     'Lag-RLS': (LagRLSEPD, BMS),
-    'DA-Lag-RLS': (DegAwareLagRLS, dict(BMS, deg_weight=16000.0)),
+    'DARO': (DegAwareLagRLS, dict(BMS, deg_weight=16000.0)),
 }
 KEYS = ('t_s', 'speed_mps', 'cpu_ghz', 'total_energy_j', 'distance_m', 'soc', 'power_w')
 CACHE = ROOT / 'figures' / 'data' / 'trace_complexity.pkl'
@@ -165,7 +165,7 @@ def plot(res):
         'BA-EPD':     dict(color='#e08a2c', ls='--'),
         'BA-EPD+SOH': dict(color='#c8413b', ls='--'),
         'Lag-RLS':    dict(color='#2a5ea8', ls='-'),
-        'DA-Lag-RLS': dict(color='#1a8a4a', ls='-'),
+        'DARO': dict(color='#1a8a4a', ls='-'),
     }
     rows = [('speed_mps', 'Speed (m/s)', 1.0), ('cpu_ghz', 'CPU freq. (GHz)', 1.0),
             ('e_per_m', 'Energy / distance (J/m)', 1.0)]
