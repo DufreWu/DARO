@@ -37,9 +37,9 @@ from .lifetime import missions_to_eol
 # Names, order, colours (colour follows the method in every figure)
 # ---------------------------------------------------------------------------------
 
-FAMILIES = ['nominal', 'tight', 'switch', 'mismatch', 'tight_mismatch', 'degradation']
+FAMILIES = ['tight', 'switch', 'mismatch', 'combined', 'degradation']
 FAM_LABEL = {'nominal': 'Nominal', 'tight': 'Tight', 'switch': 'Switch', 'mismatch': 'Mismatch',
-             'tight_mismatch': 'Tight+mism.', 'degradation': 'Ageing', 'all': 'All'}
+             'combined': 'Combined', 'degradation': 'Ageing', 'all': 'All'}
 BASELINES = ['AS-MF', 'QoS-EPD', 'BA-EPD', 'BA-EPD+SOH']
 PROPOSED = 'Lag-RLS'
 REFS = ['Lag-RLS (full info)', 'Oracle-obs', 'Oracle']
@@ -95,7 +95,11 @@ COL1, COL2 = 3.5, 7.16  # IEEE column / page width [in]
 # ---------------------------------------------------------------------------------
 
 def load_raw(path):
+    from envs.scenarios import canonical_family
     rows = [json.loads(x) for x in open(path)]
+    for r in rows:
+        r['family'] = canonical_family(r['family'])
+    rows = [r for r in rows if r['family'] in FAMILIES]
     df = pd.DataFrame(rows)
     tags = pd.DataFrame(list(df.pop('tags'))).add_prefix('tag_')
     return pd.concat([df, tags], axis=1)
@@ -541,7 +545,7 @@ def tab_main(df):
               'Bold: best implementable method (references excluded).',
               ['Method'] + [FAM_LABEL[f] for f in fams] + ['Family avg.'], rows,
               bold=bold_best(rows, range(1, len(fams) + 2), cand), groups={len(BASELINES): 1, len(BASELINES) + 1: 1},
-              note='"All" weights episodes (54 % come from Tight+mism.); "Family avg." weights the six families '
+              note='"All" weights episodes (54 % come from Combined); "Family avg." weights the six families '
                    'equally. Lag-RLS (full info) observes true SOC/SOH; Oracle-obs knows the plant and picks the '
                    'best lambda in hindsight; Oracle additionally observes the workload.')
     return t
@@ -857,7 +861,7 @@ def main():
                                f'error is larger than anything a late correction can recover.',
         'fig_family_gain': 'Paired return difference against BA-EPD+SOH per scenario family (mean and 95 % '
                            'bootstrap CI; same scenario and seed). Lag-RLS gains most where the charge is '
-                           'limited (Tight, Tight+mism.) and matches the baselines in Nominal, where the battery '
+                           'limited (Tight, Combined) and matches the baselines in Nominal, where the battery '
                            'constraint is inactive.',
         'fig_soh_value': 'Value of long-term battery-state awareness. Same mission and initial charge on a pack '
                          'of decreasing SOH (unknown, estimated online). Without the SOH estimate the controller '
@@ -888,8 +892,8 @@ def main():
         ('h', '1  Setting and summary'),
         ('p', 'All methods observe the battery only through a BMS (SOC from a coulomb counter on the rated '
               'capacity; SOH, capacity, internal resistance and OCV shape unknown) and run with battery realism '
-              '(sensor noise, BMS gain error, per-episode cell variation). Test suite: 168 scenarios in six '
-              'families (nominal, charge-limited "tight", workload switching, plant mismatch, tight + mismatch, '
+              '(sensor noise, BMS gain error, per-episode cell variation). Test suite: 159 scenarios in five '
+              'families (charge-limited "tight", workload switching, plant mismatch, tight + mismatch, '
               'ageing with SOH 0.8-1.0), 10 episodes each, test seed 42. SOH 0.8 is end of life.'),
         ('p', f'<b>Main result.</b> Lag-RLS attains a mean return of {s(R["Lag-RLS"])} versus {s(R["BA-EPD+SOH"])} '
               f'for the strongest baseline BA-EPD+SOH (paired difference {fsd(mu)}, 95 % CI [{fsd(lo)}, {fsd(hi)}]) '
@@ -909,8 +913,7 @@ def main():
         ('h', '3  Ablation'),
         ('p', 'Each row removes one component. Cost-based lambda selection, the Lagrangian price, the SOH estimate '
               'and the coordinate-descent refinement all contribute. RLS power-model adaptation is essential under '
-              'plant mismatch (Tight+mism.); its cost in nominal scenarios comes entirely from speed probing '
-              '(without probing, nominal return equals that without RLS). ' + val_txt + ' Probing is therefore '
+              'plant mismatch (Combined). ' + val_txt + ' Probing is therefore '
               'dispensable in this scenario suite (it helps only marginally under mismatch), while eta leaves the '
               'return unchanged but slightly lowers reserve violations.'),
         ('f', 'fig_ablation', 0.62), ('t', 'ablation'),

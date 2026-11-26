@@ -7,7 +7,7 @@ Modules
               tight_soc_init; lipo_fit_parameters.json holds the fitted LiPo ECM
   test_env    EVAL_CONFIG, make_robot (config -> RobotParams incl. battery realism),
               SOH x SOC x complexity test grid, make_test_env
-  scenarios   paper scenario suite (nominal / tight / switch / mismatch / tight_mismatch /
+  scenarios   paper scenario suite (tight / switch / mismatch / combined /
               degradation), true-plant overrides PLANTS, make_env
 """
 

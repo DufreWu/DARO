@@ -129,6 +129,23 @@ class DegAwareLagRLS(LagRLSEPD):
         from envs.robot_env import non_motor_power
         return non_motor_power(self.v_grid, f, c, self.p)
 
+    def _plan_lag(self, q_ref, c_safe):
+        """lag_select='tier' (ablation): the tier rule on the schedules with the degradation
+        prices (linearised at the current plan, then re-linearised at the chosen lam)."""
+        if self.select == 'cost':
+            return super()._plan_lag(q_ref, c_safe)
+        if self._soc_start is None:
+            self._soc_start = self._soc
+        c_fc = self._c_sum / self._c_n if self._c_n else (self.c_hat or 1.0)
+        d = self._d_rem
+        v0, _, e0 = self._schedule(c_fc, q_ref, self._lam)
+        self._update_prices(self._eta * e0 * d, d / v0)
+        mode, x = super()._plan_lag(q_ref, c_safe)
+        if mode == 'lag':
+            v, _, e = self._schedule(c_fc, q_ref, x)
+            self._update_prices(self._eta * e * d, d / v)
+        return mode, x
+
     def _plan_cost(self, q_ref, c_safe, c_fc, d):
         if self._soc_start is None:
             self._soc_start = self._soc

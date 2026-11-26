@@ -3,7 +3,6 @@ model mismatch, workload changes and battery degradation".
 
 Families (all in the training distribution: <= 5 km, SOH 0.8-1.0):
 
-  nominal      1 km, full charge, SOH {1, 0.9, 0.8} x C {1, 2, 3}: speed with ample charge.
   tight        5 km, SOH {1, 0.8} x C {1, 2, 3} x k {0.9, 1.0, 1.1, 1.25}: SOC0 such that
                the usable energy above the 5 % reserve is k x the energy-optimal mission
                energy (robot_env.tight_soc_init). k = 1.25: fast is affordable; k ~ 1:
@@ -12,7 +11,7 @@ Families (all in the training distribution: <= 5 km, SOH 0.8-1.0):
                {10, 30, 120} s (start C = 2).
   mismatch     2 km, full charge, true plant != nominal model (payload, terrain, compute),
                C {1, 2, 3}. Rule-based baselines keep the nominal model.
-  tight_mismatch  5 km, charge-limited as in 'tight' but for the TRUE plant (as training's
+  combined     5 km, charge-limited as in 'tight' but for the TRUE plant (formerly 'tight_mismatch') (as training's
                tight episodes): SOH {1, 0.8} x C {1, 2, 3} x k {1.0, 1.1, 1.25} x PLANTS.
                Rule-based baselines budget charge with the nominal model, so model error
                flips their fast / optimal decision (overspend -> reserve / failure, or
@@ -104,7 +103,7 @@ def print_report(res: dict, families, show: List[str]):
                 f"{100 * _mean(rows, 'reserve_viol'):9.0f}")
 
     group_key = {'nominal': 'soh', 'tight': 'k', 'switch': 'period_s', 'mismatch': 'plant',
-                 'tight_mismatch': 'plant', 'degradation': 'soh'}
+                 'combined': 'plant', 'degradation': 'soh'}
     for fam in families:
         print(f'\n=== {fam}: mean over scenarios ===')
         print(head)

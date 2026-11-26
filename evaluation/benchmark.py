@@ -40,6 +40,7 @@ from .lifetime import missions_to_eol
 from .metrics import run_episode
 from methods.oracle import LagrangianOracle, LAM_GRID
 from .scenarios import FAMILIES, build_suite, make_env
+from envs.scenarios import canonical_family
 from envs.test_env import make_robot
 
 BMS = dict(battery_obs='bms', battery_realism=True)
@@ -67,6 +68,20 @@ POLICIES = {
     'Lag-RLS split power': (LagRLSEPD, dict(BMS, lag_power='split'), 'variant'),
     'Lag-RLS event count': (LagRLSEPD, dict(BMS, lag_c_source='events'), 'variant'),
     'Lag-RLS split+events': (LagRLSEPD, dict(BMS, lag_power='split', lag_c_source='events'), 'variant'),
+    # ablations on DARO (w_D = 16000); run separately: --out logs/paper/benchmark_ablation_daro
+    'DARO w/o SOH est':    (DegAwareLagRLS, dict(BMS, deg_weight=16000.0, lag_soh='obs'), 'variant'),
+    'DARO w/o lambda':     (DegAwareLagRLS, dict(BMS, deg_weight=16000.0, lag_lambda=False), 'variant'),
+    'DARO tier select':    (DegAwareLagRLS, dict(BMS, deg_weight=16000.0, lag_select='tier'), 'variant'),
+    'DARO w/o RLS':        (DegAwareLagRLS, dict(BMS, deg_weight=16000.0, lag_rls=False), 'variant'),
+    'DARO w/o probe':      (DegAwareLagRLS, dict(BMS, deg_weight=16000.0, lag_probe=False), 'variant'),
+    'DARO w/o eta':        (DegAwareLagRLS, dict(BMS, deg_weight=16000.0, lag_eta=False), 'variant'),
+    'DARO w/o probe+eta':  (DegAwareLagRLS, dict(BMS, deg_weight=16000.0, lag_probe=False, lag_eta=False), 'variant'),
+    'DARO w/o CD':         (DegAwareLagRLS, dict(BMS, deg_weight=16000.0, lag_cd=False), 'variant'),
+    'DARO w/o QoS cost':   (DegAwareLagRLS, dict(BMS, deg_weight=16000.0, lag_qos='allowance'), 'variant'),
+    'DARO split power':    (DegAwareLagRLS, dict(BMS, deg_weight=16000.0, lag_power='split'), 'variant'),
+    'DARO event count':    (DegAwareLagRLS, dict(BMS, deg_weight=16000.0, lag_c_source='events'), 'variant'),
+    'DARO split+events':   (DegAwareLagRLS, dict(BMS, deg_weight=16000.0, lag_power='split', lag_c_source='events'), 'variant'),
+    'DARO (full info)':    (DegAwareLagRLS, dict(FULL, deg_weight=16000.0, lag_soh='obs'), 'variant'),
     'BA-EPD (full info)':  (BatteryAwareEPD, FULL, 'reference'),
     'Lag-RLS (full info)': (LagRLSEPD, dict(FULL, lag_soh='obs'), 'reference'),
     'Oracle-obs':          ('oracle', dict(BMS, observe_c=True), 'reference'),
@@ -162,6 +177,7 @@ def _key(r):
 
 
 def report(rows, families, ref='BA-EPD+SOH', out=None):
+    rows = [r for r in rows if r['family'] in families]   # e.g. drop retired families from old runs
     names = [n for n in POLICIES if any(r['policy'] == n for r in rows)]
     by = {n: [r for r in rows if r['policy'] == n] for n in names}
     lines = []
@@ -279,6 +295,8 @@ def main():
         for d in (args.inputs or [args.out]):
             with open(os.path.join(d, 'raw.jsonl')) as f:
                 rows += [json.loads(x) for x in f]
+        for r in rows:
+            r['family'] = canonical_family(r['family'])
         os.makedirs(args.out, exist_ok=True)
     else:
         print(f'{len(build_suite(args.families))} scenarios x {len(args.policies)} policies x '
